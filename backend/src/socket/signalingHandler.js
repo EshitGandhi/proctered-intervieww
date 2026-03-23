@@ -46,6 +46,12 @@ const setupSignaling = (io) => {
       socket.to(roomId).emit('ice-candidate', { candidate, fromSocketId: socket.id });
     });
 
+    // ─── Code Sync ────────────────────────────────────────────────────────────
+    socket.on('code-sync', ({ roomId, code, lang, inp }) => {
+      // Broadcast to other participant in the same room
+      socket.to(roomId).emit('code-sync', { code, lang, inp });
+    });
+
     // ─── Proctoring Violation Alert ───────────────────────────────────────────
     socket.on('proctoring-violation', ({ roomId, eventType, description, severity, timestamp }) => {
       // Broadcast violation to interviewers in the same room
@@ -62,7 +68,7 @@ const setupSignaling = (io) => {
 
     // ─── Chat Messages ────────────────────────────────────────────────────────
     socket.on('chat-message', ({ roomId, message, senderName }) => {
-      io.to(roomId).emit('chat-message', {
+      socket.to(roomId).emit('chat-message', {
         message,
         senderName,
         socketId: socket.id,

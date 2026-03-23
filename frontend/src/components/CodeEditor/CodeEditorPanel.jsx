@@ -16,7 +16,7 @@ const THEMES = [
   { id: 'light', label: 'Light' },
 ];
 
-const CodeEditorPanel = ({ interviewId, readOnly = false, onSubmit }) => {
+const CodeEditorPanel = ({ interviewId, readOnly = false, onSubmit, socket, roomId }) => {
   const [theme, setTheme] = React.useState('vs-dark');
   const [fontSize, setFontSize] = React.useState(14);
 
@@ -29,7 +29,7 @@ const CodeEditorPanel = ({ interviewId, readOnly = false, onSubmit }) => {
     lastSubmission,
     activeTab, setActiveTab,
     runCode, submitCode,
-  } = useCodeExecution({ interviewId });
+  } = useCodeExecution({ interviewId, socket, roomId, readOnly });
 
   const currentLang = LANGUAGES.find((l) => l.id === language);
 

@@ -1,10 +1,10 @@
-import { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import api from '../services/api';
 
 /**
  * useCodeExecution — handles Monaco editor state and Judge0 API calls.
  */
-const useCodeExecution = ({ interviewId }) => {
+const useCodeExecution = ({ interviewId, socket, roomId, readOnly }) => {
   const [language, setLanguage] = useState('python');
   const [sourceCode, setSourceCode] = useState(DEFAULT_CODE['python']);
   const [stdin, setStdin] = useState('');
@@ -18,13 +18,43 @@ const useCodeExecution = ({ interviewId }) => {
   const [executionTime, setExecutionTime] = useState(null);
   const [activeTab, setActiveTab] = useState('output');
 
+  // Socket sync listeners
+  React.useEffect(() => {
+    if (!socket || !roomId) return;
+    socket.on('code-sync', ({ code, lang, inp }) => {
+      if (code !== undefined) setSourceCode(code);
+      if (lang !== undefined) setLanguage(lang);
+      if (inp !== undefined) setStdin(inp);
+    });
+    return () => socket.off('code-sync');
+  }, [socket, roomId]);
+
+  // Wrapper for setting source code that also emits
+  const handleCodeChange = useCallback((newCode) => {
+    setSourceCode(newCode);
+    if (socket && roomId && !readOnly) {
+      socket.emit('code-sync', { roomId, code: newCode });
+    }
+  }, [socket, roomId, readOnly]);
+
   const handleLanguageChange = useCallback((lang) => {
     setLanguage(lang);
-    setSourceCode(DEFAULT_CODE[lang] || '// Start coding here\n');
+    const newCode = DEFAULT_CODE[lang] || '// Start coding here\n';
+    setSourceCode(newCode);
     setStdout('');
     setStderr('');
     setStatus('');
-  }, []);
+    if (socket && roomId && !readOnly) {
+      socket.emit('code-sync', { roomId, lang, code: newCode });
+    }
+  }, [socket, roomId, readOnly]);
+
+  const handleStdinChange = useCallback((inp) => {
+    setStdin(inp);
+    if (socket && roomId && !readOnly) {
+      socket.emit('code-sync', { roomId, inp });
+    }
+  }, [socket, roomId, readOnly]);
 
   const clearOutput = () => {
     setStdout('');
@@ -91,8 +121,8 @@ const useCodeExecution = ({ interviewId }) => {
 
   return {
     language, setLanguage: handleLanguageChange,
-    sourceCode, setSourceCode,
-    stdin, setStdin,
+    sourceCode, setSourceCode: handleCodeChange,
+    stdin, setStdin: handleStdinChange,
     stdout, stderr, compileOutput, status, executionTime,
     running, submitting,
     lastSubmission,

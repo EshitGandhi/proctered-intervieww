@@ -170,7 +170,7 @@ const CandidateRoom = () => {
 
           {/* Code editor - fills remaining space */}
           <div style={{ flex: 1, overflow: 'hidden' }}>
-            <CodeEditorPanel interviewId={interview?._id} />
+            <CodeEditorPanel interviewId={interview?._id} socket={connectSocket()} roomId={roomId} />
           </div>
         </div>
 
