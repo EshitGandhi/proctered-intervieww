@@ -66,6 +66,11 @@ const setupSignaling = (io) => {
       console.log(`[Proctoring] ${eventType} in room ${roomId} by ${socket.data.userName}`);
     });
 
+    // ─── End Interview ────────────────────────────────────────────────────────
+    socket.on('end-interview', ({ roomId }) => {
+      socket.to(roomId).emit('end-interview');
+    });
+
     // ─── Chat Messages ────────────────────────────────────────────────────────
     socket.on('chat-message', ({ roomId, message, senderName }) => {
       socket.to(roomId).emit('chat-message', {

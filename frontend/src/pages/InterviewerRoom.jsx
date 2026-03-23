@@ -99,6 +99,7 @@ const InterviewerRoom = () => {
   };
 
   const handleEndCall = () => {
+    webRTC.socket.current?.emit('end-interview', { roomId });
     webRTC.leaveRoom();
     window.close();
     navigate('/dashboard');

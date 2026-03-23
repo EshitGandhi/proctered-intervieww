@@ -82,14 +82,18 @@ const CandidateRoom = () => {
     socket.on('peer-left', ({ role }) => {
       if (role === 'interviewer') {
         setChatMessages((prev) => [...prev, {
-          message: 'Interviewer has left the session.',
+          message: 'Interviewer has left the session. (Testing mode only, awaiting end command)',
           senderName: 'System',
           timestamp: new Date().toISOString(),
           isSystem: true,
         }]);
       }
     });
-    return () => { socket.off('chat-message'); socket.off('peer-left'); };
+    socket.on('end-interview', () => {
+      alert("The interviewer has officially ended the session. You will be redirected.");
+      handleEndSession();
+    });
+    return () => { socket.off('chat-message'); socket.off('peer-left'); socket.off('end-interview'); };
   }, []);
 
   const sendChat = () => {

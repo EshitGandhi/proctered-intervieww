@@ -21,13 +21,13 @@ const VideoPanel = ({
     if (localVideoRef.current && localStream) {
       localVideoRef.current.srcObject = localStream;
     }
-  }, [localStream]);
+  }, [localStream, cameraOff]);
 
   useEffect(() => {
-    if (remoteVideoRef.current && remoteStream) {
+    if (remoteVideoRef.current && remoteStream && connected) {
       remoteVideoRef.current.srcObject = remoteStream;
     }
-  }, [remoteStream]);
+  }, [remoteStream, connected]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', background: '#000', overflow: 'hidden' }}>
