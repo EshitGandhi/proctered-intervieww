@@ -20,26 +20,44 @@ const executeCode = async ({ language, sourceCode, stdin = '' }) => {
   const config = LANGUAGE_CONFIG[language];
   if (!config) throw new Error(`Unsupported local language fallback: ${language}`);
 
-  // For safety and MVP purposes on Free Render tiers where Python might be 'python' instead of 'python3'
-  let cmdToRun = config.cmd;
-  
   const id = crypto.randomUUID();
   const dir = os.tmpdir();
   const filePath = path.join(dir, `${id}.${config.ext}`);
+  const outPath = path.join(dir, id);
+  let compileOutput = '';
   
   try {
     await fs.writeFile(filePath, sourceCode);
+    
+    // 1. Compilation Step (if applicable)
+    if (config.compile) {
+      const compileCmd = config.compile.replace('{file}', `"${filePath}"`).replace('{out}', `"${outPath}"`);
+      try {
+        await execPromise(compileCmd, { timeout: 10000 });
+      } catch (compileErr) {
+        return {
+          stdout: '',
+          stderr: compileErr.stderr || compileErr.message,
+          compileOutput: compileErr.stderr || compileErr.message,
+          status: 'Compilation Error',
+          time: '0.0', memory: '0', languageId: language,
+        };
+      }
+    }
+
+    // 2. Execution Step
+    let cmdToRun = config.cmd.replace('{out}', `"${outPath}"`).replace('{file}', `"${filePath}"`);
     
     // Quick test if python3 exists, else fallback to python
     if (language === 'python') {
        try {
           await execPromise('python3 --version');
        } catch {
-          cmdToRun = 'python'; // Fallback for Windows/Some Linux
+          cmdToRun = 'python "{file}"'.replace('{file}', `"${filePath}"`);
        }
     }
 
-    const { stdout, stderr } = await execPromise(`${cmdToRun} "${filePath}"`, { 
+    const { stdout, stderr } = await execPromise(cmdToRun, { 
       timeout: 5000, 
       maxBuffer: 1024 * 500, // 500kb
       stdin 
@@ -48,7 +66,7 @@ const executeCode = async ({ language, sourceCode, stdin = '' }) => {
     return {
       stdout: stdout || '',
       stderr: stderr || '',
-      compileOutput: '',
+      compileOutput,
       status: stderr ? 'Runtime Error' : 'Accepted',
       time: '0.1',
       memory: '2048',
@@ -58,7 +76,7 @@ const executeCode = async ({ language, sourceCode, stdin = '' }) => {
     return {
       stdout: err.stdout || '',
       stderr: err.stderr || err.message || 'Execution failed',
-      compileOutput: '',
+      compileOutput,
       status: err.killed ? 'Time Limit Exceeded' : 'Error',
       time: '5.0',
       memory: '0',
@@ -66,6 +84,10 @@ const executeCode = async ({ language, sourceCode, stdin = '' }) => {
     };
   } finally {
     try { await fs.unlink(filePath); } catch (e) {}
+    if (config.compile) {
+      try { await fs.unlink(outPath); } catch (e) {}
+      try { await fs.unlink(outPath + '.exe'); } catch (e) {} // Windows cleanup
+    }
   }
 };
 

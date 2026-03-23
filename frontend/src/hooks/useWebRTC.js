@@ -81,6 +81,21 @@ const useWebRTC = ({ roomId, userId, userName, role }) => {
       }
     };
 
+    // Negotiation needed (track added/removed, or ICE restart)
+    pc.onnegotiationneeded = async () => {
+      if (isInitiator.current && pc.signalingState !== 'closed') {
+        try {
+          const offer = await pc.createOffer();
+          await pc.setLocalDescription(offer);
+          if (socketRef.current) {
+            socketRef.current.emit('offer', { roomId, offer });
+          }
+        } catch (err) {
+          console.error('Renegotiation failed:', err);
+        }
+      }
+    };
+
     pc.onconnectionstatechange = () => {
       setConnectionState(pc.connectionState);
       if (pc.connectionState === 'connected') setConnected(true);
