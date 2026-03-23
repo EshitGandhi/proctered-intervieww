@@ -5,6 +5,18 @@ const ICE_SERVERS = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun.stunprotocol.org:3478' },
+    {
+      urls: 'turn:openrelay.metered.ca:80',
+      username: 'openrelayproject',
+      credential: 'openrelayproject',
+    },
+    {
+      urls: 'turn:openrelay.metered.ca:443',
+      username: 'openrelayproject',
+      credential: 'openrelayproject',
+    },
   ],
 };
 
@@ -55,8 +67,11 @@ const useWebRTC = ({ roomId, userId, userName, role }) => {
     setRemoteStream(remoteMediaStream);
 
     pc.ontrack = (e) => {
-      e.streams[0]?.getTracks().forEach((t) => remoteMediaStream.addTrack(t));
-      setRemoteStream(new MediaStream(remoteMediaStream.getTracks()));
+      // Bulletproof track adding directly from e.track
+      if (e.track) {
+        remoteMediaStream.addTrack(e.track);
+        setRemoteStream(new MediaStream(remoteMediaStream.getTracks()));
+      }
     };
 
     // ICE candidates

@@ -21,10 +21,14 @@ const useCodeExecution = ({ interviewId, socket, roomId, readOnly }) => {
   // Socket sync listeners
   React.useEffect(() => {
     if (!socket || !roomId) return;
-    socket.on('code-sync', ({ code, lang, inp }) => {
+    socket.on('code-sync', ({ code, lang, inp, outp, err, comp, stat }) => {
       if (code !== undefined) setSourceCode(code);
       if (lang !== undefined) setLanguage(lang);
       if (inp !== undefined) setStdin(inp);
+      if (outp !== undefined) setStdout(outp);
+      if (err !== undefined) setStderr(err);
+      if (comp !== undefined) setCompileOutput(comp);
+      if (stat !== undefined) setStatus(stat);
     });
     return () => socket.off('code-sync');
   }, [socket, roomId]);
@@ -62,6 +66,9 @@ const useCodeExecution = ({ interviewId, socket, roomId, readOnly }) => {
     setCompileOutput('');
     setStatus('');
     setExecutionTime(null);
+    if (socket && roomId && !readOnly) {
+      socket.emit('code-sync', { roomId, outp: '', err: '', comp: '', stat: '' });
+    }
   };
 
   const runCode = useCallback(async () => {
@@ -82,10 +89,17 @@ const useCodeExecution = ({ interviewId, socket, roomId, readOnly }) => {
       setStatus(r.status || '');
       setExecutionTime(r.time);
       setActiveTab(r.stderr || r.compileOutput ? 'errors' : 'output');
+      
+      if (socket && roomId && !readOnly) {
+        socket.emit('code-sync', { roomId, outp: r.stdout || '', err: r.stderr || '', comp: r.compileOutput || '', stat: r.status || '' });
+      }
     } catch (err) {
       const msg = err.response?.data?.message || err.message;
       setStderr(`Execution error: ${msg}`);
       setActiveTab('errors');
+      if (socket && roomId && !readOnly) {
+        socket.emit('code-sync', { roomId, err: `Execution error: ${msg}`, stat: 'Error' });
+      }
     } finally {
       setRunning(false);
     }
@@ -109,11 +123,18 @@ const useCodeExecution = ({ interviewId, socket, roomId, readOnly }) => {
       setExecutionTime(r.time);
       setLastSubmission(data.data.submission);
       setActiveTab(r.stderr || r.compileOutput ? 'errors' : 'output');
+      
+      if (socket && roomId && !readOnly) {
+        socket.emit('code-sync', { roomId, outp: r.stdout || '', err: r.stderr || '', comp: r.compileOutput || '', stat: r.status || '' });
+      }
       return data.data.submission;
     } catch (err) {
       const msg = err.response?.data?.message || err.message;
       setStderr(`Submit error: ${msg}`);
       setActiveTab('errors');
+      if (socket && roomId && !readOnly) {
+        socket.emit('code-sync', { roomId, err: `Submit error: ${msg}`, stat: 'Error' });
+      }
     } finally {
       setSubmitting(false);
     }
