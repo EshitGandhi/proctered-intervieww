@@ -23,11 +23,17 @@ const app = express();
 const httpServer = http.createServer(app);
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+const ALLOWED_ORIGINS = [
+  FRONTEND_URL,
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://proctered-intervieww.vercel.app'
+];
 
 // ─── Socket.io ────────────────────────────────────────────────────────────────
 const io = new Server(httpServer, {
   cors: {
-    origin: [FRONTEND_URL, 'http://localhost:3000'],
+    origin: ALLOWED_ORIGINS,
     methods: ['GET', 'POST'],
     credentials: true,
   },
@@ -39,7 +45,7 @@ setupSignaling(io);
 // ─── Middleware ───────────────────────────────────────────────────────────────
 app.use(
   cors({
-    origin: [FRONTEND_URL, 'http://localhost:3000'],
+    origin: ALLOWED_ORIGINS,
     credentials: true,
   })
 );
