@@ -29,11 +29,21 @@ router.get('/', protect, requireRole('interviewer', 'admin'), async (req, res) =
 });
 
 // GET /api/interviews/room/:roomId  — must come BEFORE /:id
-router.get('/room/:roomId', protect, async (req, res) => {
-  const interview = await Interview.findOne({ roomId: req.params.roomId })
-    .populate('interviewer', 'name email');
-  if (!interview) return res.status(404).json({ success: false, message: 'Room not found' });
-  res.json({ success: true, data: interview });
+router.get('/room/:roomId', protect, async (req, res, next) => {
+  try {
+    const interview = await Interview.findOne({ roomId: req.params.roomId })
+      .populate('interviewer', 'name email');
+    if (!interview) return res.status(404).json({ success: false, message: 'Room not found' });
+    
+    // Block candidate from joining if session is not active
+    if (req.user.role === 'candidate' && interview.status !== 'active') {
+      return res.status(403).json({ success: false, message: 'The interviewer has not started this session yet. Please wait.' });
+    }
+
+    res.json({ success: true, data: interview });
+  } catch (error) {
+    next(error);
+  }
 });
 
 // GET /api/interviews/:id
