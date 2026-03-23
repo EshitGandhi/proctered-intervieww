@@ -47,9 +47,9 @@ const setupSignaling = (io) => {
     });
 
     // ─── Code Sync ────────────────────────────────────────────────────────────
-    socket.on('code-sync', ({ roomId, code, lang, inp }) => {
+    socket.on('code-sync', ({ roomId, code, lang, inp, outp, err, comp, stat }) => {
       // Broadcast to other participant in the same room
-      socket.to(roomId).emit('code-sync', { code, lang, inp });
+      socket.to(roomId).emit('code-sync', { code, lang, inp, outp, err, comp, stat });
     });
 
     // ─── Proctoring Violation Alert ───────────────────────────────────────────

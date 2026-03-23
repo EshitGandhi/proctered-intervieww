@@ -98,8 +98,15 @@ const InterviewerRoom = () => {
     setChatInput('');
   };
 
-  const handleEndCall = () => {
+  const handleEndCall = async () => {
     webRTC.socket.current?.emit('end-interview', { roomId });
+    if (interview?._id) {
+      try {
+        await api.patch(`/interviews/${interview._id}/end`);
+      } catch (err) {
+        console.error('Failed to end interview in DB:', err);
+      }
+    }
     webRTC.leaveRoom();
     window.close();
     navigate('/dashboard');
