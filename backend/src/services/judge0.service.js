@@ -9,16 +9,29 @@ const crypto = require('crypto');
  * Evaluates JS and Python natively on the Backend Server!
  */
 const LANGUAGE_CONFIG = {
-  javascript: { ext: 'js', cmd: 'node' },
-  python: { ext: 'py', cmd: 'python3' }, // Try python3 first
-  java: { ext: 'java', cmd: 'java' },
-  c: { ext: 'c', compile: 'gcc -o {out} {file}', cmd: './{out}' },
-  cpp: { ext: 'cpp', compile: 'g++ -o {out} {file}', cmd: './{out}' }
+  javascript: { ext: 'js', cmd: 'node "{file}"' },
+  python: { ext: 'py', cmd: 'python3 -u "{file}"' }, // -u forces unbuffered stdout
+  java: { ext: 'java', cmd: 'java' }, // Mocked below
+  c: { ext: 'c', compile: 'gcc -o {out} {file}', cmd: './{out}' }, // Mocked below
+  cpp: { ext: 'cpp', compile: 'g++ -o {out} {file}', cmd: './{out}' } // Mocked below
 };
 
 const executeCode = async ({ language, sourceCode, stdin = '' }) => {
   const config = LANGUAGE_CONFIG[language];
   if (!config) throw new Error(`Unsupported local language fallback: ${language}`);
+
+  // Gravely decline compiled languages on basic free-tier linux instances without GCC/JDK
+  if (['java', 'c', 'cpp'].includes(language)) {
+    return {
+      stdout: '',
+      stderr: `[Platform Notice]\nThe free tier Docker container running this platform only supports natively interpreted languages (JavaScript and Python).\n\nCompilers like GCC (for C/C++) and the Java SDK are not installed on this specific server instance.\n\nPlease switch your language to Python or JavaScript to continue testing!`,
+      compileOutput: '',
+      status: 'Environment Error',
+      time: '0.0',
+      memory: '0',
+      languageId: language,
+    };
+  }
 
   const id = crypto.randomUUID();
   const dir = os.tmpdir();
