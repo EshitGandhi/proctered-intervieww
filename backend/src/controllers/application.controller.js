@@ -211,7 +211,7 @@ exports.generateInterview = async (req, res) => {
     if (app.status !== 'interview_pending') return res.status(400).json({ success: false, error: 'Candidate not in interview_pending status' });
     if (app.scores?.interview?.interviewId) return res.status(400).json({ success: false, error: 'Interview already generated for this application' });
 
-    const { startTime, duration } = req.body;
+    const { startTime, duration } = req.body || {};
 
     const interview = await Interview.create({
       title: `${app.jobId.title} — Final Interview`,

@@ -424,10 +424,11 @@ const CandidateDetail = ({ appId, onBack }) => {
       .finally(() => setLoading(false));
   }, [appId]);
 
-  const handleGenerate = async () => {
+  const handleGenerate = async (timeStr) => {
     setGenerating(true); setGenError('');
     try {
-      const { data } = await api.post(`/applications/${appId}/generate-interview`);
+      const payload = timeStr ? { startTime: new Date(timeStr).toISOString() } : {};
+      const { data } = await api.post(`/applications/${appId}/generate-interview`, payload);
       setApp(data.data);
     } catch (err) {
       setGenError(err.response?.data?.error || 'Failed to generate interview');
@@ -586,9 +587,31 @@ const CandidateDetail = ({ appId, onBack }) => {
               This candidate has passed all rounds and is awaiting an interview session.
             </p>
             {genError && <div className="alert alert-danger" style={{ marginBottom: 12 }}>{genError}</div>}
-            <button className="btn btn-primary" onClick={handleGenerate} disabled={generating}>
-              {generating ? 'Generating...' : '🎥 Generate Interview Session'}
-            </button>
+            
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 16, flexWrap: 'wrap' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>
+                  SCHEDULE TIME
+                </label>
+                <input 
+                  type="datetime-local" 
+                  id="interviewScheduleTime"
+                  defaultValue={new Date(Date.now() + 86400000 - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)} 
+                  className="input" 
+                  style={{ padding: '8px 12px', width: '220px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '6px' }}
+                />
+              </div>
+              <button 
+                className="btn btn-primary" 
+                style={{ alignSelf: 'flex-end', height: '40px' }}
+                onClick={() => {
+                  const el = document.getElementById('interviewScheduleTime');
+                  handleGenerate(el ? el.value : null);
+                }} 
+                disabled={generating}>
+                {generating ? 'Generating...' : '🎥 Generate Interview Session'}
+              </button>
+            </div>
           </div>
         ) : (
           <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
