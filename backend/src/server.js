@@ -14,9 +14,11 @@ const setupSignaling = require('./socket/signalingHandler');
 // Routes
 const authRoutes = require('./routes/auth.routes');
 const interviewRoutes = require('./routes/interview.routes');
-const proctoringRoutes = require('./routes/proctoring.routes');
-const codeRoutes = require('./routes/code.routes');
+const submissionRoutes = require('./routes/submission.routes');
 const recordingRoutes = require('./routes/recording.routes');
+const jobRoutes = require('./routes/job.routes');
+const mcqRoutes = require('./routes/mcq.routes');
+const applicationRoutes = require('./routes/application.routes');
 
 // ─── App Setup ────────────────────────────────────────────────────────────────
 const app = express();
@@ -64,9 +66,11 @@ app.use('/uploads', express.static(path.resolve(process.cwd(), 'uploads')));
 // ─── Routes ───────────────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
 app.use('/api/interviews', interviewRoutes);
-app.use('/api/proctoring', proctoringRoutes);
-app.use('/api/code', codeRoutes);
+app.use('/api/submissions', submissionRoutes);
 app.use('/api/recordings', recordingRoutes);
+app.use('/api/jobs', jobRoutes);
+app.use('/api/mcq', mcqRoutes);
+app.use('/api/applications', applicationRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

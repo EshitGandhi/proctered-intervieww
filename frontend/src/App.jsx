@@ -7,6 +7,10 @@ import CandidateRoom from './pages/CandidateRoom';
 import InterviewerDashboard from './pages/InterviewerDashboard';
 import SessionPlayback from './pages/SessionPlayback';
 import InterviewerRoom from './pages/InterviewerRoom';
+import JobBoard from './pages/candidate/JobBoard';
+import ApplicationFlow from './pages/candidate/ApplicationFlow';
+import MCQTest from './pages/candidate/MCQTest';
+import CodeEvalRound from './pages/candidate/CodeEvalRound';
 import './index.css';
 
 // ── Protected Route ───────────────────────────────────────────
@@ -40,6 +44,26 @@ const AppRouter = () => {
       <Route path="/register" element={<AuthPage />} />
 
       {/* Candidate routes */}
+      <Route path="/jobs" element={
+        <ProtectedRoute roles={['candidate']}>
+          <JobBoard />
+        </ProtectedRoute>
+      } />
+      <Route path="/apply/:jobId" element={
+        <ProtectedRoute roles={['candidate']}>
+          <ApplicationFlow />
+        </ProtectedRoute>
+      } />
+      <Route path="/mcq/:appId" element={
+        <ProtectedRoute roles={['candidate']}>
+          <MCQTest />
+        </ProtectedRoute>
+      } />
+      <Route path="/coding/:appId" element={
+        <ProtectedRoute roles={['candidate']}>
+          <CodeEvalRound />
+        </ProtectedRoute>
+      } />
       <Route path="/join" element={
         <ProtectedRoute roles={['candidate']}>
           <JoinPage />
@@ -71,7 +95,7 @@ const AppRouter = () => {
       {/* Root redirect */}
       <Route path="/" element={
         user
-          ? <Navigate to={user.role === 'candidate' ? '/join' : '/dashboard'} replace />
+          ? <Navigate to={user.role === 'candidate' ? '/jobs' : '/dashboard'} replace />
           : <Navigate to="/login" replace />
       } />
 

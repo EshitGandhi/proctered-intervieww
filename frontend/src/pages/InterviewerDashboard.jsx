@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { ProctoringWidget } from '../components/Proctoring/ProctoringComponents';
 import VideoPanel from '../components/VideoModule/VideoPanel';
+import JobManagement from './admin/JobManagement';
+import CandidatePipeline from './admin/CandidatePipeline';
 import api from '../services/api';
 import useWebRTC from '../hooks/useWebRTC';
 import { connectSocket } from '../services/socket';
@@ -24,6 +26,9 @@ const InterviewerDashboard = () => {
   const [activeSession, setActiveSession] = useState(null); // monitoring a live session
   const [liveViolations, setLiveViolations] = useState([]);
   const [copied, setCopied] = useState('');
+  
+  // Dashboard Tabs: 'interviews' | 'jobs' | 'pipeline'
+  const [activeTab, setActiveTab] = useState('interviews');
 
   // Fetch interviews
   const fetchInterviews = async () => {
@@ -147,6 +152,13 @@ const InterviewerDashboard = () => {
           ))}
         </div>
 
+        {/* Tabs */}
+        <div style={{ display: 'flex', gap: 16, marginBottom: 24, borderBottom: '1px solid var(--border)', paddingBottom: 16 }}>
+          <button className={`btn ${activeTab === 'interviews' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setActiveTab('interviews')}>Video Interviews</button>
+          <button className={`btn ${activeTab === 'jobs' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setActiveTab('jobs')}>Jobs & MCQs</button>
+          <button className={`btn ${activeTab === 'pipeline' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setActiveTab('pipeline')}>Candidate Pipeline</button>
+        </div>
+
         {/* Live monitoring panel */}
         {activeSession && (
           <div className="card" style={{ marginBottom: 24, borderColor: '#10b981' }}>
@@ -178,8 +190,15 @@ const InterviewerDashboard = () => {
           </div>
         )}
 
-        {/* Interviews table */}
-        <div className="card">
+        {/* Tab Content: Jobs */}
+        {activeTab === 'jobs' && <JobManagement />}
+
+        {/* Tab Content: Candidate Pipeline */}
+        {activeTab === 'pipeline' && <CandidatePipeline />}
+
+        {/* Tab Content: Interviews table */}
+        {activeTab === 'interviews' && (
+          <div className="card">
           <div className="card-header">
             <h2 style={{ fontSize: '1.1rem' }}>Interview Sessions</h2>
             <button className="btn btn-primary btn-sm" onClick={() => setShowModal(true)}>
@@ -268,6 +287,7 @@ const InterviewerDashboard = () => {
             </table>
           )}
         </div>
+        )}
       </div>
 
       {/* Create Interview Modal */}
