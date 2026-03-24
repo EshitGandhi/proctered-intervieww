@@ -15,7 +15,7 @@ const recordingSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ['video', 'audio', 'screen'],
+      enum: ['video', 'audio', 'screen', 'transcript'],
       default: 'video',
     },
     storageType: {

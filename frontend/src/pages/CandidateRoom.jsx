@@ -68,6 +68,7 @@ const CandidateRoom = () => {
     if (interview) {
       webRTC.joinRoom().then(() => {
         recorder.startRecording();
+        recorder.startScreenCapture(); // starts screen recording + transcription
         proctoring.requestFullscreen();
       }).catch((err) => setError(err.message));
     }
@@ -109,6 +110,7 @@ const CandidateRoom = () => {
 
   const handleEndSession = async () => {
     recorder.stopRecording();
+    recorder.stopScreenCapture(); // stops screen recording + uploads transcript
     webRTC.leaveRoom();
     setSessionEnded(true);
     navigate('/join?ended=1');
@@ -161,6 +163,30 @@ const CandidateRoom = () => {
               <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>{interview?.title || 'Interview Session'}</span>
             </div>
             <div style={{ flex: 1 }} />
+            {/* Screen recording status */}
+            {recorder.screenRecording && (
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.35)',
+                borderRadius: 20, padding: '3px 10px', fontSize: '0.72rem', color: '#fca5a5',
+              }}>
+                <span style={{
+                  width: 7, height: 7, borderRadius: '50%', background: '#ef4444',
+                  animation: 'pulse 1.4s infinite',
+                }} />
+                🖥 Screen Recording
+              </div>
+            )}
+            {recorder.transcribing && recorder.transcript && (
+              <div style={{
+                maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap', fontSize: '0.7rem', color: 'var(--text-muted)',
+                background: 'var(--bg-secondary)', borderRadius: 20, padding: '3px 10px',
+                border: '1px solid var(--border)',
+              }} title={recorder.transcript}>
+                📝 {recorder.transcript.slice(-60)}
+              </div>
+            )}
             <span className={`badge ${proctoring.violationCount > 5 ? 'badge-danger' : proctoring.violationCount > 0 ? 'badge-warning' : 'badge-success'}`}>
               {proctoring.violationCount} violations
             </span>

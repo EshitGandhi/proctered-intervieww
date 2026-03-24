@@ -12,6 +12,8 @@ const SessionPlayback = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('recordings');
   const [selectedSubmission, setSelectedSubmission] = useState(null);
+  const [transcriptContent, setTranscriptContent] = useState(null);
+  const [transcriptLoading, setTranscriptLoading] = useState(false);
   const videoRef = useRef(null);
 
   const BACKEND_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
@@ -44,6 +46,34 @@ const SessionPlayback = () => {
     const m = Math.floor(diff / 60);
     const s = diff % 60;
     return `${m}m ${s}s`;
+  };
+
+  // Fetch transcript text when Transcript tab is opened
+  const handleTranscriptTab = async () => {
+    setActiveTab('transcript');
+    if (transcriptContent !== null) return; // already fetched
+    const transcriptRec = recordings.find((r) => r.type === 'transcript');
+    if (!transcriptRec) { setTranscriptContent(''); return; }
+    try {
+      setTranscriptLoading(true);
+      const res = await api.get(`/recordings/${transcriptRec._id}/transcript`);
+      setTranscriptContent(res.data);
+    } catch (err) {
+      setTranscriptContent('[Error loading transcript]');
+    } finally {
+      setTranscriptLoading(false);
+    }
+  };
+
+  const downloadTranscript = () => {
+    if (!transcriptContent) return;
+    const blob = new Blob([transcriptContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `transcript-${interview?.candidateName || 'session'}-${new Date().toISOString().slice(0, 10)}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const LANG_ICONS = { python: '🐍', javascript: '🟨', java: '☕', c: '🔵', cpp: '🔷' };
@@ -111,13 +141,14 @@ const SessionPlayback = () => {
         {/* Tabs */}
         <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: 'var(--bg-card)', padding: 4, borderRadius: 10, border: '1px solid var(--border)', width: 'fit-content' }}>
           {[
-            { id: 'recordings', label: `🎬 Recordings (${recordings.length})` },
+            { id: 'recordings', label: `🎬 Recordings (${recordings.filter(r => r.type !== 'transcript').length})` },
             { id: 'submissions', label: `💻 Code (${submissions.length})` },
             { id: 'violations', label: `⚠ Violations (${violations.length})` },
+            { id: 'transcript', label: `📝 Transcript`, onClick: handleTranscriptTab },
           ].map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={tab.onClick || (() => setActiveTab(tab.id))}
               style={{
                 padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer',
                 fontFamily: 'Inter, sans-serif', fontSize: '0.85rem', fontWeight: 600,
@@ -134,35 +165,79 @@ const SessionPlayback = () => {
         {/* Recordings Tab */}
         {activeTab === 'recordings' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {recordings.length === 0 ? (
+            {recordings.filter(r => r.type !== 'transcript').length === 0 ? (
               <div className="card" style={{ textAlign: 'center', padding: '40px' }}>
                 <div style={{ fontSize: 40, marginBottom: 12 }}>📭</div>
                 <p style={{ color: 'var(--text-muted)' }}>No recordings available for this session</p>
               </div>
-            ) : recordings.map((rec) => (
-              <div key={rec._id} className="card">
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{ fontSize: 24 }}>{rec.type === 'audio' ? '🎵' : '🎬'}</span>
-                    <div>
-                      <div style={{ fontWeight: 600, textTransform: 'capitalize' }}>{rec.type} Recording</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                        {new Date(rec.uploadedAt).toLocaleString()} ·{' '}
-                        {(rec.fileSize / 1024 / 1024).toFixed(1)} MB
+            ) : recordings.filter(r => r.type !== 'transcript').map((rec) => {
+              const icon = rec.type === 'screen' ? '🖥️' : rec.type === 'audio' ? '🎵' : '🎬';
+              const label = rec.type === 'screen' ? 'Screen Recording' : rec.type === 'audio' ? 'Audio Recording' : 'Camera Recording';
+              return (
+                <div key={rec._id} className="card">
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{ fontSize: 24 }}>{icon}</span>
+                      <div>
+                        <div style={{ fontWeight: 600 }}>{label}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                          {new Date(rec.uploadedAt).toLocaleString()} ·{' '}
+                          {(rec.fileSize / 1024 / 1024).toFixed(1)} MB
+                        </div>
                       </div>
                     </div>
                   </div>
+                  {rec.filePath && (
+                    <video
+                      ref={videoRef}
+                      controls
+                      style={{ width: '100%', borderRadius: 8, background: '#000', maxHeight: 400 }}
+                      src={rec.filePath.startsWith('http') ? rec.filePath : `${BACKEND_URL}${rec.filePath}`}
+                    />
+                  )}
                 </div>
-                {rec.filePath && (
-                  <video
-                    ref={videoRef}
-                    controls
-                    style={{ width: '100%', borderRadius: 8, background: '#000', maxHeight: 400 }}
-                    src={`${BACKEND_URL}${rec.filePath}`}
-                  />
-                )}
+              );
+            })}
+          </div>
+        )}
+
+        {/* Transcript Tab */}
+        {activeTab === 'transcript' && (
+          <div className="card">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 24 }}>📝</span>
+                <div>
+                  <div style={{ fontWeight: 600 }}>Speech Transcript</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Auto-generated from candidate's microphone</div>
+                </div>
               </div>
-            ))}
+              {transcriptContent && (
+                <button className="btn btn-primary btn-sm" onClick={downloadTranscript}>
+                  ⬇ Download .txt
+                </button>
+              )}
+            </div>
+            {transcriptLoading ? (
+              <div style={{ textAlign: 'center', padding: 40 }}><div className="spinner" /></div>
+            ) : transcriptContent === null ? (
+              <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: 40 }}>Loading…</p>
+            ) : transcriptContent === '' ? (
+              <div style={{ textAlign: 'center', padding: 40 }}>
+                <div style={{ fontSize: 40, marginBottom: 12 }}>📭</div>
+                <p style={{ color: 'var(--text-muted)' }}>No transcript available for this session</p>
+              </div>
+            ) : (
+              <pre style={{
+                whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                background: 'var(--bg-secondary)', padding: 20, borderRadius: 10,
+                fontSize: '0.9rem', lineHeight: 1.7, color: 'var(--text-primary)',
+                border: '1px solid var(--border)', maxHeight: 500, overflowY: 'auto',
+                fontFamily: 'Inter, sans-serif',
+              }}>
+                {transcriptContent}
+              </pre>
+            )}
           </div>
         )}
 
