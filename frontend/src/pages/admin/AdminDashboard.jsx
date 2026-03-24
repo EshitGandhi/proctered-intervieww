@@ -523,7 +523,20 @@ const CandidateDetail = ({ appId, onBack }) => {
       {/* Resume detail */}
       {app.scores?.resume?.matchedSkills?.length > 0 && (
         <div className="card" style={{ marginBottom: 16 }}>
-          <h3 style={{ fontSize: '0.95rem', marginBottom: 14 }}>Resume Analysis</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <h3 style={{ fontSize: '0.95rem', margin: 0 }}>Resume Analysis</h3>
+            {app.scores?.resume?.resumeUrl && (
+              <a
+                href={`${api.defaults.baseURL?.replace('/api', '') || 'http://localhost:5000'}${app.scores.resume.resumeUrl}`}
+                target="_blank"
+                rel="noreferrer"
+                className="btn btn-secondary btn-sm"
+                style={{ textDecoration: 'none' }}
+              >
+                📄 View Resume
+              </a>
+            )}
+          </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             <div>
               <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#10b981', marginBottom: 8, textTransform: 'uppercase' }}>Matched Skills</div>

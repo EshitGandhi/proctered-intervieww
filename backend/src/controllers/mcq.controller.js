@@ -1,5 +1,6 @@
 const multer = require('multer');
 const xlsx = require('xlsx');
+const mongoose = require('mongoose');
 const MCQ = require('../models/MCQ');
 const Job = require('../models/Job');
 const fs = require('fs');
@@ -114,7 +115,7 @@ exports.getTestMCQs = async (req, res) => {
 
     // Aggregate query to get random documents
     const questions = await MCQ.aggregate([
-      { $match: { jobId: new require('mongoose').Types.ObjectId(jobId) } },
+      { $match: { jobId: new mongoose.Types.ObjectId(jobId) } },
       { $sample: { size: limit } }, // Randomize
       { $project: { correctAnswer: 0, createdAt: 0, updatedAt: 0, __v: 0 } }, // Hide sensitive info
     ]);
@@ -126,6 +127,7 @@ exports.getTestMCQs = async (req, res) => {
 
     res.status(200).json({ success: true, count: questions.length, data: questions });
   } catch (error) {
-    res.status(400).json({ success: false, error: 'Failed to fetch test questions' });
+    console.error('getTestMCQs error:', error);
+    res.status(400).json({ success: false, error: 'Failed to fetch test questions: ' + error.message });
   }
 };
