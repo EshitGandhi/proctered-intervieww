@@ -1,19 +1,21 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+
+// Pages
 import AuthPage from './pages/AuthPage';
-import JoinPage from './pages/JoinPage';
-import CandidateRoom from './pages/CandidateRoom';
-import InterviewerDashboard from './pages/InterviewerDashboard';
-import SessionPlayback from './pages/SessionPlayback';
-import InterviewerRoom from './pages/InterviewerRoom';
-import JobBoard from './pages/candidate/JobBoard';
-import ApplicationFlow from './pages/candidate/ApplicationFlow';
+import CandidateDashboard from './pages/candidate/CandidateDashboard';
 import MCQTest from './pages/candidate/MCQTest';
 import CodeEvalRound from './pages/candidate/CodeEvalRound';
+import CandidateRoom from './pages/CandidateRoom';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import InterviewerDashboard from './pages/InterviewerDashboard';
+import InterviewerRoom from './pages/InterviewerRoom';
+import SessionPlayback from './pages/SessionPlayback';
+
 import './index.css';
 
-// ── Protected Route ───────────────────────────────────────────
+// ─── Protected Route ──────────────────────────────────────────────────────────
 const ProtectedRoute = ({ children, roles }) => {
   const { user, loading } = useAuth();
 
@@ -28,30 +30,25 @@ const ProtectedRoute = ({ children, roles }) => {
 
   if (!user) return <Navigate to="/login" replace />;
   if (roles && !roles.includes(user.role)) {
-    return <Navigate to={user.role === 'candidate' ? '/join' : '/dashboard'} replace />;
+    return <Navigate to={user.role === 'candidate' ? '/dashboard' : '/admin'} replace />;
   }
   return children;
 };
 
-// ── App Router ────────────────────────────────────────────────
+// ─── App Router ───────────────────────────────────────────────────────────────
 const AppRouter = () => {
   const { user } = useAuth();
 
   return (
     <Routes>
-      {/* Public */}
+      {/* Auth */}
       <Route path="/login" element={<AuthPage />} />
       <Route path="/register" element={<AuthPage />} />
 
-      {/* Candidate routes */}
-      <Route path="/jobs" element={
+      {/* ── Candidate Routes ── */}
+      <Route path="/dashboard" element={
         <ProtectedRoute roles={['candidate']}>
-          <JobBoard />
-        </ProtectedRoute>
-      } />
-      <Route path="/apply/:jobId" element={
-        <ProtectedRoute roles={['candidate']}>
-          <ApplicationFlow />
+          <CandidateDashboard />
         </ProtectedRoute>
       } />
       <Route path="/mcq/:appId" element={
@@ -64,38 +61,54 @@ const AppRouter = () => {
           <CodeEvalRound />
         </ProtectedRoute>
       } />
-      <Route path="/join" element={
-        <ProtectedRoute roles={['candidate']}>
-          <JoinPage />
-        </ProtectedRoute>
-      } />
       <Route path="/room/:roomId" element={
         <ProtectedRoute roles={['candidate']}>
           <CandidateRoom />
         </ProtectedRoute>
       } />
 
-      {/* Interviewer routes */}
-      <Route path="/dashboard" element={
-        <ProtectedRoute roles={['interviewer', 'admin']}>
+      {/* ── Admin / Interviewer Routes ── */}
+      <Route path="/admin" element={
+        <ProtectedRoute roles={['admin', 'interviewer']}>
+          <AdminDashboard />
+        </ProtectedRoute>
+      } />
+      <Route path="/admin/jobs" element={
+        <ProtectedRoute roles={['admin', 'interviewer']}>
+          <AdminDashboard />
+        </ProtectedRoute>
+      } />
+      <Route path="/admin/mcq" element={
+        <ProtectedRoute roles={['admin', 'interviewer']}>
+          <AdminDashboard />
+        </ProtectedRoute>
+      } />
+      <Route path="/admin/candidates" element={
+        <ProtectedRoute roles={['admin', 'interviewer']}>
+          <AdminDashboard />
+        </ProtectedRoute>
+      } />
+      {/* Legacy dashboard (interview sessions) */}
+      <Route path="/interviews" element={
+        <ProtectedRoute roles={['admin', 'interviewer']}>
           <InterviewerDashboard />
         </ProtectedRoute>
       } />
       <Route path="/monitor/:roomId" element={
-        <ProtectedRoute roles={['interviewer', 'admin']}>
+        <ProtectedRoute roles={['admin', 'interviewer']}>
           <InterviewerRoom />
         </ProtectedRoute>
       } />
       <Route path="/playback/:interviewId" element={
-        <ProtectedRoute roles={['interviewer', 'admin']}>
+        <ProtectedRoute roles={['admin', 'interviewer']}>
           <SessionPlayback />
         </ProtectedRoute>
       } />
 
-      {/* Root redirect */}
+      {/* Root redirect by role */}
       <Route path="/" element={
         user
-          ? <Navigate to={user.role === 'candidate' ? '/jobs' : '/dashboard'} replace />
+          ? <Navigate to={user.role === 'candidate' ? '/dashboard' : '/admin'} replace />
           : <Navigate to="/login" replace />
       } />
 
@@ -103,7 +116,7 @@ const AppRouter = () => {
       <Route path="*" element={
         <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12 }}>
           <div style={{ fontSize: 64 }}>🔍</div>
-          <h2 style={{ fontSize: '1.5rem' }}>Page Not Found</h2>
+          <h2>Page Not Found</h2>
           <a href="/" className="btn btn-primary">Go Home</a>
         </div>
       } />

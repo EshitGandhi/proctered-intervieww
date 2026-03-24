@@ -26,6 +26,7 @@ const applicationSchema = new mongoose.Schema(
         'coding_passed',
         'coding_failed',
         'interview_pending',
+        'interview_scheduled',
         'interview_completed',
         'hired',
         'rejected',
