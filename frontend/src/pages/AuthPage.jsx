@@ -13,7 +13,7 @@ const AuthPage = () => {
   // Redirect if already logged in
   React.useEffect(() => {
     if (user) {
-      navigate(user.role === 'candidate' ? '/join' : '/dashboard');
+      navigate(user.role === 'candidate' ? '/dashboard' : '/admin');
     }
   }, [user]);
 
@@ -28,7 +28,7 @@ const AuthPage = () => {
       } else {
         u = await register(form.name, form.email, form.password, form.role);
       }
-      navigate(u.role === 'candidate' ? '/join' : '/dashboard');
+      navigate(u.role === 'candidate' ? '/dashboard' : '/admin');
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'An error occurred');
     } finally {
@@ -153,6 +153,10 @@ const AuthPage = () => {
             </button>
           </p>
         )}
+        <p style={{ textAlign: 'center', marginTop: 12, fontSize: '0.78rem', color: 'var(--text-muted)', borderTop: '1px solid var(--border)', paddingTop: 14 }}>
+          Applying for a job?{' '}
+          <a href="/register/candidate" style={{ color: 'var(--accent-primary)', fontWeight: 600 }}>Candidate Sign-Up →</a>
+        </p>
       </div>
     </div>
   );

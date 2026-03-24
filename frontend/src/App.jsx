@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 
 // Pages
 import AuthPage from './pages/AuthPage';
+import CandidateRegister from './pages/CandidateRegister';
 import CandidateDashboard from './pages/candidate/CandidateDashboard';
 import MCQTest from './pages/candidate/MCQTest';
 import CodeEvalRound from './pages/candidate/CodeEvalRound';
@@ -44,6 +45,10 @@ const AppRouter = () => {
       {/* Auth */}
       <Route path="/login" element={<AuthPage />} />
       <Route path="/register" element={<AuthPage />} />
+      {/* Dedicated shareable candidate registration link */}
+      <Route path="/register/candidate" element={<CandidateRegister />} />
+      {/* Legacy /join redirect */}
+      <Route path="/join" element={<Navigate to="/login" replace />} />
 
       {/* ── Candidate Routes ── */}
       <Route path="/dashboard" element={
