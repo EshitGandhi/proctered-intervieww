@@ -300,6 +300,7 @@ const CandidateDashboard = () => {
   const navigate = useNavigate();
 
   const fetchApplications = async () => {
+    setLoading(true);
     try {
       const { data } = await api.get('/applications/my');
       setApplications(data.data);
@@ -308,7 +309,7 @@ const CandidateDashboard = () => {
     }
   };
 
-  useEffect(() => { fetchApplications(); }, []);
+  useEffect(() => { fetchApplications(); }, [tab]);
 
   return (
     <AppLayout>
