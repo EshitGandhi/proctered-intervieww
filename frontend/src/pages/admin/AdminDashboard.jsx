@@ -436,6 +436,24 @@ const CandidateDetail = ({ appId, onBack }) => {
     }
   };
 
+  const handleOverride = async (action) => {
+    if (!window.confirm('Are you sure you want to perform this override action?')) return;
+    setGenerating(true); setGenError('');
+    try {
+      if (action === 'delete') {
+        await api.delete(`/applications/${appId}`);
+        onBack(); // go back to candidates list
+      } else {
+        const { data } = await api.post(`/applications/${appId}/override`, { action });
+        setApp(data.data);
+      }
+    } catch (err) {
+      setGenError(err.response?.data?.error || 'Action failed');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   if (loading) return <div style={{ textAlign: 'center', padding: 60 }}><div className="spinner" /></div>;
   if (!app) return <div>Application not found</div>;
 
@@ -468,6 +486,31 @@ const CandidateDetail = ({ appId, onBack }) => {
           </span>
         </div>
       </div>
+
+      {/* Admin Overrides */}
+      {(app.status === 'resume_rejected' || app.status === 'mcq_failed') && (
+        <div className="card" style={{ marginBottom: 20, background: '#fef2f2', border: '1px solid #fca5a5' }}>
+          <h3 style={{ fontSize: '0.95rem', marginBottom: 10, color: '#991b1b' }}>Admin Overrides</h3>
+          <p style={{ fontSize: '0.8rem', color: '#7f1d1d', marginBottom: 14 }}>
+            Candidate was rejected. You can manually intervene to give them another chance.
+          </p>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <button className="btn btn-secondary btn-sm" onClick={() => handleOverride('delete')} disabled={generating}>
+              {generating ? '...' : '🗑 Delete Application (Allows Re-upload)'}
+            </button>
+            {app.status === 'resume_rejected' && (
+              <button className="btn btn-primary btn-sm" onClick={() => handleOverride('force_mcq')} disabled={generating}>
+                📝 Ignore Resume & Allow MCQ
+              </button>
+            )}
+            {app.status === 'mcq_failed' && (
+              <button className="btn btn-primary btn-sm" onClick={() => handleOverride('retry_mcq')} disabled={generating}>
+                🔄 Allow MCQ Retry
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Scores */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>

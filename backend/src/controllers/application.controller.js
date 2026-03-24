@@ -241,3 +241,53 @@ exports.generateInterview = async (req, res) => {
     res.status(400).json({ success: false, error: error.message });
   }
 };
+
+// ─── Admin overrides ───────────────────────────────────────────────────────────
+// DELETE /api/applications/:appId
+exports.deleteApplication = async (req, res) => {
+  try {
+    const app = await Application.findById(req.params.appId);
+    if (!app) return res.status(404).json({ success: false, error: 'Application not found' });
+    
+    // optionally delete file if it exists, though storage.service logic would be better
+    if (app.scores?.resume?.resumeUrl) {
+      const p = path.join(process.cwd(), app.scores.resume.resumeUrl);
+      if (fs.existsSync(p)) fs.unlinkSync(p);
+    }
+    
+    await Application.findByIdAndDelete(req.params.appId);
+    res.status(200).json({ success: true, message: 'Application deleted. Candidate can re-apply.' });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+};
+
+// POST /api/applications/:appId/override
+// body: { action: 'force_mcq' | 'retry_mcq' }
+exports.overrideApplicationStatus = async (req, res) => {
+  try {
+    const app = await Application.findById(req.params.appId).populate('jobId').populate('candidateId');
+    if (!app) return res.status(404).json({ success: false, error: 'Application not found' });
+
+    const { action } = req.body;
+    let message = '';
+
+    if (action === 'force_mcq' && app.status === 'resume_rejected') {
+      app.status = 'mcq_pending';
+      message = 'ATS Resume result overridden. Candidate can now take the MCQ round.';
+    } else if (action === 'retry_mcq' && app.status === 'mcq_failed') {
+      app.status = 'mcq_pending';
+      delete app.scores.mcq;
+      // Tricky: mongoose maps require MarkModified if not fully replacing, but deleting the whole key is ok if we use doc.set
+      app.set('scores.mcq', undefined); 
+      message = 'MCQ score reset. Candidate can retake the MCQ round.';
+    } else {
+      return res.status(400).json({ success: false, error: 'Invalid override action for current status' });
+    }
+
+    await app.save();
+    res.status(200).json({ success: true, data: app, message });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+};

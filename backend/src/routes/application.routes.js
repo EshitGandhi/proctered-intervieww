@@ -11,6 +11,8 @@ const {
   getApplicationDetail,
   submitMCQ,
   generateInterview,
+  deleteApplication,
+  overrideApplicationStatus,
 } = require('../controllers/application.controller');
 const Application = require('../models/Application');
 
@@ -79,5 +81,7 @@ router.get('/admin/all', protect, requireRole('admin', 'interviewer'), getAdminA
 router.get('/job/:jobId', protect, requireRole('admin', 'interviewer'), getJobApplications);
 router.get('/:appId', protect, getApplicationDetail);
 router.post('/:appId/generate-interview', protect, requireRole('admin', 'interviewer'), generateInterview);
+router.delete('/:appId', protect, requireRole('admin', 'interviewer'), deleteApplication);
+router.post('/:appId/override', protect, requireRole('admin', 'interviewer'), overrideApplicationStatus);
 
 module.exports = router;
