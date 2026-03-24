@@ -12,7 +12,7 @@ const SessionPlayback = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('recordings');
   const [selectedSubmission, setSelectedSubmission] = useState(null);
-  const [transcriptContent, setTranscriptContent] = useState(null);
+  const [transcriptsData, setTranscriptsData] = useState([]);
   const [transcriptLoading, setTranscriptLoading] = useState(false);
   const videoRef = useRef(null);
 
@@ -48,30 +48,38 @@ const SessionPlayback = () => {
     return `${m}m ${s}s`;
   };
 
-  // Fetch transcript text when Transcript tab is opened
+  // Fetch transcripts text when Transcript tab is opened
   const handleTranscriptTab = async () => {
     setActiveTab('transcript');
-    if (transcriptContent !== null) return; // already fetched
-    const transcriptRec = recordings.find((r) => r.type === 'transcript');
-    if (!transcriptRec) { setTranscriptContent(''); return; }
+    const transcriptRecs = recordings.filter((r) => r.type === 'transcript');
+    if (transcriptRecs.length === 0) { setTranscriptsData([]); return; }
+    
+    // If already loaded the same number of transcripts, don't re-fetch everything
+    if (transcriptsData.length === transcriptRecs.length) return;
+
     try {
       setTranscriptLoading(true);
-      const res = await api.get(`/recordings/${transcriptRec._id}/transcript`);
-      setTranscriptContent(res.data);
+      const allTranscripts = await Promise.all(
+        transcriptRecs.map(async (rec) => {
+          const res = await api.get(`/recordings/${rec._id}/transcript`);
+          return { id: rec._id, content: res.data, date: rec.uploadedAt };
+        })
+      );
+      setTranscriptsData(allTranscripts);
     } catch (err) {
-      setTranscriptContent('[Error loading transcript]');
+      console.error('Error fetching transcripts:', err);
     } finally {
       setTranscriptLoading(false);
     }
   };
 
-  const downloadTranscript = () => {
-    if (!transcriptContent) return;
-    const blob = new Blob([transcriptContent], { type: 'text/plain' });
+  const downloadTranscript = (content, date) => {
+    if (!content) return;
+    const blob = new Blob([content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `transcript-${interview?.candidateName || 'session'}-${new Date().toISOString().slice(0, 10)}.txt`;
+    a.download = `transcript-${interview?.candidateName || 'session'}-${new Date(date).toISOString().slice(0, 16).replace(':', '-')}.txt`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -204,39 +212,47 @@ const SessionPlayback = () => {
         {/* Transcript Tab */}
         {activeTab === 'transcript' && (
           <div className="card">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: 24 }}>📝</span>
-                <div>
-                  <div style={{ fontWeight: 600 }}>Speech Transcript</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Auto-generated from candidate's microphone</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+              <span style={{ fontSize: 24 }}>📝</span>
+              <div>
+                <div style={{ fontWeight: 600 }}>Speech Transcripts</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  Auto-generated from candidate's microphone during the session
                 </div>
               </div>
-              {transcriptContent && (
-                <button className="btn btn-primary btn-sm" onClick={downloadTranscript}>
-                  ⬇ Download .txt
-                </button>
-              )}
             </div>
+
             {transcriptLoading ? (
               <div style={{ textAlign: 'center', padding: 40 }}><div className="spinner" /></div>
-            ) : transcriptContent === null ? (
-              <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: 40 }}>Loading…</p>
-            ) : transcriptContent === '' ? (
+            ) : transcriptsData.length === 0 ? (
               <div style={{ textAlign: 'center', padding: 40 }}>
                 <div style={{ fontSize: 40, marginBottom: 12 }}>📭</div>
-                <p style={{ color: 'var(--text-muted)' }}>No transcript available for this session</p>
+                <p style={{ color: 'var(--text-muted)' }}>No transcripts found for this interview</p>
               </div>
             ) : (
-              <pre style={{
-                whiteSpace: 'pre-wrap', wordBreak: 'break-word',
-                background: 'var(--bg-secondary)', padding: 20, borderRadius: 10,
-                fontSize: '0.9rem', lineHeight: 1.7, color: 'var(--text-primary)',
-                border: '1px solid var(--border)', maxHeight: 500, overflowY: 'auto',
-                fontFamily: 'Inter, sans-serif',
-              }}>
-                {transcriptContent}
-              </pre>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                {transcriptsData.map((tr, idx) => (
+                  <div key={tr.id} style={{ borderBottom: idx < transcriptsData.length - 1 ? '1px solid var(--border)' : 'none', paddingBottom: 24 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                        FRAGMENT {idx + 1} — {new Date(tr.date).toLocaleString()}
+                      </span>
+                      <button className="btn btn-ghost btn-xs" onClick={() => downloadTranscript(tr.content, tr.date)}>
+                        ⬇ Download .txt
+                      </button>
+                    </div>
+                    <pre style={{
+                      whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                      background: 'var(--bg-secondary)', padding: 16, borderRadius: 8,
+                      fontSize: '0.88rem', lineHeight: 1.6, color: 'var(--text-primary)',
+                      border: '1px solid var(--border)', maxHeight: 300, overflowY: 'auto',
+                      fontFamily: 'Inter, sans-serif',
+                    }}>
+                      {tr.content}
+                    </pre>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         )}

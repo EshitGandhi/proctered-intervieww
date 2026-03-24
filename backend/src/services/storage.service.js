@@ -105,7 +105,7 @@ const uploadRecording = multer({
  */
 const getFileUrl = (file, type = 'recordings') => {
   if (STORAGE_TYPE === 's3') {
-    return file.location; // Provided by multer-s3
+    return file.location;
   }
   return `/uploads/${type}/${file.filename}`;
 };
@@ -114,10 +114,9 @@ const getFileUrl = (file, type = 'recordings') => {
  * Delete a file.
  */
 const deleteFile = async (recording) => {
-  if (STORAGE_TYPE === 's3' && recording.s3Key) {
-    // Note: Implementation for S3 delete can be added here if needed
-    // const { DeleteObjectCommand } = require('@aws-sdk/client-s3');
-    // await s3.send(new DeleteObjectCommand({ Bucket: process.env.AWS_S3_BUCKET, Key: recording.s3Key }));
+  if (STORAGE_TYPE === 's3' && recording.s3Key && s3) {
+    const { DeleteObjectCommand } = require('@aws-sdk/client-s3');
+    await s3.send(new DeleteObjectCommand({ Bucket: process.env.AWS_S3_BUCKET, Key: recording.s3Key }));
     return;
   }
   
@@ -134,5 +133,6 @@ module.exports = {
   getFileUrl, 
   deleteFile, 
   UPLOAD_DIR,
-  STORAGE_TYPE 
+  STORAGE_TYPE,
+  s3 // Export S3 client to be used in routes
 };

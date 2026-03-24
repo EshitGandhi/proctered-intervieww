@@ -4,7 +4,7 @@ import api from '../services/api';
 /**
  * useRecorder — handles:
  *  1. Camera/mic stream recording (WebRTC stream) → uploads as `video`
- *  2. Screen recording (getDisplayMedia) with audio → uploads as `screen`
+ *  2. Screen recording (getDisplayMedia) with MIXED audio (Mic + System) → uploads as `screen`
  *  3. Live speech transcription (SpeechRecognition) → uploads as `transcript` (.txt)
  */
 const useRecorder = ({ interviewId, stream }) => {
@@ -21,18 +21,18 @@ const useRecorder = ({ interviewId, stream }) => {
   const screenMediaRecorderRef = useRef(null);
   const screenChunksRef = useRef([]);
   const screenStreamRef = useRef(null);
+  const audioContextRef = useRef(null);
 
   // --- Transcription state ---
   const [transcript, setTranscript] = useState('');
   const [transcribing, setTranscribing] = useState(false);
   const recognitionRef = useRef(null);
-  const transcriptRef = useRef(''); // always up-to-date copy for upload on stop
+  const transcriptRef = useRef('');
 
   // ─── Camera/mic recording ──────────────────────────────────────────────────
   const startRecording = useCallback(() => {
     if (!stream || recording) return;
     chunksRef.current = [];
-
     const options = { mimeType: 'video/webm;codecs=vp9,opus' };
     let mr;
     try {
@@ -40,20 +40,17 @@ const useRecorder = ({ interviewId, stream }) => {
     } catch {
       mr = new MediaRecorder(stream);
     }
-
     mr.ondataavailable = (e) => {
       if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
     };
-
     mr.onstop = async () => {
-      const blob = new Blob(chunksRef.current, { type: mr.mimeType || 'video/webm' });
+      const blob = new Blob(chunksRef.current, { type: 'video/webm' });
       await uploadRecording(blob, 'video');
     };
-
     mr.start(1000);
     mediaRecorderRef.current = mr;
     setRecording(true);
-  }, [stream, recording, interviewId]);
+  }, [stream, recording]);
 
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current?.state !== 'inactive') {
@@ -62,27 +59,62 @@ const useRecorder = ({ interviewId, stream }) => {
     setRecording(false);
   }, []);
 
-  // ─── Screen capture + transcription ───────────────────────────────────────
+  // ─── Screen capture + Composite Audio ──────────────────────────────────────
   const startScreenCapture = useCallback(async () => {
     if (screenRecording) return;
-
     try {
-      // Request screen + audio
       const screenStream = await navigator.mediaDevices.getDisplayMedia({
-        video: { frameRate: 15, displaySurface: 'monitor' },
-        audio: true,
+        video: { frameRate: 20, displaySurface: 'monitor' },
+        audio: true, // system audio
       });
+
+      // MIXING AUDIO: Microphone (stream) + System Audio (screenStream)
+      let finalStream = screenStream;
+      
+      try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        audioContextRef.current = audioContext;
+        const dest = audioContext.createMediaStreamDestination();
+
+        let hasAudio = false;
+
+        // 1. Add Mic (from camera/mic stream)
+        if (stream && stream.getAudioTracks().length > 0) {
+          const micSource = audioContext.createMediaStreamSource(stream);
+          micSource.connect(dest);
+          hasAudio = true;
+          console.log('Mixed: Microphone tracks added to screen recording');
+        }
+
+        // 2. Add System Audio (from screen share)
+        if (screenStream.getAudioTracks().length > 0) {
+          const screenAudioSource = audioContext.createMediaStreamSource(screenStream);
+          screenAudioSource.connect(dest);
+          hasAudio = true;
+          console.log('Mixed: System audio tracks added to screen recording');
+        }
+
+        // 3. Create final stream
+        if (hasAudio) {
+          const tracks = [
+            ...screenStream.getVideoTracks(),
+            ...dest.stream.getAudioTracks()
+          ];
+          finalStream = new MediaStream(tracks);
+        }
+      } catch (err) {
+        console.warn('Audio mixing failed, falling back to screen-only audio:', err);
+      }
 
       screenStreamRef.current = screenStream;
       screenChunksRef.current = [];
 
-      // Screen MediaRecorder
       const opts = { mimeType: 'video/webm;codecs=vp9,opus' };
       let smr;
       try {
-        smr = new MediaRecorder(screenStream, opts);
+        smr = new MediaRecorder(finalStream, opts);
       } catch {
-        smr = new MediaRecorder(screenStream);
+        smr = new MediaRecorder(finalStream);
       }
 
       smr.ondataavailable = (e) => {
@@ -90,19 +122,20 @@ const useRecorder = ({ interviewId, stream }) => {
       };
 
       smr.onstop = async () => {
-        const blob = new Blob(screenChunksRef.current, { type: smr.mimeType || 'video/webm' });
+        const blob = new Blob(screenChunksRef.current, { type: 'video/webm' });
         await uploadRecording(blob, 'screen');
+        await uploadTranscript(); // upload text file on completion
 
-        // Upload transcript after screen recording stops
-        await uploadTranscript();
-
-        // Stop all screen stream tracks
+        // Clean up
         screenStreamRef.current?.getTracks().forEach((t) => t.stop());
         screenStreamRef.current = null;
+        if (audioContextRef.current) {
+          audioContextRef.current.close();
+          audioContextRef.current = null;
+        }
         setScreenRecording(false);
       };
 
-      // Handle user stopping share via browser UI (e.g. "Stop sharing" button)
       screenStream.getVideoTracks()[0].onended = () => {
         if (smr.state !== 'inactive') smr.stop();
       };
@@ -110,14 +143,11 @@ const useRecorder = ({ interviewId, stream }) => {
       smr.start(1000);
       screenMediaRecorderRef.current = smr;
       setScreenRecording(true);
-
-      // Start speech recognition transcription
-      startTranscription();
+      startTranscription(); // Start transcription loop
     } catch (err) {
       console.error('Screen capture error:', err);
-      // Don't hard-fail — the interview can continue without screen recording
     }
-  }, [screenRecording, interviewId]);
+  }, [screenRecording, stream, interviewId]);
 
   const stopScreenCapture = useCallback(() => {
     stopTranscription();
@@ -126,14 +156,10 @@ const useRecorder = ({ interviewId, stream }) => {
     }
   }, []);
 
-  // ─── SpeechRecognition transcription ──────────────────────────────────────
+  // ─── SpeechRecognition ─────────────────────────────────────────────────────
   const startTranscription = useCallback(() => {
-    const SpeechRecognition =
-      window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      console.warn('SpeechRecognition not supported in this browser.');
-      return;
-    }
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
 
     const recognition = new SpeechRecognition();
     recognition.continuous = true;
@@ -141,7 +167,6 @@ const useRecorder = ({ interviewId, stream }) => {
     recognition.lang = 'en-US';
 
     let finalTranscript = '';
-
     recognition.onresult = (event) => {
       let interimText = '';
       for (let i = event.resultIndex; i < event.results.length; i++) {
@@ -152,42 +177,45 @@ const useRecorder = ({ interviewId, stream }) => {
           interimText += res[0].transcript;
         }
       }
-      const combined = finalTranscript + interimText;
+      const combined = (finalTranscript + interimText).trim();
       setTranscript(combined);
       transcriptRef.current = combined;
     };
 
     recognition.onerror = (e) => {
-      if (e.error !== 'no-speech') console.warn('SpeechRecognition error:', e.error);
+      if (e.error !== 'no-speech') console.warn('Transcription error:', e.error);
     };
 
-    // Auto-restart on end (continuous mode stops on long silences in some browsers)
     recognition.onend = () => {
-      if (recognitionRef.current === recognition && screenMediaRecorderRef.current?.state === 'recording') {
-        recognition.start();
+      // Keep it running as long as we are recording
+      if (screenMediaRecorderRef.current?.state === 'recording') {
+        try { recognition.start(); } catch (e) {}
       }
     };
 
-    recognition.start();
-    recognitionRef.current = recognition;
-    setTranscribing(true);
+    try {
+      recognition.start();
+      recognitionRef.current = recognition;
+      setTranscribing(true);
+    } catch (e) {
+      console.error('Failed to start transcription:', e);
+    }
   }, []);
 
   const stopTranscription = useCallback(() => {
     if (recognitionRef.current) {
-      recognitionRef.current.onend = null; // prevent auto-restart
+      recognitionRef.current.onend = null;
       recognitionRef.current.stop();
       recognitionRef.current = null;
     }
     setTranscribing(false);
   }, []);
 
-  // ─── Upload helpers ────────────────────────────────────────────────────────
+  // ─── Uploaders ─────────────────────────────────────────────────────────────
   const uploadRecording = async (blob, type = 'video') => {
-    if (!interviewId) return;
-    const ext = blob.type.includes('audio') ? 'webm' : 'webm';
+    if (!interviewId || blob.size === 0) return;
     const formData = new FormData();
-    formData.append('recording', blob, `session-${type}-${Date.now()}.${ext}`);
+    formData.append('recording', blob, `session-${type}-${Date.now()}.webm`);
     formData.append('interviewId', interviewId);
     formData.append('type', type);
 
@@ -204,12 +232,14 @@ const useRecorder = ({ interviewId, stream }) => {
 
   const uploadTranscript = async () => {
     const text = transcriptRef.current.trim();
-    if (!interviewId || !text) return;
+    if (!interviewId || !text) {
+      console.log('No transcript text to upload.');
+      return;
+    }
 
     const blob = new Blob([text], { type: 'text/plain' });
     const formData = new FormData();
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    formData.append('recording', blob, `transcript-${timestamp}.txt`);
+    formData.append('recording', blob, `transcript-${Date.now()}.txt`);
     formData.append('interviewId', interviewId);
     formData.append('type', 'transcript');
 
@@ -217,32 +247,21 @@ const useRecorder = ({ interviewId, stream }) => {
       await api.post('/recordings/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
+      console.log('Transcript uploaded successfully');
     } catch (err) {
       console.error('Transcript upload failed:', err.message);
     }
   };
 
-  // Cleanup on unmount
   useEffect(() => () => {
     stopRecording();
     stopScreenCapture();
   }, []);
 
   return {
-    // Camera recording
-    recording,
-    uploaded,
-    uploadError,
-    startRecording,
-    stopRecording,
-    // Screen recording
-    screenRecording,
-    screenUploaded,
-    startScreenCapture,
-    stopScreenCapture,
-    // Transcription
-    transcript,
-    transcribing,
+    recording, uploaded, uploadError, startRecording, stopRecording,
+    screenRecording, screenUploaded, startScreenCapture, stopScreenCapture,
+    transcript, transcribing
   };
 };
 

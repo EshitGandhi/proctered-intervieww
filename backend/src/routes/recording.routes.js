@@ -2,11 +2,23 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const axios = require('axios');
+const { GetObjectCommand } = require('@aws-sdk/client-s3');
 const Recording = require('../models/Recording');
-const { uploadRecording, STORAGE_TYPE } = require('../services/storage.service');
+const { uploadRecording, STORAGE_TYPE, s3 } = require('../services/storage.service');
 const { protect, requireRole } = require('../middleware/auth.middleware');
 
 const router = express.Router();
+
+/**
+ * Helper to convert stream to string for S3 GetObject
+ */
+const streamToString = (stream) =>
+  new Promise((resolve, reject) => {
+    const chunks = [];
+    stream.on("data", (chunk) => chunks.push(chunk));
+    stream.on("error", reject);
+    stream.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
+  });
 
 // POST /api/recordings/upload
 router.post('/upload', protect, uploadRecording.single('recording'), async (req, res) => {
@@ -19,15 +31,13 @@ router.post('/upload', protect, uploadRecording.single('recording'), async (req,
     return res.status(400).json({ success: false, message: 'interviewId is required' });
   }
 
-  // Determine URL and key
   let fileUrl;
   let s3Key = null;
 
   if (STORAGE_TYPE === 's3') {
-    fileUrl = req.file.location; // Full S3 URL from multer-s3
+    fileUrl = req.file.location;
     s3Key = req.file.key;
   } else {
-    // Determine sub-directory based on type for local storage
     let subDir;
     if (type === 'transcript') subDir = 'transcripts';
     else if (req.file.mimetype.startsWith('audio')) subDir = 'audio';
@@ -40,7 +50,7 @@ router.post('/upload', protect, uploadRecording.single('recording'), async (req,
     candidate: req.user?._id,
     type: type || 'video',
     storageType: STORAGE_TYPE,
-    filePath: fileUrl, // either /uploads/ or full S3 URL
+    filePath: fileUrl,
     fileName: req.file.filename || req.file.key,
     s3Key: s3Key,
     s3Url: STORAGE_TYPE === 's3' ? fileUrl : null,
@@ -60,7 +70,7 @@ router.get('/interview/:interviewId', protect, async (req, res) => {
   res.json({ success: true, data: recordings });
 });
 
-// GET /api/recordings/:id/transcript — return raw text content of transcript file
+// GET /api/recordings/:id/transcript — return raw text content
 router.get('/:id/transcript', protect, async (req, res) => {
   try {
     const recording = await Recording.findById(req.params.id);
@@ -69,12 +79,20 @@ router.get('/:id/transcript', protect, async (req, res) => {
     }
 
     let content;
-    if (STORAGE_TYPE === 's3' || (recording.filePath && recording.filePath.startsWith('http'))) {
-      // Fetch from S3 URL
+    if (STORAGE_TYPE === 's3' && recording.s3Key && s3) {
+      // Fetch from S3 directly using SDK
+      const command = new GetObjectCommand({
+        Bucket: process.env.AWS_S3_BUCKET,
+        Key: recording.s3Key,
+      });
+      const { Body } = await s3.send(command);
+      content = await streamToString(Body);
+    } else if (recording.filePath && recording.filePath.startsWith('http')) {
+      // Fallback: Fetch via HTTP
       const response = await axios.get(recording.filePath);
       content = response.data;
     } else {
-      // Local file
+      // Local disk
       const fullPath = path.resolve(process.cwd(), recording.filePath.replace(/^\//, ''));
       if (!fs.existsSync(fullPath)) {
         return res.status(404).json({ success: false, message: 'Transcript file not found on disk' });

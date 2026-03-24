@@ -33,11 +33,21 @@ const useProctoringMonitor = ({ interviewId, enabled = true, onViolation, socket
   const [lastViolation, setLastViolation] = useState(null);
   const [violationCount, setViolationCount] = useState(0);
   const devToolsRef = useRef(false);
+  const skippedCountRef = useRef(0);
+  const SKIP_THRESHOLD = 3;
   const prevHeight = useRef(window.outerHeight);
 
   const logViolation = useCallback(
     async (eventType, description = '', metadata = {}) => {
       const severity = SEVERITY[eventType] || 'medium';
+      
+      // Ignore first 3 violations (often triggered by permission dialogs)
+      if (skippedCountRef.current < SKIP_THRESHOLD) {
+        skippedCountRef.current += 1;
+        console.log(`Ignoring initial violation (${skippedCountRef.current}/${SKIP_THRESHOLD}): ${eventType}`);
+        return;
+      }
+
       const violation = { eventType, description, severity, timestamp: new Date().toISOString(), metadata };
 
       setViolations((prev) => [violation, ...prev]);
