@@ -98,6 +98,18 @@ const InterviewerRoom = () => {
     setChatInput('');
   };
 
+  const handleStartCall = async () => {
+    if (interview?._id) {
+      try {
+        const { data } = await api.patch(`/interviews/${interview._id}/start`);
+        setInterview(data.data);
+      } catch (err) {
+        console.error('Failed to start interview:', err);
+        alert('Failed to start interview. ' + (err.response?.data?.message || err.message));
+      }
+    }
+  };
+
   const handleEndCall = async () => {
     webRTC.socket.current?.emit('end-interview', { roomId });
     if (interview?._id) {
@@ -149,6 +161,13 @@ const InterviewerRoom = () => {
             <span style={{ fontSize: 20 }}>👁️</span>
             <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>Live Monitoring: {interview?.title}</span>
           </div>
+
+          {interview?.status === 'scheduled' && (
+            <button className="btn btn-primary btn-sm" style={{ marginLeft: 16 }} onClick={handleStartCall}>
+              ▶️ Start Session
+            </button>
+          )}
+
           <div style={{ flex: 1 }} />
           <span className={`badge ${liveViolations.length > 5 ? 'badge-danger' : liveViolations.length > 0 ? 'badge-warning' : 'badge-success'}`}>
             {liveViolations.length} violations
