@@ -20,6 +20,7 @@ const jobRoutes = require('./routes/job.routes');
 const mcqRoutes = require('./routes/mcq.routes');
 const applicationRoutes = require('./routes/application.routes');
 const proctoringRoutes = require('./routes/proctoring.routes');
+const codingQuestionRoutes = require('./routes/codingQuestion.routes');
 
 // ─── App Setup ────────────────────────────────────────────────────────────────
 const app = express();
@@ -73,6 +74,7 @@ app.use('/api/jobs', jobRoutes);
 app.use('/api/mcq', mcqRoutes);
 app.use('/api/applications', applicationRoutes);
 app.use('/api/proctoring', proctoringRoutes);
+app.use('/api/coding-questions', codingQuestionRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

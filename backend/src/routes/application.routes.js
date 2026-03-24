@@ -42,14 +42,62 @@ router.post('/apply/:jobId', protect, upload.single('resume'), applyForJob);
 router.get('/my', protect, getMyApplications);
 router.post('/:appId/mcq', protect, submitMCQ);
 
-// Candidate submits coding score
+// Candidate submits coding round (auto-graded against hidden test cases)
 router.post('/:appId/coding', protect, async (req, res) => {
   try {
-    const { score } = req.body;
+    // submissions: [{ questionId, language, sourceCode }]
+    const { submissions } = req.body;
     const application = await Application.findOne({ _id: req.params.appId, candidateId: req.user.id }).populate('jobId');
     if (!application) return res.status(404).json({ success: false, error: 'Application not found' });
     if (application.status !== 'coding_pending') return res.status(400).json({ success: false, error: 'Not in coding phase' });
 
+    if (!submissions || submissions.length === 0) {
+      return res.status(400).json({ success: false, error: 'No submissions provided' });
+    }
+
+    // Load all submitted questions with their hidden test cases
+    const CodingQuestion = require('../models/CodingQuestion');
+    const { executeCode } = require('../services/judge0.service');
+
+    let totalTestCases = 0;
+    let passedTestCases = 0;
+    const results = [];
+
+    for (const sub of submissions) {
+      const question = await CodingQuestion.findById(sub.questionId);
+      if (!question) continue;
+
+      const qResults = { questionId: sub.questionId, title: question.title, testsPassed: 0, testsTotal: 0, testCaseResults: [] };
+
+      for (const tc of question.testCases) {
+        qResults.testsTotal++;
+        totalTestCases++;
+        try {
+          const execResult = await executeCode({
+            language: sub.language || 'python',
+            sourceCode: sub.sourceCode,
+            stdin: tc.input,
+          });
+          // Normalize output: trim whitespace to be lenient
+          const actualOut = (execResult.stdout || '').trim();
+          const expectedOut = (tc.expectedOutput || '').trim();
+          const passed = actualOut === expectedOut;
+          if (passed) { passedTestCases++; qResults.testsPassed++; }
+          qResults.testCaseResults.push({
+            input: tc.isHidden ? '[hidden]' : tc.input,
+            expected: tc.isHidden ? '[hidden]' : tc.expectedOutput,
+            actual: tc.isHidden ? (passed ? '✅ Passed' : '❌ Failed') : actualOut,
+            passed,
+          });
+        } catch (e) {
+          qResults.testCaseResults.push({ input: tc.isHidden ? '[hidden]' : tc.input, passed: false, error: e.message });
+        }
+      }
+      results.push(qResults);
+    }
+
+    // Score = percentage of total test cases passed across all questions
+    const score = totalTestCases > 0 ? Math.round((passedTestCases / totalTestCases) * 100) : 0;
     const isPassed = score >= application.jobId.codingThreshold;
 
     const resW = application.jobId.resumeWeight / 100;
@@ -69,7 +117,11 @@ router.post('/:appId/coding', protect, async (req, res) => {
     res.status(200).json({
       success: true,
       data: application,
-      message: isPassed ? `Coding passed (${score}%)! Awaiting interview.` : `Coding failed (${score}%). Required: ${application.jobId.codingThreshold}%.`
+      score,
+      results, // detailed per-question breakdown
+      message: isPassed
+        ? `Coding passed! Score: ${score}%. Awaiting interview.`
+        : `Coding failed. Score: ${score}%. Required: ${application.jobId.codingThreshold}%.`
     });
   } catch (error) {
     res.status(400).json({ success: false, error: error.message });

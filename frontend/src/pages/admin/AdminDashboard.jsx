@@ -623,6 +623,177 @@ const CandidateDetail = ({ appId, onBack }) => {
   );
 };
 
+// ─── Tab: Coding Questions ────────────────────────────────────────────────────
+const CodingQuestionsTab = () => {
+  const [questions, setQuestions] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [showForm, setShowForm] = React.useState(false);
+  const [editing, setEditing] = React.useState(null);
+  const [saving, setSaving] = React.useState(false);
+  const [error, setError] = React.useState('');
+
+  const emptyForm = () => ({
+    title: '', description: '', difficulty: 'medium', constraints: '',
+    testCases: [{ input: '', expectedOutput: '', isHidden: false }],
+  });
+  const [form, setForm] = React.useState(emptyForm());
+
+  const fetchQuestions = () => {
+    setLoading(true);
+    api.get('/coding-questions').then(r => setQuestions(r.data.data)).finally(() => setLoading(false));
+  };
+  React.useEffect(() => { fetchQuestions(); }, []);
+
+  const addTestCase = () => setForm(f => ({ ...f, testCases: [...f.testCases, { input: '', expectedOutput: '', isHidden: false }] }));
+  const removeTestCase = (i) => setForm(f => ({ ...f, testCases: f.testCases.filter((_, idx) => idx !== i) }));
+  const updateTestCase = (i, key, val) => setForm(f => {
+    const tcs = [...f.testCases]; tcs[i] = { ...tcs[i], [key]: key === 'isHidden' ? val : val }; return { ...f, testCases: tcs };
+  });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault(); setSaving(true); setError('');
+    try {
+      const payload = {
+        ...form,
+        constraints: form.constraints ? form.constraints.split('\n').filter(Boolean) : [],
+      };
+      if (editing) {
+        await api.put(`/coding-questions/${editing}`, payload);
+      } else {
+        await api.post('/coding-questions', payload);
+      }
+      setShowForm(false); setEditing(null); setForm(emptyForm());
+      fetchQuestions();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to save question');
+    } finally { setSaving(false); }
+  };
+
+  const handleEdit = (q) => {
+    setForm({ ...q, constraints: (q.constraints || []).join('\n') });
+    setEditing(q._id); setShowForm(true);
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this question?')) return;
+    await api.delete(`/coding-questions/${id}`);
+    fetchQuestions();
+  };
+
+  const labelStyle = { fontWeight: 600, fontSize: '0.8rem', display: 'block', marginBottom: 4, color: 'var(--text-secondary)' };
+  const inputStyle = { width: '100%', padding: '8px 12px', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '0.875rem', boxSizing: 'border-box' };
+  const diffColor = { easy: '#10b981', medium: '#f59e0b', hard: '#ef4444' };
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: '1.2rem' }}>Coding Questions</h2>
+          <p style={{ margin: '4px 0 0', color: 'var(--text-muted)', fontSize: '0.82rem' }}>Global question bank — 3 random questions are given per coding round</p>
+        </div>
+        <button className="btn btn-primary" onClick={() => { setForm(emptyForm()); setEditing(null); setShowForm(v => !v); }}>
+          {showForm ? 'Cancel' : '+ Add Question'}
+        </button>
+      </div>
+
+      {showForm && (
+        <div className="card" style={{ marginBottom: 24 }}>
+          <h3 style={{ marginBottom: 20, fontSize: '1rem' }}>{editing ? 'Edit Question' : 'New Question'}</h3>
+          {error && <div className="alert alert-danger" style={{ marginBottom: 16 }}>{error}</div>}
+          <form onSubmit={handleSubmit}>
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16, marginBottom: 16 }}>
+              <div>
+                <label style={labelStyle}>Question Title *</label>
+                <input style={inputStyle} placeholder="e.g. Two Sum" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} required />
+              </div>
+              <div>
+                <label style={labelStyle}>Difficulty</label>
+                <select style={inputStyle} value={form.difficulty} onChange={e => setForm(f => ({ ...f, difficulty: e.target.value }))}>
+                  <option value="easy">Easy</option>
+                  <option value="medium">Medium</option>
+                  <option value="hard">Hard</option>
+                </select>
+              </div>
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <label style={labelStyle}>Problem Description *</label>
+              <textarea style={{ ...inputStyle, minHeight: 120, resize: 'vertical' }}
+                placeholder="Describe the problem clearly — include what input is given and what output is expected..."
+                value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} required />
+            </div>
+            <div style={{ marginBottom: 20 }}>
+              <label style={labelStyle}>Constraints (one per line)</label>
+              <textarea style={{ ...inputStyle, minHeight: 64, resize: 'vertical', fontFamily: 'monospace' }}
+                placeholder="1 ≤ n ≤ 10^4\n-10^9 ≤ nums[i] ≤ 10^9"
+                value={form.constraints} onChange={e => setForm(f => ({ ...f, constraints: e.target.value }))} />
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <label style={{ ...labelStyle, marginBottom: 0 }}>Test Cases ({form.testCases.length})</label>
+                <button type="button" className="btn btn-secondary btn-sm" onClick={addTestCase}>+ Add Test Case</button>
+              </div>
+              {form.testCases.map((tc, i) => (
+                <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto auto', gap: 10, marginBottom: 10, alignItems: 'center', background: 'var(--bg-secondary)', padding: '10px 12px', borderRadius: 8 }}>
+                  <div>
+                    <label style={{ ...labelStyle, fontSize: '0.7rem' }}>Input (stdin)</label>
+                    <textarea style={{ ...inputStyle, minHeight: 56, fontFamily: 'monospace', fontSize: '0.8rem' }}
+                      placeholder="e.g. 2 7 11 15\n9" value={tc.input} onChange={e => updateTestCase(i, 'input', e.target.value)} />
+                  </div>
+                  <div>
+                    <label style={{ ...labelStyle, fontSize: '0.7rem' }}>Expected Output (stdout)</label>
+                    <textarea style={{ ...inputStyle, minHeight: 56, fontFamily: 'monospace', fontSize: '0.8rem' }}
+                      placeholder="e.g. 0 1" value={tc.expectedOutput} onChange={e => updateTestCase(i, 'expectedOutput', e.target.value)} />
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <label style={{ ...labelStyle, fontSize: '0.7rem' }}>Hidden?</label>
+                    <input type="checkbox" checked={tc.isHidden} onChange={e => updateTestCase(i, 'isHidden', e.target.checked)} style={{ width: 18, height: 18, cursor: 'pointer' }} />
+                  </div>
+                  <button type="button" onClick={() => removeTestCase(i)} disabled={form.testCases.length <= 1}
+                    style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', fontSize: '0.78rem', alignSelf: 'flex-end' }}>✕</button>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+              <button type="button" className="btn btn-secondary" onClick={() => { setShowForm(false); setEditing(null); }}>Cancel</button>
+              <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Saving...' : editing ? 'Update Question' : 'Create Question'}</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: 40 }}><div className="spinner" /></div>
+      ) : questions.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: 48, color: 'var(--text-muted)' }}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>💻</div>
+          <p>No coding questions yet. Click "+ Add Question" to create the first one.</p>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gap: 12 }}>
+          {questions.map(q => (
+            <div key={q._id} style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                  <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>{q.title}</span>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 700, color: diffColor[q.difficulty], background: `${diffColor[q.difficulty]}20`, padding: '2px 8px', borderRadius: 20, textTransform: 'capitalize' }}>{q.difficulty}</span>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{q.testCases.length} test case{q.testCases.length !== 1 ? 's' : ''} ({q.testCases.filter(t => t.isHidden).length} hidden)</span>
+                </div>
+                <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-muted)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{q.description}</p>
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                <button className="btn btn-secondary btn-sm" onClick={() => handleEdit(q)}>Edit</button>
+                <button className="btn btn-sm" style={{ background: '#ef444420', color: '#ef4444', border: 'none', borderRadius: 6, padding: '6px 12px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }} onClick={() => handleDelete(q._id)}>Delete</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ─── Admin Dashboard Shell ─────────────────────────────────────────────────────
 const AdminDashboard = () => {
   const [tab, setTab] = useState('jobs');
@@ -631,6 +802,7 @@ const AdminDashboard = () => {
   const nav = [
     { id: 'jobs', label: '💼 Jobs' },
     { id: 'mcq', label: '📝 MCQ' },
+    { id: 'coding', label: '💻 Coding Questions' },
     { id: 'candidates', label: '👥 Candidates' },
   ];
 
@@ -680,6 +852,7 @@ const AdminDashboard = () => {
 
         {tab === 'jobs' && <JobsTab />}
         {tab === 'mcq' && <MCQTab />}
+        {tab === 'coding' && <CodingQuestionsTab />}
         {tab === 'candidates' && <CandidatesTab onSelectCandidate={handleSelectCandidate} />}
         {tab === 'detail' && selectedAppId && (
           <CandidateDetail appId={selectedAppId} onBack={() => setTab('candidates')} />
