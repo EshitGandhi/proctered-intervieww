@@ -14,6 +14,7 @@ const JobsTab = () => {
     title: '', domain: '', description: '', skills: '',
     resumeThreshold: 60, mcqThreshold: 70, codingThreshold: 50,
     resumeWeight: 20, mcqWeight: 20, codingWeight: 30, interviewWeight: 30,
+    mcqCount: 20,
   });
 
   const fetchJobs = () => {
@@ -30,7 +31,7 @@ const JobsTab = () => {
         requiredSkills: form.skills.split(',').map(s => s.trim()).filter(Boolean),
       });
       setShowForm(false);
-      setForm({ title: '', domain: '', description: '', skills: '', resumeThreshold: 60, mcqThreshold: 70, codingThreshold: 50, resumeWeight: 20, mcqWeight: 20, codingWeight: 30, interviewWeight: 30 });
+      setForm({ title: '', domain: '', description: '', skills: '', resumeThreshold: 60, mcqThreshold: 70, codingThreshold: 50, resumeWeight: 20, mcqWeight: 20, codingWeight: 30, interviewWeight: 30, mcqCount: 20 });
       fetchJobs();
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to create job');
@@ -102,6 +103,12 @@ const JobsTab = () => {
                   <input type="number" min="0" max="100" style={inputStyle} value={form[k]} onChange={e => setForm(f => ({ ...f, [k]: Number(e.target.value) }))} />
                 </div>
               ))}
+            </div>
+
+            <div style={{ marginBottom: 20 }}>
+              <label style={labelStyle}>Number of MCQ Questions per Test</label>
+              <input type="number" min="1" max="100" style={{ ...inputStyle, width: '200px' }} value={form.mcqCount} onChange={e => setForm(f => ({ ...f, mcqCount: Number(e.target.value) }))} />
+              <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 4 }}>This determines how many random questions are shown to the candidate.</p>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>

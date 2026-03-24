@@ -111,7 +111,14 @@ exports.uploadMCQs = async (req, res) => {
 exports.getTestMCQs = async (req, res) => {
   try {
     const { jobId } = req.params;
-    const limit = parseInt(req.query.limit) || 20;
+
+    // Fetch the job to get the MCQ limit
+    const job = await Job.findById(jobId);
+    if (!job) {
+      return res.status(404).json({ success: false, error: 'Job not found' });
+    }
+
+    const limit = job.mcqCount || 20;
 
     // Aggregate query to get random documents
     const questions = await MCQ.aggregate([
@@ -120,7 +127,7 @@ exports.getTestMCQs = async (req, res) => {
       { $project: { correctAnswer: 0, createdAt: 0, updatedAt: 0, __v: 0 } }, // Hide sensitive info
     ]);
 
-    // Shuffle options for each question (Bonus feature)
+    // Shuffle options for each question
     questions.forEach(q => {
       q.options = q.options.sort(() => Math.random() - 0.5);
     });
