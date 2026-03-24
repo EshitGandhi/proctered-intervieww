@@ -182,7 +182,8 @@ exports.submitMCQ = async (req, res) => {
       return { questionId: ans.questionId, selectedOption: ans.selectedOption, isCorrect };
     });
 
-    const score = questions.length > 0 ? Math.round((correctCount / questions.length) * 100) : 0;
+    const totalQuestions = application.jobId.mcqCount || questions.length || 1;
+    const score = Math.round((correctCount / totalQuestions) * 100);
     const isPassed = score >= application.jobId.mcqThreshold;
 
     application.scores.mcq = { score, answers: evaluatedAnswers };
