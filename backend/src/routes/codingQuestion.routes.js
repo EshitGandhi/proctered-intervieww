@@ -16,10 +16,10 @@ router.get('/round', protect, requireRole('candidate'), getRoundQuestions);
 // Admin / Interviewer Routes
 router.route('/')
   .get(protect, requireRole('admin', 'interviewer'), getQuestions)
-  .post(protect, requireRole('admin'), createQuestion);
+  .post(protect, requireRole('admin', 'interviewer'), createQuestion);
 
 router.route('/:id')
-  .put(protect, requireRole('admin'), updateQuestion)
-  .delete(protect, requireRole('admin'), deleteQuestion);
+  .put(protect, requireRole('admin', 'interviewer'), updateQuestion)
+  .delete(protect, requireRole('admin', 'interviewer'), deleteQuestion);
 
 module.exports = router;
