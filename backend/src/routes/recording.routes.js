@@ -5,6 +5,7 @@ const axios = require('axios');
 const { GetObjectCommand } = require('@aws-sdk/client-s3');
 const Recording = require('../models/Recording');
 const { uploadRecording, STORAGE_TYPE, s3 } = require('../services/storage.service');
+const { transcribeFile } = require('../services/transcription.service');
 const { protect, requireRole } = require('../middleware/auth.middleware');
 
 const router = express.Router();
@@ -58,6 +59,11 @@ router.post('/upload', protect, uploadRecording.single('recording'), async (req,
     fileSize: req.file.size,
     duration: duration ? parseFloat(duration) : 0,
   });
+
+  // Trigger transcription asynchronously if it's a video or screen recording
+  if (type === 'video' || type === 'screen') {
+    transcribeFile(fileUrl, recording._id).catch(err => console.error('Async transcription trigger failed:', err));
+  }
 
   res.status(201).json({ success: true, data: recording, url: fileUrl });
 });
