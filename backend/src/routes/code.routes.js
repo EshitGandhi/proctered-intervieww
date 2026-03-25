@@ -20,7 +20,11 @@ router.post('/run', protect, async (req, res) => {
     if (question && question.templates) {
       const template = question.templates.find(t => t.language === language);
       if (template && template.driverCode) {
-        codeToExecute = sourceCode + '\n\n' + template.driverCode;
+        if (template.driverCode.includes('// [[CANDIDATE_CODE]]')) {
+          codeToExecute = template.driverCode.replace('// [[CANDIDATE_CODE]]', sourceCode);
+        } else {
+          codeToExecute = sourceCode + '\n\n' + template.driverCode;
+        }
       }
     }
   }
@@ -63,7 +67,11 @@ router.post('/submit', protect, async (req, res) => {
     if (question && question.templates) {
       const template = question.templates.find(t => t.language === language);
       if (template && template.driverCode) {
-        codeToExecute = sourceCode + '\n\n' + template.driverCode;
+        if (template.driverCode.includes('// [[CANDIDATE_CODE]]')) {
+          codeToExecute = template.driverCode.replace('// [[CANDIDATE_CODE]]', sourceCode);
+        } else {
+          codeToExecute = sourceCode + '\n\n' + template.driverCode;
+        }
       }
     }
   }

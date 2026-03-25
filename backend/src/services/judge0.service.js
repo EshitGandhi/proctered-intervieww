@@ -28,7 +28,7 @@ const executeCode = async ({ language, sourceCode, stdin = '' }) => {
     const options = {
       method: 'POST',
       url: `${JUDGE0_URL}/submissions`,
-      params: { base64_encoded: 'false', wait: 'true' },
+      params: { base64_encoded: 'true', wait: 'true' },
       headers: {
         'content-type': 'application/json',
         'Content-Type': 'application/json',
@@ -36,9 +36,9 @@ const executeCode = async ({ language, sourceCode, stdin = '' }) => {
         ...(JUDGE0_KEY && JUDGE0_KEY !== 'your_judge0_rapidapi_key' ? { 'X-RapidAPI-Host': new URL(JUDGE0_URL).hostname } : {})
       },
       data: {
-        source_code: sourceCode,
+        source_code: Buffer.from(sourceCode || '').toString('base64'),
         language_id: languageId,
-        stdin: stdin
+        stdin: Buffer.from(stdin || '').toString('base64')
       }
     };
 
@@ -46,9 +46,9 @@ const executeCode = async ({ language, sourceCode, stdin = '' }) => {
     const result = response.data;
 
     return {
-      stdout: result.stdout || '',
-      stderr: result.stderr || '',
-      compileOutput: result.compile_output || '',
+      stdout: result.stdout ? Buffer.from(result.stdout, 'base64').toString('utf8') : '',
+      stderr: result.stderr ? Buffer.from(result.stderr, 'base64').toString('utf8') : '',
+      compileOutput: result.compile_output ? Buffer.from(result.compile_output, 'base64').toString('utf8') : '',
       status: result.status?.description || 'Unknown Status',
       time: result.time || '0.0',
       memory: result.memory || 0,
