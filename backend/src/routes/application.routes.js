@@ -73,9 +73,22 @@ router.post('/:appId/coding', protect, async (req, res) => {
         qResults.testsTotal++;
         totalTestCases++;
         try {
+          // Join with driver code if template exists
+          let codeToExecute = sub.sourceCode;
+          if (question.templates) {
+            const template = question.templates.find(t => t.language === sub.language);
+            if (template && template.driverCode) {
+              if (template.driverCode.includes('// [[CANDIDATE_CODE]]')) {
+                codeToExecute = template.driverCode.replace('// [[CANDIDATE_CODE]]', sub.sourceCode);
+              } else {
+                codeToExecute = sub.sourceCode + '\n\n' + template.driverCode;
+              }
+            }
+          }
+
           const execResult = await executeCode({
             language: sub.language || 'python',
-            sourceCode: sub.sourceCode,
+            sourceCode: codeToExecute,
             stdin: tc.input,
           });
           // Normalize output: trim whitespace to be lenient
@@ -122,6 +135,63 @@ router.post('/:appId/coding', protect, async (req, res) => {
       message: isPassed
         ? `Coding passed! Score: ${score}%. Awaiting interview.`
         : `Coding failed. Score: ${score}%. Required: ${application.jobId.codingThreshold}%.`
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+});
+
+// Candidate evaluates a single question (runs against hidden test cases, but doesn't finalize round)
+router.post('/:appId/coding/evaluate', protect, async (req, res) => {
+  try {
+    const { questionId, language, sourceCode } = req.body;
+    const application = await Application.findOne({ _id: req.params.appId, candidateId: req.user.id });
+    if (!application) return res.status(404).json({ success: false, error: 'Application not found' });
+    if (application.status !== 'coding_pending') return res.status(400).json({ success: false, error: 'Not in coding phase' });
+
+    const CodingQuestion = require('../models/CodingQuestion');
+    const { executeCode } = require('../services/judge0.service');
+    const question = await CodingQuestion.findById(questionId);
+    if (!question) return res.status(404).json({ success: false, error: 'Question not found' });
+
+    let testsPassed = 0;
+    const testCaseResults = [];
+
+    for (const tc of question.testCases) {
+      try {
+        let codeToExecute = sourceCode;
+        if (question.templates) {
+          const template = question.templates.find(t => t.language === language);
+          if (template && template.driverCode) {
+            codeToExecute = template.driverCode.includes('// [[CANDIDATE_CODE]]') 
+              ? template.driverCode.replace('// [[CANDIDATE_CODE]]', sourceCode)
+              : sourceCode + '\n\n' + template.driverCode;
+          }
+        }
+
+        const execResult = await executeCode({ language, sourceCode: codeToExecute, stdin: tc.input });
+        const actualOut = (execResult.stdout || '').trim();
+        const expectedOut = (tc.expectedOutput || '').trim();
+        const passed = actualOut === expectedOut;
+        if (passed) testsPassed++;
+
+        testCaseResults.push({
+          passed,
+          actual: tc.isHidden ? (passed ? '✅ Passed' : '❌ Failed') : actualOut,
+          expected: tc.isHidden ? '[hidden]' : expectedOut,
+          input: tc.isHidden ? '[hidden]' : tc.input,
+          stderr: execResult.stderr,
+        });
+      } catch (e) {
+        testCaseResults.push({ passed: false, error: e.message });
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      testsPassed,
+      testsTotal: question.testCases.length,
+      results: testCaseResults,
     });
   } catch (error) {
     res.status(400).json({ success: false, error: error.message });

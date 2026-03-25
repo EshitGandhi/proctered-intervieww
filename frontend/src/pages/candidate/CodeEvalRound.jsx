@@ -52,13 +52,13 @@ const CodeEvalRound = () => {
           return;
         }
         setQuestions(qs);
-        // Initialize per-question state
+        // Initialize per-question state: { language, code, running, submitted, submitResult }
         const init = {};
         qs.forEach((q, i) => { 
           const lang = 'python';
           const tpl = q.templates?.find(t => t.language === lang);
           const initialCode = tpl?.starterCode || DEFAULT_CODE[lang] || '';
-          init[i] = { language: lang, code: initialCode, running: false, runResult: null }; 
+          init[i] = { language: lang, code: initialCode, running: false, runResult: null, submitted: false, submitResult: null }; 
         });
         setQState(init);
       } catch (e) {
@@ -74,6 +74,7 @@ const CodeEvalRound = () => {
 
   const handleRunCode = async (idx) => {
     const q = qState[idx];
+    if (q.submitted) return; // shouldn't happen but defensive
     const question = questions[idx];
     updateQ(idx, { running: true, runResult: null });
     try {
@@ -101,8 +102,36 @@ const CodeEvalRound = () => {
     }
   };
 
-  const handleSubmitRound = async () => {
-    if (!window.confirm('Are you sure you want to submit your final solutions? You cannot change them afterwards.')) return;
+  const handleSubmitQuestion = async (idx) => {
+    const q = qState[idx];
+    const question = questions[idx];
+    if (!window.confirm('Submit this code for evaluation? You will not be able to edit it anymore.')) return;
+    updateQ(idx, { running: true, runResult: null });
+    try {
+      const { data } = await api.post(`/applications/${appId}/coding/evaluate`, { 
+        questionId: question._id, 
+        language: q.language, 
+        sourceCode: q.code 
+      });
+      updateQ(idx, { 
+        submitted: true, 
+        running: false, 
+        runResult: { type: 'testcases', results: data.results },
+        submitResult: { testsPassed: data.testsPassed, testsTotal: data.testsTotal }
+      });
+    } catch (e) {
+      updateQ(idx, { running: false, runResult: { type: 'error', message: 'Evaluation failed. Please try again.' } });
+    }
+  };
+
+  const handleFinishTest = async () => {
+    const submittedCount = Object.values(qState).filter(q => q.submitted).length;
+    if (submittedCount < questions.length) {
+      if (!window.confirm(`You have only submitted ${submittedCount}/${questions.length} questions. Are you sure you want to finish the test? Unsubmitted questions will count as 0%.`)) return;
+    } else {
+      if (!window.confirm('Are you sure you want to finalize your test and submit all results?')) return;
+    }
+
     setSubmitting(true);
     try {
       const submissions = questions.map((q, i) => ({
@@ -113,7 +142,7 @@ const CodeEvalRound = () => {
       const { data } = await api.post(`/applications/${appId}/coding`, { submissions });
       setResult(data);
     } catch (e) {
-      setError(e.response?.data?.error || 'Submission failed. Please try again.');
+      setError(e.response?.data?.error || 'Final submission failed.');
     } finally {
       setSubmitting(false);
     }
@@ -196,28 +225,30 @@ const CodeEvalRound = () => {
         {/* Question tabs */}
         <div style={{ display: 'flex', gap: 4 }}>
           {questions.map((q, i) => {
-            const code = qState[i]?.code || '';
-            const attempted = code.trim().length > 10;
+            const state = qState[i] || {};
+            const attempted = (state.code || '').trim().length > 10;
+            const submitted = state.submitted;
             return (
               <button key={i} onClick={() => setActiveQ(i)} style={{
                 padding: '6px 16px', borderRadius: 20, fontSize: '0.82rem', fontWeight: 600, border: 'none', cursor: 'pointer',
-                background: activeQ === i ? 'var(--primary)' : attempted ? 'var(--bg-secondary)' : 'var(--bg-secondary)',
-                color: activeQ === i ? '#fff' : attempted ? '#10b981' : 'var(--text-muted)',
-                outline: activeQ === i ? 'none' : attempted ? '1px solid #10b981' : 'none',
+                background: activeQ === i ? 'var(--primary)' : submitted ? '#10b98120' : 'var(--bg-secondary)',
+                color: activeQ === i ? '#fff' : submitted ? '#10b981' : 'var(--text-muted)',
+                outline: activeQ === i ? 'none' : submitted ? '1px solid #10b981' : 'none',
               }}>
-                Q{i + 1} {attempted ? '✓' : ''}
+                Q{i + 1} {submitted ? '✓' : attempted ? '…' : ''}
               </button>
             );
           })}
         </div>
 
+        {/* Finish button */}
         <button
           className="btn btn-primary"
-          style={{ minWidth: 140 }}
-          onClick={handleSubmitRound}
+          style={{ minWidth: 140, background: '#10b981', border: 'none' }}
+          onClick={handleFinishTest}
           disabled={submitting}
         >
-          {submitting ? '⏳ Evaluating…' : '🚀 Submit Round'}
+          {submitting ? '⏳ Finalizing…' : '🏁 Finish Test'}
         </button>
       </div>
 
@@ -278,13 +309,29 @@ const CodeEvalRound = () => {
                 const tpl = qq?.templates?.find(t => t.language === newLang);
                 updateQ(activeQ, { language: newLang, code: tpl?.starterCode || DEFAULT_CODE[newLang] || '' });
               }}
+              disabled={currentQState.submitted}
             >
               {LANGUAGES.map(l => <option key={l.id} value={l.id}>{l.label}</option>)}
             </select>
-            <div style={{ flex: 1 }} />
-            <button className="btn btn-secondary btn-sm" onClick={() => handleRunCode(activeQ)} disabled={currentQState.running}>
-              {currentQState.running ? '⏳ Running…' : '▶ Run Code'}
-            </button>
+            <div style={{ flex: 1 }}>
+              {currentQState.submitted && (
+                <span style={{ color: '#10b981', fontSize: '0.82rem', fontWeight: 700 }}>
+                  ✅ Submitted ({currentQState.submitResult?.testsPassed}/{currentQState.submitResult?.testsTotal} test cases passed)
+                </span>
+              )}
+            </div>
+            {!currentQState.submitted ? (
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="btn btn-secondary btn-sm" onClick={() => handleRunCode(activeQ)} disabled={currentQState.running}>
+                  {currentQState.running ? '⏳ Running…' : '▶ Run Code'}
+                </button>
+                <button className="btn btn-primary btn-sm" onClick={() => handleSubmitQuestion(activeQ)} disabled={currentQState.running}>
+                  🚀 Submit Question
+                </button>
+              </div>
+            ) : (
+              <button className="btn btn-ghost btn-sm" disabled>Locked</button>
+            )}
           </div>
 
           {/* Monaco Editor */}
@@ -294,8 +341,13 @@ const CodeEvalRound = () => {
               theme="vs-dark"
               language={LANGUAGES.find(l => l.id === currentQState.language)?.monacoLang || 'python'}
               value={currentQState.code}
-              onChange={val => updateQ(activeQ, { code: val || '' })}
-              options={{ fontSize: 14, minimap: { enabled: false }, automaticLayout: true }}
+              onChange={val => !currentQState.submitted && updateQ(activeQ, { code: val || '' })}
+              options={{ 
+                fontSize: 14, 
+                minimap: { enabled: false }, 
+                automaticLayout: true,
+                readOnly: currentQState.submitted
+              }}
             />
           </div>
 
