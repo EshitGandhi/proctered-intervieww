@@ -17,8 +17,10 @@ const JobsTab = () => {
     resumeWeight: 20, mcqWeight: 20, codingWeight: 30, interviewWeight: 30,
     mcqCount: 20,
   });
+  const [showInactive, setShowInactive] = useState(false);
 
   const fetchJobs = () => {
+    setLoading(true);
     api.get('/jobs').then(r => setJobs(r.data.data)).finally(() => setLoading(false));
   };
   useEffect(() => { fetchJobs(); }, []);
@@ -49,10 +51,18 @@ const JobsTab = () => {
   const labelStyle = { fontWeight: 600, fontSize: '0.8rem', display: 'block', marginBottom: 4, color: 'var(--text-secondary)' };
   const inputStyle = { width: '100%', padding: '8px 12px', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '0.875rem' };
 
+  const filteredJobs = showInactive ? jobs : jobs.filter(j => j.isActive);
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-        <h2 style={{ margin: 0, fontSize: '1.2rem' }}>Job Postings</h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <h2 style={{ margin: 0, fontSize: '1.2rem' }}>Job Postings</h2>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.75rem', cursor: 'pointer', color: 'var(--text-muted)' }}>
+            <input type="checkbox" checked={showInactive} onChange={e => setShowInactive(e.target.checked)} />
+            Show Deactivated
+          </label>
+        </div>
         <button className="btn btn-primary" onClick={() => setShowForm(v => !v)}>
           {showForm ? 'Cancel' : '+ Create Job'}
         </button>
@@ -132,8 +142,8 @@ const JobsTab = () => {
 
       {loading ? <div style={{ textAlign: 'center', padding: 40 }}><div className="spinner" /></div> : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {jobs.length === 0 && <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>No jobs created yet</div>}
-          {jobs.map(job => (
+          {filteredJobs.length === 0 && <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>No {showInactive ? '' : 'active'} jobs found</div>}
+          {filteredJobs.map(job => (
             <div key={job._id} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
@@ -349,7 +359,7 @@ const CandidatesTab = ({ onSelectCandidate }) => {
             <label style={{ fontSize: '0.72rem', fontWeight: 600, display: 'block', marginBottom: 4, color: 'var(--text-muted)' }}>JOB</label>
             <select style={inputStyle} value={filters.jobId} onChange={e => setFilters(f => ({ ...f, jobId: e.target.value }))}>
               <option value="">All Jobs</option>
-              {jobs.map(j => <option key={j._id} value={j._id}>{j.title}</option>)}
+              {jobs.filter(j => j.isActive).map(j => <option key={j._id} value={j._id}>{j.title}</option>)}
             </select>
           </div>
           <div>

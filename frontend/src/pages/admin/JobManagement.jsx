@@ -25,6 +25,7 @@ const JobManagement = () => {
   const [form, setForm] = useState(INITIAL_JOB_FORM);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [showDeactivated, setShowDeactivated] = useState(false);
   
   // MCQ Upload state
   const [uploadJobId, setUploadJobId] = useState(null);
@@ -114,10 +115,18 @@ const JobManagement = () => {
     }
   };
 
+  const filteredJobs = showDeactivated ? jobs : jobs.filter(job => job.isActive);
+
   return (
     <div className="card">
       <div className="card-header">
-        <h2 style={{ fontSize: '1.2rem' }}>Job Postings & ATS Settings</h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <h2 style={{ fontSize: '1.2rem' }}>Job Postings & ATS Settings</h2>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.75rem', cursor: 'pointer', color: 'var(--text-muted)' }}>
+            <input type="checkbox" checked={showDeactivated} onChange={e => setShowDeactivated(e.target.checked)} />
+            Show Deactivated
+          </label>
+        </div>
         <button className="btn btn-primary btn-sm" onClick={() => { setForm(INITIAL_JOB_FORM); setShowModal(true); }}>
           + Create New Job
         </button>
@@ -125,14 +134,14 @@ const JobManagement = () => {
 
       {loading ? (
         <div style={{ padding: '40px', textAlign: 'center' }}><div className="spinner" /></div>
-      ) : jobs.length === 0 ? (
+      ) : filteredJobs.length === 0 ? (
         <div style={{ padding: '48px', textAlign: 'center', color: 'var(--text-muted)' }}>
           <div style={{ fontSize: 40, marginBottom: 12 }}>💼</div>
-          <p>No jobs created yet. Create one to start accepting applications.</p>
+          <p>No {showDeactivated ? '' : 'active'} jobs found.</p>
         </div>
       ) : (
         <div className="grid-list" style={{ display: 'grid', gap: 16 }}>
-          {jobs.map(job => (
+          {filteredJobs.map(job => (
             <div key={job._id} style={{ border: '1px solid var(--border)', padding: 16, borderRadius: 8 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
