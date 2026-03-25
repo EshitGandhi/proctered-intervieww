@@ -6,7 +6,7 @@ const router = express.Router();
 
 // Public routes (or candidate routes)
 router.route('/')
-  .get(getJobs)
+  .get(protect, getJobs)
   .post(protect, requireRole('admin', 'interviewer'), createJob);
 
 router.route('/:id')

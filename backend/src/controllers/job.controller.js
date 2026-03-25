@@ -21,7 +21,10 @@ exports.getJobs = async (req, res) => {
     const query = (req.user?.role === 'admin' || req.user?.role === 'interviewer') ? {} : { isActive: true };
 
     // If candidate, filter by their domain
-    if (req.user?.role === 'candidate' && req.user.domain) {
+    if (req.user?.role === 'candidate') {
+      if (!req.user.domain) {
+        return res.status(200).json({ success: true, count: 0, data: [] });
+      }
       query.domain = req.user.domain;
     }
 
