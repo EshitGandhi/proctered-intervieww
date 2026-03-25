@@ -97,7 +97,7 @@ const CodeEvalRound = () => {
       ));
       updateQ(idx, { running: false, runResult: { type: 'testcases', results } });
     } catch (e) {
-      updateQ(idx, { running: false, runResult: { type: 'error', message: e.message } });
+      updateQ(idx, { running: false, runResult: { type: 'error', message: e.response?.data?.message || e.response?.data?.error || e.message } });
     }
   };
 
