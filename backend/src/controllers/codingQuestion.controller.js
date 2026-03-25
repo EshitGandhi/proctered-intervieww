@@ -58,6 +58,10 @@ exports.getRoundQuestions = async (req, res) => {
         description: q.description,
         difficulty: q.difficulty,
         constraints: q.constraints,
+        templates: q.templates?.map(t => ({
+          language: t.language,
+          starterCode: t.starterCode
+        })) || [],
         // Only return visible test cases to the candidate (to act as examples)
         testCases: q.testCases.filter(t => !t.isHidden).map(t => ({
           input: t.input,
