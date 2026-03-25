@@ -647,10 +647,20 @@ const CodingQuestionsTab = () => {
   const [editing, setEditing] = React.useState(null);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState('');
+  const [activeLang, setActiveLang] = React.useState('cpp');
+
+  const defaultTemplates = [
+    { language: 'cpp', starterCode: '', driverCode: '' },
+    { language: 'java', starterCode: '', driverCode: '' },
+    { language: 'python', starterCode: '', driverCode: '' },
+    { language: 'javascript', starterCode: '', driverCode: '' },
+    { language: 'c', starterCode: '', driverCode: '' }
+  ];
 
   const emptyForm = () => ({
     title: '', description: '', difficulty: 'medium', constraints: '',
     testCases: [{ input: '', expectedOutput: '', isHidden: false }],
+    templates: JSON.parse(JSON.stringify(defaultTemplates))
   });
   const [form, setForm] = React.useState(emptyForm());
 
@@ -686,7 +696,12 @@ const CodingQuestionsTab = () => {
   };
 
   const handleEdit = (q) => {
-    setForm({ ...q, constraints: (q.constraints || []).join('\n') });
+    // Ensure all 5 languages are populated even if older question doesn't have them
+    const qTemplates = defaultTemplates.map(dt => {
+      const existing = q.templates?.find(t => t.language === dt.language);
+      return existing ? { ...existing } : { ...dt };
+    });
+    setForm({ ...q, constraints: (q.constraints || []).join('\n'), templates: qTemplates });
     setEditing(q._id); setShowForm(true);
   };
 
@@ -742,6 +757,57 @@ const CodingQuestionsTab = () => {
               <textarea style={{ ...inputStyle, minHeight: 64, resize: 'vertical', fontFamily: 'monospace' }}
                 placeholder="1 ≤ n ≤ 10^4\n-10^9 ≤ nums[i] ≤ 10^9"
                 value={form.constraints} onChange={e => setForm(f => ({ ...f, constraints: e.target.value }))} />
+            </div>
+
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ ...labelStyle, fontSize: '0.9rem', marginBottom: 12, color: 'var(--text-primary)' }}>Code Templates & Injection</label>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 12, overflowX: 'auto' }}>
+                {defaultTemplates.map(t => (
+                  <button 
+                    type="button" 
+                    key={t.language}
+                    onClick={() => setActiveLang(t.language)}
+                    style={{ 
+                      padding: '4px 12px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 600, border: 'none', cursor: 'pointer',
+                      background: activeLang === t.language ? 'var(--primary)' : 'var(--bg-secondary)',
+                      color: activeLang === t.language ? '#fff' : 'var(--text-muted)'
+                    }}
+                  >
+                    {t.language.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, background: 'var(--bg-secondary)', padding: '16px', borderRadius: 8 }}>
+                <div>
+                  <label style={{ ...labelStyle, fontSize: '0.75rem' }}>Starter Code (Shown to Candidate)</label>
+                  <textarea 
+                    style={{ ...inputStyle, minHeight: 140, fontFamily: 'monospace', fontSize: '0.8rem', background: 'var(--bg-app)' }}
+                    placeholder="e.g. int solve(int a, int b) {\n\n}"
+                    value={form.templates?.find(t => t.language === activeLang)?.starterCode || ''}
+                    onChange={e => {
+                      const newT = [...form.templates];
+                      const idx = newT.findIndex(t => t.language === activeLang);
+                      if (idx >= 0) newT[idx].starterCode = e.target.value;
+                      setForm(f => ({ ...f, templates: newT }));
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ ...labelStyle, fontSize: '0.75rem' }}>Driver Code (Hidden Backend Runner)</label>
+                  <textarea 
+                    style={{ ...inputStyle, minHeight: 140, fontFamily: 'monospace', fontSize: '0.8rem', background: 'var(--bg-app)' }}
+                    placeholder="e.g. int main() {\n  int a, b; cin >> a >> b;\n  cout << solve(a,b);\n  return 0;\n}"
+                    value={form.templates?.find(t => t.language === activeLang)?.driverCode || ''}
+                    onChange={e => {
+                      const newT = [...form.templates];
+                      const idx = newT.findIndex(t => t.language === activeLang);
+                      if (idx >= 0) newT[idx].driverCode = e.target.value;
+                      setForm(f => ({ ...f, templates: newT }));
+                    }}
+                  />
+                </div>
+              </div>
             </div>
 
             <div style={{ marginBottom: 16 }}>

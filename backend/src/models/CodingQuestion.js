@@ -6,6 +6,12 @@ const testCaseSchema = new mongoose.Schema({
   isHidden: { type: Boolean, default: false }, // if false, candidate can see it as an example
 });
 
+const templateSchema = new mongoose.Schema({
+  language: { type: String, required: true },
+  starterCode: { type: String, required: true },
+  driverCode: { type: String, required: true }
+});
+
 const codingQuestionSchema = new mongoose.Schema(
   {
     title: {
@@ -23,6 +29,7 @@ const codingQuestionSchema = new mongoose.Schema(
       default: 'medium',
     },
     testCases: [testCaseSchema],
+    templates: [templateSchema],
     constraints: [String],
     isActive: {
       type: Boolean,

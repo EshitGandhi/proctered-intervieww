@@ -54,7 +54,12 @@ const CodeEvalRound = () => {
         setQuestions(qs);
         // Initialize per-question state
         const init = {};
-        qs.forEach((_, i) => { init[i] = { language: 'python', code: DEFAULT_CODE['python'], running: false, runResult: null }; });
+        qs.forEach((q, i) => { 
+          const lang = 'python';
+          const tpl = q.templates?.find(t => t.language === lang);
+          const initialCode = tpl?.starterCode || DEFAULT_CODE[lang] || '';
+          init[i] = { language: lang, code: initialCode, running: false, runResult: null }; 
+        });
         setQState(init);
       } catch (e) {
         setError('Failed to load coding round.');
@@ -76,13 +81,13 @@ const CodeEvalRound = () => {
       const visibleTCs = question.testCases.filter(tc => !tc.isHidden);
       if (visibleTCs.length === 0) {
         // Just run with empty stdin
-        const { data } = await api.post('/code/run', { language: q.language, sourceCode: q.code, stdin: '' });
+        const { data } = await api.post('/code/run', { questionId: question._id, language: q.language, sourceCode: q.code, stdin: '' });
         updateQ(idx, { running: false, runResult: { type: 'single', result: data.data } });
         return;
       }
       // Run against each visible test case
       const results = await Promise.all(visibleTCs.map(tc =>
-        api.post('/code/run', { language: q.language, sourceCode: q.code, stdin: tc.input }).then(r => ({
+        api.post('/code/run', { questionId: question._id, language: q.language, sourceCode: q.code, stdin: tc.input }).then(r => ({
           input: tc.input,
           expected: tc.expectedOutput,
           actual: (r.data.data.stdout || '').trim(),
@@ -269,7 +274,9 @@ const CodeEvalRound = () => {
               value={currentQState.language}
               onChange={e => {
                 const newLang = e.target.value;
-                updateQ(activeQ, { language: newLang, code: DEFAULT_CODE[newLang] });
+                const qq = questions[activeQ];
+                const tpl = qq?.templates?.find(t => t.language === newLang);
+                updateQ(activeQ, { language: newLang, code: tpl?.starterCode || DEFAULT_CODE[newLang] || '' });
               }}
             >
               {LANGUAGES.map(l => <option key={l.id} value={l.id}>{l.label}</option>)}

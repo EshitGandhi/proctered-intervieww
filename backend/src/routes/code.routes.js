@@ -1,5 +1,6 @@
 const express = require('express');
 const CodeSubmission = require('../models/CodeSubmission');
+const CodingQuestion = require('../models/CodingQuestion');
 const { executeCode, LANGUAGE_IDS } = require('../services/judge0.service');
 const { protect } = require('../middleware/auth.middleware');
 
@@ -13,7 +14,18 @@ router.post('/run', protect, async (req, res) => {
     return res.status(400).json({ success: false, message: 'language and sourceCode are required' });
   }
 
-  const result = await executeCode({ language, sourceCode, stdin: stdin || '' });
+  let codeToExecute = sourceCode;
+  if (questionId) {
+    const question = await CodingQuestion.findById(questionId);
+    if (question && question.templates) {
+      const template = question.templates.find(t => t.language === language);
+      if (template && template.driverCode) {
+        codeToExecute = sourceCode + '\n\n' + template.driverCode;
+      }
+    }
+  }
+
+  const result = await executeCode({ language, sourceCode: codeToExecute, stdin: stdin || '' });
 
   if (interviewId) {
     await CodeSubmission.create({
@@ -45,7 +57,18 @@ router.post('/submit', protect, async (req, res) => {
     return res.status(400).json({ success: false, message: 'language, sourceCode, and interviewId are required' });
   }
 
-  const result = await executeCode({ language, sourceCode, stdin: stdin || '' });
+  let codeToExecute = sourceCode;
+  if (questionId) {
+    const question = await CodingQuestion.findById(questionId);
+    if (question && question.templates) {
+      const template = question.templates.find(t => t.language === language);
+      if (template && template.driverCode) {
+        codeToExecute = sourceCode + '\n\n' + template.driverCode;
+      }
+    }
+  }
+
+  const result = await executeCode({ language, sourceCode: codeToExecute, stdin: stdin || '' });
 
   const submission = await CodeSubmission.create({
     interview: interviewId,
