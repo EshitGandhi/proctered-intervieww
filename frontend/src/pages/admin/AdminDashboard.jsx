@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AppLayout from '../../components/Layout/AppLayout';
 import api from '../../services/api';
+import { DOMAINS } from '../../utils/constants';
 
 // ─── Tab: Job Management ──────────────────────────────────────────────────────
 const JobsTab = () => {
@@ -69,7 +70,15 @@ const JobsTab = () => {
               </div>
               <div>
                 <label style={labelStyle}>Domain *</label>
-                <input style={inputStyle} placeholder="e.g. Engineering" value={form.domain} onChange={e => setForm(f => ({ ...f, domain: e.target.value }))} required />
+                <select 
+                  style={inputStyle} 
+                  value={form.domain} 
+                  onChange={e => setForm(f => ({ ...f, domain: e.target.value }))} 
+                  required
+                >
+                  <option value="">— Select Domain —</option>
+                  {DOMAINS.map(d => <option key={d} value={d}>{d}</option>)}
+                </select>
               </div>
             </div>
             <div style={{ marginBottom: 16 }}>

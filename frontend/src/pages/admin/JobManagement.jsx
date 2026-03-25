@@ -1,6 +1,7 @@
 // Create JobManagement.jsx component inside admin folder
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
+import { DOMAINS } from '../../utils/constants';
 
 const INITIAL_JOB_FORM = {
   title: '',
@@ -175,7 +176,15 @@ const JobManagement = () => {
                 </div>
                 <div className="form-group">
                   <label>Domain</label>
-                  <input className="input" required value={form.domain} onChange={e => setForm({...form, domain: e.target.value})} placeholder="e.g. Engineering" />
+                  <select 
+                    className="input" 
+                    required 
+                    value={form.domain} 
+                    onChange={e => setForm({...form, domain: e.target.value})}
+                  >
+                    <option value="">— Select Domain —</option>
+                    {DOMAINS.map(d => <option key={d} value={d}>{d}</option>)}
+                  </select>
                 </div>
               </div>
 

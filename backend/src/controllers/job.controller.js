@@ -17,8 +17,14 @@ exports.createJob = async (req, res) => {
 // @access  Public / Candidate
 exports.getJobs = async (req, res) => {
   try {
-    // Only show active jobs unless requested by admin
-    const query = req.user?.role === 'admin' ? {} : { isActive: true };
+    // Admins see everything, candidates/interviewers see active jobs
+    const query = (req.user?.role === 'admin' || req.user?.role === 'interviewer') ? {} : { isActive: true };
+
+    // If candidate, filter by their domain
+    if (req.user?.role === 'candidate' && req.user.domain) {
+      query.domain = req.user.domain;
+    }
+
     const jobs = await Job.find(query).sort('-createdAt');
     res.status(200).json({ success: true, count: jobs.length, data: jobs });
   } catch (error) {

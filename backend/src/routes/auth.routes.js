@@ -13,7 +13,7 @@ const signToken = (id) =>
 // POST /api/auth/register
 router.post('/register', async (req, res, next) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, domain } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({ success: false, message: 'Name, email, and password are required' });
@@ -27,13 +27,13 @@ router.post('/register', async (req, res, next) => {
     const allowedRoles = ['candidate', 'interviewer'];
     const userRole = allowedRoles.includes(role) ? role : 'candidate';
 
-    const user = await User.create({ name, email, password, role: userRole });
+    const user = await User.create({ name, email, password, role: userRole, domain });
     const token = signToken(user._id);
 
     res.status(201).json({
       success: true,
       token,
-      user: { id: user._id, name: user.name, email: user.email, role: user.role },
+      user: { id: user._id, name: user.name, email: user.email, role: user.role, domain: user.domain },
     });
   } catch (error) {
     next(error);
@@ -59,7 +59,7 @@ router.post('/login', async (req, res, next) => {
     res.json({
       success: true,
       token,
-      user: { id: user._id, name: user.name, email: user.email, role: user.role },
+      user: { id: user._id, name: user.name, email: user.email, role: user.role, domain: user.domain },
     });
   } catch (error) {
     next(error);
@@ -76,6 +76,7 @@ router.get('/me', protect, async (req, res, next) => {
         name: req.user.name,
         email: req.user.email,
         role: req.user.role,
+        domain: req.user.domain,
       },
     });
   } catch (error) {

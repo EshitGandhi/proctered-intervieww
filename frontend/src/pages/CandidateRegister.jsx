@@ -2,21 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
-
-const DOMAINS = [
-  'Software Engineering',
-  'Frontend Development',
-  'Backend Development',
-  'Full Stack Development',
-  'Data Science / ML',
-  'DevOps / Cloud',
-  'UI/UX Design',
-  'Product Management',
-  'QA / Testing',
-  'Cybersecurity',
-  'Mobile Development',
-  'Other',
-];
+import { DOMAINS } from '../utils/constants';
 
 const CandidateRegister = () => {
   const navigate = useNavigate();

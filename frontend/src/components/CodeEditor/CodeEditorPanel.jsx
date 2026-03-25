@@ -5,6 +5,9 @@ import useCodeExecution from '../../hooks/useCodeExecution';
 const LANGUAGES = [
   { id: 'python', label: 'Python', monacoLang: 'python' },
   { id: 'javascript', label: 'JavaScript', monacoLang: 'javascript' },
+  { id: 'java', label: 'Java', monacoLang: 'java' },
+  { id: 'c', label: 'C', monacoLang: 'c' },
+  { id: 'cpp', label: 'C++', monacoLang: 'cpp' },
 ];
 
 const THEMES = [

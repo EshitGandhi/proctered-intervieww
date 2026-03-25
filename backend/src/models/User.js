@@ -30,6 +30,11 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    domain: {
+      type: String,
+      trim: true,
+      default: null, // Only for candidates
+    },
     isActive: {
       type: Boolean,
       default: true,
