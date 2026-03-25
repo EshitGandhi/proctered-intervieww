@@ -3,9 +3,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
 import api from '../../services/api';
 
+import { DEFAULT_CODE } from '../../hooks/useCodeExecution';
+
 const LANGUAGES = [
-  { id: 'python', label: 'Python' },
-  { id: 'javascript', label: 'JavaScript' },
+  { id: 'python', label: 'Python', monacoLang: 'python' },
+  { id: 'javascript', label: 'JavaScript', monacoLang: 'javascript' },
+  { id: 'java', label: 'Java', monacoLang: 'java' },
+  { id: 'c', label: 'C', monacoLang: 'c' },
+  { id: 'cpp', label: 'C++', monacoLang: 'cpp' },
 ];
 
 const DIFF_COLORS = { easy: '#10b981', medium: '#f59e0b', hard: '#ef4444' };
@@ -49,7 +54,7 @@ const CodeEvalRound = () => {
         setQuestions(qs);
         // Initialize per-question state
         const init = {};
-        qs.forEach((_, i) => { init[i] = { language: 'python', code: '# Write your solution here\n', running: false, runResult: null }; });
+        qs.forEach((_, i) => { init[i] = { language: 'python', code: DEFAULT_CODE['python'], running: false, runResult: null }; });
         setQState(init);
       } catch (e) {
         setError('Failed to load coding round.');
@@ -262,7 +267,10 @@ const CodeEvalRound = () => {
               className="input select"
               style={{ width: 130, padding: '5px 10px' }}
               value={currentQState.language}
-              onChange={e => updateQ(activeQ, { language: e.target.value })}
+              onChange={e => {
+                const newLang = e.target.value;
+                updateQ(activeQ, { language: newLang, code: DEFAULT_CODE[newLang] });
+              }}
             >
               {LANGUAGES.map(l => <option key={l.id} value={l.id}>{l.label}</option>)}
             </select>
@@ -277,7 +285,7 @@ const CodeEvalRound = () => {
             <Editor
               height="100%"
               theme="vs-dark"
-              language={currentQState.language}
+              language={LANGUAGES.find(l => l.id === currentQState.language)?.monacoLang || 'python'}
               value={currentQState.code}
               onChange={val => updateQ(activeQ, { code: val || '' })}
               options={{ fontSize: 14, minimap: { enabled: false }, automaticLayout: true }}
