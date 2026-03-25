@@ -2,35 +2,68 @@ const Application = require('../models/Application');
 const Job = require('../models/Job');
 const Interview = require('../models/Interview');
 const fs = require('fs');
-const pdfParse = require('pdf-parse');
+const axios = require('axios');
+const FormData = require('form-data');
 
-// ─── Real Resume Parser ────────────────────────────────────────────────────────
-const parseResumeAndScore = async (resumePath, requiredSkills) => {
+// ─── External ATS API Integration ─────────────────────────────────────────────
+const mapDomainToATS = (domain) => {
+  const supported = [
+    'AI/ML Engineer',
+    'PHP Developer',
+    'Data Engineer',
+    'Data Scientist',
+    'DevOps',
+    'MERN Developer',
+    'Python Developer',
+    'Java Developer',
+    'DBA',
+    'Cloud Engineer',
+    'Network Engineer',
+    'Go Lang Developer',
+    'Technical Support',
+    'Business Analyst',
+    '.NET Developer',
+    'Data Analytics',
+    'QA (Quality Assurance)',
+  ];
+  
+  // Try exact match first
+  const exact = supported.find(s => s.toLowerCase() === domain?.toLowerCase());
+  if (exact) return exact;
+  
+  // Try partial match
+  const partial = supported.find(s => domain?.toLowerCase().includes(s.toLowerCase()) || s.toLowerCase().includes(domain?.toLowerCase()));
+  if (partial) return partial;
+
+  return 'MERN Developer'; // Default fallback
+};
+
+const parseResumeAndScore = async (resumePath, jobDomain) => {
   try {
-    const dataBuffer = fs.readFileSync(resumePath);
-    const pdfData = await pdfParse(dataBuffer);
-    const extractedText = pdfData.text.toLowerCase();
+    const atsDomain = mapDomainToATS(jobDomain);
+    const form = new FormData();
+    form.append('resume', fs.createReadStream(resumePath));
+    form.append('domain', atsDomain);
 
-    const matchedSkills = [];
-    const missingSkills = [];
-
-    requiredSkills.forEach(skill => {
-      if (extractedText.includes(skill.toLowerCase())) {
-        matchedSkills.push(skill);
-      } else {
-        missingSkills.push(skill);
-      }
+    const response = await axios.post('https://atsscorer-production.up.railway.app/analyze', form, {
+      headers: {
+        ...form.getHeaders(),
+      },
     });
 
-    const score = requiredSkills.length > 0
-      ? Math.round((matchedSkills.length / requiredSkills.length) * 100)
-      : 100;
-
-    return { score, matchedSkills, missingSkills };
+    // The API returns a score as a string or number. Let's ensure it's a number.
+    // Assuming the response is { "score": 85, ... } or { "total_score": 85, ... }
+    const score = response.data.score || response.data.total_score || response.data.ats_score || 0;
+    
+    return { 
+      score: Number(score), 
+      matchedSkills: response.data.matched_skills || [], 
+      missingSkills: response.data.missing_skills || [] 
+    };
   } catch (err) {
-    console.error('PDF parse error:', err.message);
-    // Fallback: return 0 score if PDF cannot be parsed
-    return { score: 0, matchedSkills: [], missingSkills: requiredSkills };
+    console.error('External ATS API error:', err.response?.data || err.message);
+    // Fallback: return 0 score if API fails
+    return { score: 0, matchedSkills: [], missingSkills: [] };
   }
 };
 
@@ -57,7 +90,7 @@ exports.applyForJob = async (req, res) => {
       return res.status(400).json({ success: false, error: 'Resume PDF is required' });
     }
 
-    const { score, matchedSkills, missingSkills } = await parseResumeAndScore(req.file.path, job.requiredSkills);
+    const { score, matchedSkills, missingSkills } = await parseResumeAndScore(req.file.path, job.domain);
     const isPassed = score >= job.resumeThreshold;
     const status = isPassed ? 'mcq_pending' : 'resume_rejected';
 
