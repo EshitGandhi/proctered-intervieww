@@ -1,59 +1,61 @@
 const axios = require('axios');
 
 /**
- * Piston-based Code Execution Engine
- * Evaluates Python, JS, Java, C, and C++ using the Piston API.
+ * Judge0-based Code Execution Engine
+ * Evaluates Python, JS, Java, C, and C++ using the Judge0 API.
  */
 
-const PISTON_URL = 'https://emkc.org/api/v2/piston/execute';
+// Use CE community instance if no URL provided: https://ce.judge0.com
+const JUDGE0_URL = process.env.JUDGE0_API_URL || 'https://ce.judge0.com';
+const JUDGE0_KEY = process.env.JUDGE0_API_KEY;
 
-const LANGUAGE_VERSIONS = {
-  javascript: '18.15.0',
-  python: '3.10.0',
-  java: '15.0.2',
-  c: '10.2.0',
-  cpp: '10.2.0'
+// Judge0 Language IDs (for CE Edition)
+const JUDGE0_LANG_IDS = {
+  javascript: 63, // Node.js 12.14.0
+  python: 71,     // Python 3.8.1
+  java: 62,       // Java 13.0.1
+  c: 50,          // GCC 9.2.0
+  cpp: 54         // GCC 9.2.0
 };
 
 const executeCode = async ({ language, sourceCode, stdin = '' }) => {
   try {
-    const response = await axios.post(PISTON_URL, {
-      language: language === 'javascript' ? 'node-js' : language, // node-js is the identifier for JS in Piston
-      version: '*', // Use latest available version
-      files: [
-        {
-          name: language === 'java' ? 'Main.java' : `main.${getExt(language)}`,
-          content: sourceCode
-        }
-      ],
-      stdin: stdin
-    });
-
-    const { run, compile } = response.data;
-    
-    // Determine status
-    let status = 'Accepted';
-    if (compile && compile.code !== 0) {
-      status = 'Compilation Error';
-    } else if (run.code !== 0) {
-      if (run.signal === 'SIGKILL') {
-        status = 'Time Limit Exceeded';
-      } else {
-        status = 'Runtime Error';
-      }
+    const languageId = JUDGE0_LANG_IDS[language];
+    if (!languageId) {
+      throw new Error(`Unsupported language: ${language}`);
     }
 
+    const options = {
+      method: 'POST',
+      url: `${JUDGE0_URL}/submissions`,
+      params: { base64_encoded: 'false', wait: 'true' },
+      headers: {
+        'content-type': 'application/json',
+        'Content-Type': 'application/json',
+        ...(JUDGE0_KEY && JUDGE0_KEY !== 'your_judge0_rapidapi_key' ? { 'X-RapidAPI-Key': JUDGE0_KEY } : {}),
+        ...(JUDGE0_KEY && JUDGE0_KEY !== 'your_judge0_rapidapi_key' ? { 'X-RapidAPI-Host': new URL(JUDGE0_URL).hostname } : {})
+      },
+      data: {
+        source_code: sourceCode,
+        language_id: languageId,
+        stdin: stdin
+      }
+    };
+
+    const response = await axios.request(options);
+    const result = response.data;
+
     return {
-      stdout: run.stdout || '',
-      stderr: run.stderr || '',
-      compileOutput: compile ? compile.stderr || compile.stdout || '' : '',
-      status: status,
-      time: '0.1', // Piston doesn't provide precise execution time easily
-      memory: 2048,
-      languageId: language,
+      stdout: result.stdout || '',
+      stderr: result.stderr || '',
+      compileOutput: result.compile_output || '',
+      status: result.status?.description || 'Unknown Status',
+      time: result.time || '0.0',
+      memory: result.memory || 0,
+      languageId: languageId,
     };
   } catch (err) {
-    console.error('Piston execution error:', err.response?.data || err.message);
+    console.error('Judge0 execution error:', err.response?.data || err.message);
     return {
       stdout: '',
       stderr: `Execution failed: ${err.response?.data?.message || err.message}`,
@@ -66,18 +68,7 @@ const executeCode = async ({ language, sourceCode, stdin = '' }) => {
   }
 };
 
-const getExt = (lang) => {
-  const map = {
-    python: 'py',
-    javascript: 'js',
-    java: 'java',
-    c: 'c',
-    cpp: 'cpp'
-  };
-  return map[lang] || 'txt';
-};
-
 module.exports = { 
   executeCode, 
-  LANGUAGE_IDS: { javascript: 1, python: 2, java: 3, c: 4, cpp: 5 } 
+  LANGUAGE_IDS: JUDGE0_LANG_IDS 
 };
