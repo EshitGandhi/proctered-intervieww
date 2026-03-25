@@ -515,24 +515,44 @@ const CandidateDetail = ({ appId, onBack }) => {
       </div>
 
       {/* Admin Overrides */}
-      {(app.status === 'resume_rejected' || app.status === 'mcq_failed') && (
-        <div className="card" style={{ marginBottom: 20, background: '#fef2f2', border: '1px solid #fca5a5' }}>
-          <h3 style={{ fontSize: '0.95rem', marginBottom: 10, color: '#991b1b' }}>Admin Overrides</h3>
-          <p style={{ fontSize: '0.8rem', color: '#7f1d1d', marginBottom: 14 }}>
-            Candidate was rejected. You can manually intervene to give them another chance.
+      {['resume_rejected', 'mcq_pending', 'mcq_failed', 'coding_pending', 'coding_failed'].includes(app.status) && (
+        <div className="card" style={{ marginBottom: 20, background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
+          <h3 style={{ fontSize: '0.95rem', marginBottom: 10 }}>Admin Controls & Overrides</h3>
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: 14 }}>
+            Manually intervene to progress the candidate or reset scores.
           </p>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button className="btn btn-secondary btn-sm" onClick={() => handleOverride('delete')} disabled={generating}>
-              {generating ? '...' : '🗑 Delete Application (Allows Re-upload)'}
+              🗑 Delete Application
             </button>
+
             {app.status === 'resume_rejected' && (
               <button className="btn btn-primary btn-sm" onClick={() => handleOverride('force_mcq')} disabled={generating}>
                 📝 Ignore Resume & Allow MCQ
               </button>
             )}
+
             {app.status === 'mcq_failed' && (
               <button className="btn btn-primary btn-sm" onClick={() => handleOverride('retry_mcq')} disabled={generating}>
                 🔄 Allow MCQ Retry
+              </button>
+            )}
+
+            {(app.status === 'mcq_pending' || app.status === 'mcq_failed') && (
+              <button className="btn btn-secondary btn-sm" onClick={() => handleOverride('skip_mcq')} disabled={generating}>
+                ⏩ Skip MCQ Round
+              </button>
+            )}
+
+            {app.status === 'coding_failed' && (
+              <button className="btn btn-primary btn-sm" onClick={() => handleOverride('retry_coding')} disabled={generating}>
+                🔄 Allow Coding Retry
+              </button>
+            )}
+
+            {(app.status === 'coding_pending' || app.status === 'coding_failed') && (
+              <button className="btn btn-secondary btn-sm" onClick={() => handleOverride('skip_coding')} disabled={generating}>
+                ⏩ Skip Coding Round
               </button>
             )}
           </div>

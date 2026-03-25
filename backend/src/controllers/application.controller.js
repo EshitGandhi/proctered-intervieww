@@ -311,12 +311,20 @@ exports.overrideApplicationStatus = async (req, res) => {
       message = 'ATS Resume result overridden. Candidate can now take the MCQ round.';
     } else if (action === 'retry_mcq' && app.status === 'mcq_failed') {
       app.status = 'mcq_pending';
-      delete app.scores.mcq;
-      // Tricky: mongoose maps require MarkModified if not fully replacing, but deleting the whole key is ok if we use doc.set
       app.set('scores.mcq', undefined); 
       message = 'MCQ score reset. Candidate can retake the MCQ round.';
+    } else if (action === 'retry_coding' && app.status === 'coding_failed') {
+      app.status = 'coding_pending';
+      app.set('scores.coding', undefined);
+      message = 'Coding score reset. Candidate can retake the coding round.';
+    } else if (action === 'skip_mcq' && (app.status === 'mcq_pending' || app.status === 'mcq_failed')) {
+      app.status = 'coding_pending';
+      message = 'MCQ round skipped. Candidate proceeds to coding.';
+    } else if (action === 'skip_coding' && (app.status === 'coding_pending' || app.status === 'coding_failed')) {
+      app.status = 'interview_pending';
+      message = 'Coding round skipped. Candidate proceeds to interview.';
     } else {
-      return res.status(400).json({ success: false, error: 'Invalid override action for current status' });
+      return res.status(400).json({ success: false, error: `Action '${action}' not available for current stage '${app.status}'` });
     }
 
     await app.save();
