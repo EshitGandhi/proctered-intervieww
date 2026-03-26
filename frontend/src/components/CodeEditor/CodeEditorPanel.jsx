@@ -19,7 +19,6 @@ const THEMES = [
 const CodeEditorPanel = ({ interviewId, readOnly = false, onSubmit, socket, roomId }) => {
   const [theme, setTheme] = React.useState('vs-dark');
   const [fontSize, setFontSize] = React.useState(14);
-  const [explorerOpen, setExplorerOpen] = React.useState(true);
 
   const {
     language, setLanguage,
@@ -47,41 +46,41 @@ const CodeEditorPanel = ({ interviewId, readOnly = false, onSubmit, socket, room
 
   return (
     <div className="editor-panel" style={{ background: '#1e1e1e', height: '100%', display: 'flex', flexDirection: 'column' }}>
-      {/* 1. VS Code Style Toolbar / Tabs */}
-      <div style={{ display: 'flex', background: '#252526', height: '35px', alignItems: 'center', borderBottom: '1px solid #333' }}>
-        {/* Explorer Toggle */}
-        <button 
-          onClick={() => setExplorerOpen(!explorerOpen)}
-          style={{ width: '48px', height: '100%', border: 'none', background: 'transparent', cursor: 'pointer', color: explorerOpen ? '#fff' : '#858585' }}
-        >
-          📁
-        </button>
+      {/* 1. Toolbar */}
+      <div style={{ display: 'flex', background: '#252526', height: '40px', alignItems: 'center', borderBottom: '1px solid #333', padding: '0 12px' }}>
         
-        {/* Active Tabs */}
-        <div style={{ display: 'flex', height: '100%', overflowX: 'auto' }}>
+        {/* Active Tab View */}
+        <div style={{ display: 'flex', height: '100%' }}>
           <div style={{ 
             display: 'flex', alignItems: 'center', padding: '0 16px', gap: 8,
             background: '#1e1e1e', height: '100%', color: '#fff', borderTop: '1px solid var(--accent-primary)',
-            fontSize: '13px', cursor: 'pointer'
+            fontSize: '13px'
           }}>
-            <span>🐍</span>
-            <span>solution.py</span>
-            <span style={{ fontSize: '10px', opacity: 0.6 }}>✕</span>
-          </div>
-          <div style={{ 
-            display: 'flex', alignItems: 'center', padding: '0 16px', gap: 8,
-            background: '#2d2d2d', height: '100%', color: '#969696',
-            fontSize: '13px', cursor: 'pointer'
-          }}>
-            <span>📄</span>
-            <span>readme.md</span>
+            <span>Code Editor</span>
           </div>
         </div>
 
         <div style={{ flex: 1 }} />
         
-        {/* Execution Controls */}
-        <div style={{ display: 'flex', gap: 8, paddingRight: 8 }}>
+        {/* Language Selector & Execution Controls */}
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          {/* Language Switcher */}
+          {!readOnly && (
+            <select
+              className="input"
+              style={{ 
+                height: '24px', padding: '0 8px', fontSize: '12px', background: '#3c3c3c', 
+                border: '1px solid #555', color: '#fff', borderRadius: '4px' 
+              }}
+              value={language}
+              onChange={(e) => setLanguage(e.target.value)}
+            >
+              {LANGUAGES.map((l) => (
+                <option key={l.id} value={l.id}>{l.label}</option>
+              ))}
+            </select>
+          )}
+
           <button 
             className="btn btn-primary" 
             style={{ height: '24px', padding: '0 12px', fontSize: '12px' }}
@@ -104,32 +103,7 @@ const CodeEditorPanel = ({ interviewId, readOnly = false, onSubmit, socket, room
       </div>
 
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-        {/* 2. Left File Explorer (VS Code Style) */}
-        {explorerOpen && (
-          <div style={{ width: '220px', background: '#252526', borderRight: '1px solid #333', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ padding: '10px 16px', fontSize: '11px', color: '#bbb', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Explorer
-            </div>
-            <div style={{ padding: '4px 16px', fontSize: '13px', color: '#ccc', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span>⌄</span>
-              <span style={{ fontWeight: 700 }}>PROJECT_ROOT</span>
-            </div>
-            <div style={{ padding: '4px 28px', fontSize: '13px', color: '#fff', background: '#37373d', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span>🐍</span>
-              <span>solution.py</span>
-            </div>
-            <div style={{ padding: '4px 28px', fontSize: '13px', color: '#ccc', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span>📄</span>
-              <span>readme.md</span>
-            </div>
-            <div style={{ padding: '4px 28px', fontSize: '13px', color: '#ccc', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span>⚙️</span>
-              <span>utils.py</span>
-            </div>
-          </div>
-        )}
-
-        {/* 3. Main Editor Stage */}
+        {/* 2. Main Editor Stage */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#1e1e1e' }}>
           
           <div style={{ flex: 1 }}>
@@ -163,20 +137,20 @@ const CodeEditorPanel = ({ interviewId, readOnly = false, onSubmit, socket, room
             />
           </div>
 
-          {/* 4. Console Section (LeetCode Style) */}
+          {/* 3. Console Section (LeetCode Style) */}
           <div style={{ height: '30%', borderTop: '2px solid #333', display: 'flex', flexDirection: 'column', background: '#1e1e1e' }}>
              <div style={{ display: 'flex', borderBottom: '1px solid #333', background: '#252526' }}>
                 <button 
                   className={`console-tab ${activeTab === 'input' ? 'active' : ''}`}
                   onClick={() => setActiveTab('input')}
-                  style={{ border: 'none', background: 'transparent', padding: '8px 16px', fontSize: '12px', color: activeTab === 'input' ? '#fff' : '#858585', borderBottom: activeTab === 'input' ? '2px solid #fff' : 'none' }}
+                  style={{ border: 'none', background: 'transparent', padding: '10px 16px', fontSize: '12px', color: activeTab === 'input' ? '#fff' : '#858585', borderBottom: activeTab === 'input' ? '2px solid #fff' : 'none', cursor: 'pointer' }}
                 >
                   Test Case
                 </button>
                 <button 
                   className={`console-tab ${activeTab === 'output' ? 'active' : ''}`}
                   onClick={() => setActiveTab('output')}
-                  style={{ border: 'none', background: 'transparent', padding: '8px 16px', fontSize: '12px', color: activeTab === 'output' ? '#fff' : '#858585', borderBottom: activeTab === 'output' ? '2px solid #fff' : 'none' }}
+                  style={{ border: 'none', background: 'transparent', padding: '10px 16px', fontSize: '12px', color: activeTab === 'output' ? '#fff' : '#858585', borderBottom: activeTab === 'output' ? '2px solid #fff' : 'none', cursor: 'pointer' }}
                 >
                   Result
                 </button>
@@ -210,7 +184,7 @@ const CodeEditorPanel = ({ interviewId, readOnly = false, onSubmit, socket, room
              </div>
           </div>
 
-          {/* 5. VS Code Status Bar */}
+          {/* 4. Status Bar */}
           <div style={{ height: '22px', background: 'var(--accent-primary)', color: '#fff', fontSize: '12px', display: 'flex', alignItems: 'center', padding: '0 12px', gap: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               <span>⎇</span>
@@ -221,7 +195,7 @@ const CodeEditorPanel = ({ interviewId, readOnly = false, onSubmit, socket, room
               Ln {sourceCode.split('\n').length}, Col 1
             </div>
             <div style={{ borderLeft: '1px solid rgba(255,255,255,0.2)', paddingLeft: 12 }}>
-              {currentLang?.label} {currentLang?.id === 'python' ? '3.x' : ''}
+              {currentLang?.label}
             </div>
           </div>
         </div>
