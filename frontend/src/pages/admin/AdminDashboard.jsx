@@ -80,10 +80,10 @@ const JobsTab = () => {
               </div>
               <div>
                 <label style={labelStyle}>Domain *</label>
-                <select 
-                  style={inputStyle} 
-                  value={form.domain} 
-                  onChange={e => setForm(f => ({ ...f, domain: e.target.value }))} 
+                <select
+                  style={inputStyle}
+                  value={form.domain}
+                  onChange={e => setForm(f => ({ ...f, domain: e.target.value }))}
                   required
                 >
                   <option value="">— Select Domain —</option>
@@ -116,9 +116,9 @@ const JobsTab = () => {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 20 }}>
-              {['resumeWeight','mcqWeight','codingWeight','interviewWeight'].map(k => (
+              {['resumeWeight', 'mcqWeight', 'codingWeight', 'interviewWeight'].map(k => (
                 <div key={k}>
-                  <label style={labelStyle}>{k.replace('Weight','').replace(/([A-Z])/g,' $1')} Weight</label>
+                  <label style={labelStyle}>{k.replace('Weight', '').replace(/([A-Z])/g, ' $1')} Weight</label>
                   <input type="number" min="0" max="100" style={inputStyle} value={form[k]} onChange={e => setForm(f => ({ ...f, [k]: Number(e.target.value) }))} />
                 </div>
               ))}
@@ -316,7 +316,7 @@ const CandidatesTab = ({ onSelectCandidate }) => {
   const [apps, setApps] = useState([]);
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState({ jobId: '', domain: '', minResume: '', minMcq: '', minCoding: '', status: '' });
+  const [filters, setFilters] = useState({ jobId: '', minResume: '', minMcq: '', minCoding: '', status: '' });
 
   const fetchData = async () => {
     setLoading(true);
@@ -363,13 +363,6 @@ const CandidatesTab = ({ onSelectCandidate }) => {
             </select>
           </div>
           <div>
-            <label style={{ fontSize: '0.72rem', fontWeight: 600, display: 'block', marginBottom: 4, color: 'var(--text-muted)' }}>DOMAIN</label>
-            <select style={inputStyle} value={filters.domain} onChange={e => setFilters(f => ({ ...f, domain: e.target.value }))}>
-              <option value="">All Domains</option>
-              {DOMAINS.map(d => <option key={d} value={d}>{d}</option>)}
-            </select>
-          </div>
-          <div>
             <label style={{ fontSize: '0.72rem', fontWeight: 600, display: 'block', marginBottom: 4, color: 'var(--text-muted)' }}>STATUS</label>
             <select style={inputStyle} value={filters.status} onChange={e => setFilters(f => ({ ...f, status: e.target.value }))}>
               <option value="">All Stages</option>
@@ -379,9 +372,6 @@ const CandidatesTab = ({ onSelectCandidate }) => {
               <option value="coding_pending">Coding Pending</option>
               <option value="interview_pending">Interview Pending</option>
               <option value="interview_scheduled">Interview Scheduled</option>
-              <option value="interview_completed">Interview Completed</option>
-              <option value="hired">Hired</option>
-              <option value="rejected">Rejected</option>
             </select>
           </div>
           <div>
@@ -617,24 +607,6 @@ const CandidateDetail = ({ appId, onBack }) => {
         </div>
       )}
 
-      {/* Interview history */}
-      {app.scores?.interview?.interviewSessions?.length > 0 && (
-        <div className="card" style={{ marginBottom: 20 }}>
-          <h3 style={{ fontSize: '0.95rem', marginBottom: 14 }}>Previous Interview Rounds</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {app.scores.interview.interviewSessions.map((session, idx) => (
-              <div key={session._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-secondary)', padding: 12, borderRadius: 8 }}>
-                <div>
-                  <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>Round {idx + 1}</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{new Date(session.createdAt).toLocaleDateString()}</div>
-                </div>
-                <button className="btn btn-ghost btn-sm" onClick={() => navigate(`/playback/${session._id}`)}>View History →</button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Interview section */}
       <div className="card">
         <h3 style={{ fontSize: '0.95rem', marginBottom: 14 }}>Interview Stage</h3>
@@ -644,34 +616,13 @@ const CandidateDetail = ({ appId, onBack }) => {
             <div className="alert alert-success" style={{ marginBottom: 14 }}>
               Interview session provisioned · Status: <strong>{app.scores.interview.interviewId.status || 'scheduled'}</strong>
             </div>
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              {app.scores.interview.interviewId.roomId && (
+            {app.scores.interview.interviewId.roomId && (
+              <div style={{ display: 'flex', gap: 10 }}>
                 <button className="btn btn-primary" onClick={() => navigate(`/monitor/${app.scores.interview.interviewId.roomId}`)}>
                   Join as Interviewer
                 </button>
-              )}
-              <button className="btn btn-secondary" onClick={() => navigate(`/playback/${app.scores.interview.interviewId._id}`)}>
-                View Recording / Transcript
-              </button>
-            </div>
-
-            {app.scores.interview.interviewId.status === 'completed' && (
-              <div style={{ marginTop: 20, paddingTop: 20, borderTop: '1px solid var(--border)' }}>
-                <h4 style={{ fontSize: '0.85rem', marginBottom: 10 }}>Subsequent Round</h4>
-                <button
-                  className="btn btn-primary btn-sm"
-                  onClick={async () => {
-                    if (window.confirm("Reschedule? This will create a NEW round and move this one to history.")) {
-                      const time = prompt("Enter time (YYYY-MM-DDTHH:mm):", new Date().toISOString().slice(0, 16));
-                      if (!time) return;
-                      try {
-                        await api.post(`/interviews/${app.scores.interview.interviewId._id}/reschedule`, { scheduledAt: new Date(time) });
-                        window.location.reload();
-                      } catch (e) { alert(e.response?.data?.message || e.message); }
-                    }
-                  }}
-                >
-                  🔁 Create New Interview Round
+                <button className="btn btn-secondary" onClick={() => navigate(`/playback/${app.scores.interview.interviewId._id}`)}>
+                  View Recording / Transcript
                 </button>
               </div>
             )}
@@ -682,27 +633,27 @@ const CandidateDetail = ({ appId, onBack }) => {
               This candidate has passed all rounds and is awaiting an interview session.
             </p>
             {genError && <div className="alert alert-danger" style={{ marginBottom: 12 }}>{genError}</div>}
-            
+
             <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 16, flexWrap: 'wrap' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>
                   SCHEDULE TIME
                 </label>
-                <input 
-                  type="datetime-local" 
+                <input
+                  type="datetime-local"
                   id="interviewScheduleTime"
-                  defaultValue={new Date(Date.now() + 86400000 - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)} 
-                  className="input" 
+                  defaultValue={new Date(Date.now() + 86400000 - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)}
+                  className="input"
                   style={{ padding: '8px 12px', width: '220px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '6px' }}
                 />
               </div>
-              <button 
-                className="btn btn-primary" 
+              <button
+                className="btn btn-primary"
                 style={{ alignSelf: 'flex-end', height: '40px' }}
                 onClick={() => {
                   const el = document.getElementById('interviewScheduleTime');
                   handleGenerate(el ? el.value : null);
-                }} 
+                }}
                 disabled={generating}>
                 {generating ? 'Generating...' : '🎥 Generate Interview Session'}
               </button>
@@ -842,11 +793,11 @@ const CodingQuestionsTab = () => {
               <label style={{ ...labelStyle, fontSize: '0.9rem', marginBottom: 12, color: 'var(--text-primary)' }}>Code Templates & Injection</label>
               <div style={{ display: 'flex', gap: 8, marginBottom: 12, overflowX: 'auto' }}>
                 {defaultTemplates.map(t => (
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     key={t.language}
                     onClick={() => setActiveLang(t.language)}
-                    style={{ 
+                    style={{
                       padding: '4px 12px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 600, border: 'none', cursor: 'pointer',
                       background: activeLang === t.language ? 'var(--primary)' : 'var(--bg-secondary)',
                       color: activeLang === t.language ? '#fff' : 'var(--text-muted)'
@@ -856,11 +807,11 @@ const CodingQuestionsTab = () => {
                   </button>
                 ))}
               </div>
-              
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, background: 'var(--bg-secondary)', padding: '16px', borderRadius: 8 }}>
                 <div>
                   <label style={{ ...labelStyle, fontSize: '0.75rem' }}>Starter Code (Shown to Candidate)</label>
-                  <textarea 
+                  <textarea
                     style={{ ...inputStyle, minHeight: 140, fontFamily: 'monospace', fontSize: '0.8rem', background: 'var(--bg-app)' }}
                     placeholder="e.g. int solve(int a, int b) {\n\n}"
                     value={form.templates?.find(t => t.language === activeLang)?.starterCode || ''}
@@ -874,7 +825,7 @@ const CodingQuestionsTab = () => {
                 </div>
                 <div>
                   <label style={{ ...labelStyle, fontSize: '0.75rem' }}>Driver Code (Hidden Backend Runner)</label>
-                  <textarea 
+                  <textarea
                     style={{ ...inputStyle, minHeight: 140, fontFamily: 'monospace', fontSize: '0.8rem', background: 'var(--bg-app)' }}
                     placeholder="e.g. int main() {\n  int a, b; cin >> a >> b;\n  cout << solve(a,b);\n  return 0;\n}"
                     value={form.templates?.find(t => t.language === activeLang)?.driverCode || ''}

@@ -1,7 +1,6 @@
 const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const Interview = require('../models/Interview');
-const Application = require('../models/Application'); // Ensure Application model is imported
 const { protect, requireRole } = require('../middleware/auth.middleware');
 
 const router = express.Router();
@@ -35,7 +34,7 @@ router.get('/room/:roomId', protect, async (req, res, next) => {
     const interview = await Interview.findOne({ roomId: req.params.roomId })
       .populate('interviewer', 'name email');
     if (!interview) return res.status(404).json({ success: false, message: 'Room not found' });
-    
+
     // Block candidate from joining if session is not active
     if (req.user.role === 'candidate' && interview.status !== 'active') {
       return res.status(403).json({ success: false, message: 'The interviewer has not started this session yet. Please wait.' });
@@ -70,57 +69,24 @@ router.patch('/:id/end', protect, requireRole('interviewer', 'admin'), async (re
   const interview = await Interview.findByIdAndUpdate(
     req.params.id, { status: 'completed', endedAt: new Date() }, { new: true }
   );
-  if (interview) {
-    await Application.findOneAndUpdate(
-      { 'scores.interview.interviewId': req.params.id },
-      { status: 'interview_completed' }
-    );
-  }
   if (!interview) return res.status(404).json({ success: false, message: 'Interview not found' });
   res.json({ success: true, data: interview });
 });
 
-// POST /api/interviews/:id/reschedule (Changed from PATCH to POST as it creates a new resource)
-router.post('/:id/reschedule', protect, requireRole('interviewer', 'admin'), async (req, res) => {
-  try {
-    const oldInterview = await Interview.findById(req.params.id);
-    if (!oldInterview) return res.status(404).json({ success: false, message: 'Original interview not found' });
-
-    // Create a NEW interview session based on the old one
-    const newInterview = await Interview.create({
-      title: `${oldInterview.title} (Round ${Date.now().toString().slice(-3)})`,
-      description: oldInterview.description,
-      interviewer: oldInterview.interviewer,
-      candidate: oldInterview.candidate,
-      candidateName: oldInterview.candidateName,
-      candidateEmail: oldInterview.candidateEmail,
-      duration: oldInterview.duration,
-      scheduledAt: req.body.scheduledAt || new Date(),
-      questions: oldInterview.questions,
-      settings: oldInterview.settings,
+// PATCH /api/interviews/:id/reschedule
+router.patch('/:id/reschedule', protect, requireRole('interviewer', 'admin'), async (req, res) => {
+  const interview = await Interview.findByIdAndUpdate(
+    req.params.id,
+    {
       status: 'scheduled',
-      roomId: uuidv4(), // New room for the new session
-    });
-
-    // Update Application if linked
-    const application = await Application.findOne({ 'scores.interview.interviewId': oldInterview._id });
-    if (application) {
-      // Push old one to sessions history
-      if (!application.scores.interview.interviewSessions) {
-        application.scores.interview.interviewSessions = [];
-      }
-      application.scores.interview.interviewSessions.push(oldInterview._id);
-      
-      // Update active interview and status
-      application.scores.interview.interviewId = newInterview._id;
-      application.status = 'interview_scheduled';
-      await application.save();
-    }
-
-    res.status(201).json({ success: true, data: newInterview });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
+      scheduledAt: req.body.scheduledAt || new Date(),
+      startedAt: null,
+      endedAt: null
+    },
+    { new: true }
+  );
+  if (!interview) return res.status(404).json({ success: false, message: 'Interview not found' });
+  res.json({ success: true, data: interview });
 });
 
 // PATCH /api/interviews/:id

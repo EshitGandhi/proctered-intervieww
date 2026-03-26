@@ -37,8 +37,15 @@ const ALLOWED_ORIGINS = [
 // ─── Socket.io ────────────────────────────────────────────────────────────────
 const io = new Server(httpServer, {
   cors: {
-    origin: ALLOWED_ORIGINS,
-    methods: ['GET', 'POST'],
+    origin: (origin, callback) => {
+      // Allow if no origin (e.g. mobile apps, curl), exactly matches ALLOWED_ORIGINS, or is a Vercel preview deployment
+      if (!origin || ALLOWED_ORIGINS.includes(origin) || origin.endsWith('.vercel.app')) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     credentials: true,
   },
   maxHttpBufferSize: 1e8, // 100MB for potential data transfers
@@ -49,7 +56,13 @@ setupSignaling(io);
 // ─── Middleware ───────────────────────────────────────────────────────────────
 app.use(
   cors({
-    origin: ALLOWED_ORIGINS,
+    origin: (origin, callback) => {
+      if (!origin || ALLOWED_ORIGINS.includes(origin) || origin.endsWith('.vercel.app')) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
   })
 );

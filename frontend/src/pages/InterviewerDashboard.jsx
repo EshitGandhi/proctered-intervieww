@@ -26,10 +26,9 @@ const InterviewerDashboard = () => {
   const [activeSession, setActiveSession] = useState(null); // monitoring a live session
   const [liveViolations, setLiveViolations] = useState([]);
   const [copied, setCopied] = useState('');
-  
+
   // Dashboard Tabs: 'interviews' | 'jobs' | 'pipeline'
   const [activeTab, setActiveTab] = useState('interviews');
-  const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'scheduled', 'active', 'completed'
 
   // Fetch interviews
   const fetchInterviews = async () => {
@@ -94,23 +93,21 @@ const InterviewerDashboard = () => {
     try {
       await api.patch(`/interviews/${id}/end`);
       fetchInterviews();
-    } catch {}
+    } catch { }
   };
 
   const startInterview = async (id) => {
     try {
       await api.patch(`/interviews/${id}/start`);
       fetchInterviews();
-    } catch {}
+    } catch { }
   };
 
   const rescheduleInterview = async (id) => {
-    if (!window.confirm("This will create a NEW interview session for this candidate while keeping the old one as history. Proceed?")) return;
-
     const newDate = prompt("Enter new scheduled time (e.g., 2026-03-27T10:00):", new Date().toISOString().slice(0, 16));
     if (!newDate) return;
     try {
-      await api.post(`/interviews/${id}/reschedule`, { scheduledAt: new Date(newDate) });
+      await api.patch(`/interviews/${id}/reschedule`, { scheduledAt: new Date(newDate) });
       fetchInterviews();
     } catch (err) {
       alert("Failed to reschedule: " + (err.response?.data?.message || err.message));
@@ -136,11 +133,6 @@ const InterviewerDashboard = () => {
     scheduled: 'badge-neutral', active: 'badge-success',
     completed: 'badge-primary', cancelled: 'badge-danger',
   };
-
-  const filteredInterviews = interviews.filter((iv) => {
-    if (statusFilter === 'all') return true;
-    return iv.status === statusFilter;
-  });
 
   return (
     <div className="dashboard-page">
@@ -218,127 +210,108 @@ const InterviewerDashboard = () => {
         {/* Tab Content: Interviews table */}
         {activeTab === 'interviews' && (
           <div className="card">
-          <div className="card-header" style={{ flexWrap: 'wrap', gap: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <h2 style={{ fontSize: '1.1rem', margin: 0 }}>Interview Sessions</h2>
-              {/* Filter pills */}
-              <div style={{ display: 'flex', gap: 8, marginLeft: 16 }}>
-                {['all', 'scheduled', 'active', 'completed'].map((f) => (
-                  <button
-                    key={f}
-                    onClick={() => setStatusFilter(f)}
-                    style={{
-                      padding: '4px 12px', borderRadius: 20, cursor: 'pointer',
-                      border: '1px solid var(--border)', fontSize: '0.75rem',
-                      background: statusFilter === f ? 'var(--primary)' : 'var(--bg-secondary)',
-                      color: statusFilter === f ? 'white' : 'var(--text-secondary)',
-                    }}
-                  >
-                    {f.charAt(0).toUpperCase() + f.slice(1)}
-                  </button>
-                ))}
-              </div>
+            <div className="card-header">
+              <h2 style={{ fontSize: '1.1rem' }}>Interview Sessions</h2>
+              <button className="btn btn-primary btn-sm" onClick={() => setShowModal(true)}>
+                + New Interview
+              </button>
             </div>
-            <button className="btn btn-primary btn-sm" onClick={() => setShowModal(true)}>
-              + New Interview
-            </button>
-          </div>
 
-          {loading ? (
-            <div style={{ padding: '40px', textAlign: 'center' }}>
-              <div className="spinner" style={{ margin: '0 auto' }} />
-            </div>
-          ) : filteredInterviews.length === 0 ? (
-            <div style={{ padding: '48px', textAlign: 'center', color: 'var(--text-muted)' }}>
-              <div style={{ fontSize: 48, marginBottom: 12 }}>📋</div>
-              <p>No {statusFilter === 'all' ? '' : `${statusFilter} `}interviews found.</p>
-            </div>
-          ) : (
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Title</th>
-                  <th>Candidate</th>
-                  <th>Duration</th>
-                  <th>Status</th>
-                  <th>Created</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredInterviews.map((iv) => (
-                  <tr key={iv._id}>
-                    <td>
-                      <div style={{ fontWeight: 600 }}>{iv.title}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
-                        {iv.roomId.substring(0, 18)}…
-                      </div>
-                    </td>
-                    <td>
-                      <div>{iv.candidateName || '—'}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{iv.candidateEmail}</div>
-                    </td>
-                    <td>{iv.duration} min</td>
-                    <td>
-                      <span className={`badge ${STATUS_COLORS[iv.status]}`}>
-                        {iv.status === 'completed' ? 'Interview Completed' : iv.status}
-                      </span>
-                    </td>
-                    <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                      {new Date(iv.createdAt).toLocaleDateString()}
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        <button
-                          className="btn btn-ghost btn-sm"
-                          onClick={() => copyRoomLink(iv.roomId)}
-                          title="Copy room link"
-                        >
-                          {copied === iv.roomId ? '✅ Copied' : '🔗 Link'}
-                        </button>
-                        {iv.status === 'scheduled' && (
-                          <button className="btn btn-success btn-sm" onClick={async () => {
-                            await startInterview(iv._id);
-                            window.open(`/monitor/${iv.roomId}`, '_blank', 'popup=yes,fullscreen=yes,width=1280,height=720');
-                          }}>
-                            ▶ Start
+            {loading ? (
+              <div style={{ padding: '40px', textAlign: 'center' }}>
+                <div className="spinner" style={{ margin: '0 auto' }} />
+              </div>
+            ) : interviews.length === 0 ? (
+              <div style={{ padding: '48px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                <div style={{ fontSize: 48, marginBottom: 12 }}>📋</div>
+                <p>No interviews yet. Create your first one!</p>
+              </div>
+            ) : (
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Title</th>
+                    <th>Candidate</th>
+                    <th>Duration</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {interviews.map((iv) => (
+                    <tr key={iv._id}>
+                      <td>
+                        <div style={{ fontWeight: 600 }}>{iv.title}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+                          {iv.roomId.substring(0, 18)}…
+                        </div>
+                      </td>
+                      <td>
+                        <div>{iv.candidateName || '—'}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{iv.candidateEmail}</div>
+                      </td>
+                      <td>{iv.duration} min</td>
+                      <td>
+                        <span className={`badge ${STATUS_COLORS[iv.status]}`}>
+                          {iv.status === 'completed' ? 'Interview Completed' : iv.status}
+                        </span>
+                      </td>
+                      <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                        {new Date(iv.createdAt).toLocaleDateString()}
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                          <button
+                            className="btn btn-ghost btn-sm"
+                            onClick={() => copyRoomLink(iv.roomId)}
+                            title="Copy room link"
+                          >
+                            {copied === iv.roomId ? '✅ Copied' : '🔗 Link'}
                           </button>
-                        )}
-                        {iv.status === 'active' && (
-                          <>
-                            <button className="btn btn-secondary btn-sm" onClick={() => {
+                          {iv.status === 'scheduled' && (
+                            <button className="btn btn-success btn-sm" onClick={async () => {
+                              await startInterview(iv._id);
                               window.open(`/monitor/${iv.roomId}`, '_blank', 'popup=yes,fullscreen=yes,width=1280,height=720');
                             }}>
-                              👁 Monitor
+                              ▶ Start
                             </button>
-                            <button className="btn btn-danger btn-sm" onClick={() => endInterview(iv._id)}>
-                              ⏹ End
-                            </button>
-                          </>
-                        )}
-                        {iv.status === 'completed' && (
-                          <>
-                            <button className="btn btn-secondary btn-sm" onClick={() => navigate(`/playback/${iv._id}`)}>
-                              ▶ Playback
-                            </button>
+                          )}
+                          {iv.status === 'active' && (
+                            <>
+                              <button className="btn btn-secondary btn-sm" onClick={() => {
+                                window.open(`/monitor/${iv.roomId}`, '_blank', 'popup=yes,fullscreen=yes,width=1280,height=720');
+                              }}>
+                                👁 Monitor
+                              </button>
+                              <button className="btn btn-danger btn-sm" onClick={() => endInterview(iv._id)}>
+                                ⏹ End
+                              </button>
+                            </>
+                          )}
+                          {iv.status === 'completed' && (
+                            <>
+                              <button className="btn btn-secondary btn-sm" onClick={() => navigate(`/playback/${iv._id}`)}>
+                                ▶ Playback
+                              </button>
+                              <button className="btn btn-ghost btn-sm" onClick={() => rescheduleInterview(iv._id)}>
+                                🔁 Reschedule
+                              </button>
+                            </>
+                          )}
+                          {(iv.status === 'cancelled' || (iv.status === 'scheduled' && new Date(iv.scheduledAt) < new Date())) && (
                             <button className="btn btn-ghost btn-sm" onClick={() => rescheduleInterview(iv._id)}>
                               🔁 Reschedule
                             </button>
-                          </>
-                        )}
-                        {(iv.status === 'cancelled' || (iv.status === 'scheduled' && new Date(iv.scheduledAt) < new Date())) && (
-                           <button className="btn btn-ghost btn-sm" onClick={() => rescheduleInterview(iv._id)}>
-                            🔁 Reschedule
-                           </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
         )}
       </div>
 

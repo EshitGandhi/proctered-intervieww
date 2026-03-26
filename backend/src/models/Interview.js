@@ -14,11 +14,6 @@ const interviewSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
-    jobId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Job',
-      default: null,
-    },
     description: {
       type: String,
       default: '',

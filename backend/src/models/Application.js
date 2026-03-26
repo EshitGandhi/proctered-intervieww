@@ -56,8 +56,7 @@ const applicationSchema = new mongoose.Schema(
       },
       interview: {
         score: { type: Number, default: 0 },
-        interviewId: { type: mongoose.Schema.Types.ObjectId, ref: 'Interview' }, // Active session
-        interviewSessions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Interview' }], // History
+        interviewId: { type: mongoose.Schema.Types.ObjectId, ref: 'Interview' }, // Link to actual video session
       },
       finalScore: { type: Number, default: 0 },
     },

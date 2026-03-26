@@ -26,11 +26,11 @@ const mapDomainToATS = (domain) => {
     'Data Analytics',
     'QA (Quality Assurance)',
   ];
-  
+
   // Try exact match first
   const exact = supported.find(s => s.toLowerCase() === domain?.toLowerCase());
   if (exact) return exact;
-  
+
   // Try partial match
   const partial = supported.find(s => domain?.toLowerCase().includes(s.toLowerCase()) || s.toLowerCase().includes(domain?.toLowerCase()));
   if (partial) return partial;
@@ -54,11 +54,11 @@ const parseResumeAndScore = async (resumePath, jobDomain) => {
     // The API returns a score as a string or number. Let's ensure it's a number.
     // Assuming the response is { "score": 85, ... } or { "total_score": 85, ... }
     const score = response.data.score || response.data.total_score || response.data.ats_score || 0;
-    
-    return { 
-      score: Number(score), 
-      matchedSkills: response.data.matched_skills || [], 
-      missingSkills: response.data.missing_skills || [] 
+
+    return {
+      score: Number(score),
+      matchedSkills: response.data.matched_skills || [],
+      missingSkills: response.data.missing_skills || []
     };
   } catch (err) {
     console.error('External ATS API error:', err.response?.data || err.message);
@@ -141,7 +141,7 @@ exports.getMyApplications = async (req, res) => {
 // GET /api/applications/admin/all
 exports.getAdminAllApplications = async (req, res) => {
   try {
-    const { jobId, domain, minResume, minMcq, minCoding, status } = req.query;
+    const { jobId, minResume, minMcq, minCoding, status } = req.query;
 
     const filter = {};
     if (jobId) filter.jobId = jobId;
@@ -153,11 +153,10 @@ exports.getAdminAllApplications = async (req, res) => {
       .populate('scores.interview.interviewId', 'roomId status')
       .sort('-createdAt');
 
-    // Apply score and domain filters in JS
+    // Apply score filters in JS (simpler than complex mongo aggregation)
     if (minResume) apps = apps.filter(a => (a.scores.resume?.score || 0) >= Number(minResume));
     if (minMcq) apps = apps.filter(a => (a.scores.mcq?.score || 0) >= Number(minMcq));
     if (minCoding) apps = apps.filter(a => (a.scores.coding?.score || 0) >= Number(minCoding));
-    if (domain) apps = apps.filter(a => a.jobId?.domain === domain);
 
     res.status(200).json({ success: true, count: apps.length, data: apps });
   } catch (error) {
@@ -186,8 +185,7 @@ exports.getApplicationDetail = async (req, res) => {
     const app = await Application.findById(req.params.appId)
       .populate('candidateId', 'name email avatar')
       .populate('jobId', 'title domain resumeThreshold mcqThreshold codingThreshold resumeWeight mcqWeight codingWeight interviewWeight')
-      .populate('scores.interview.interviewId', 'roomId status scheduledAt duration')
-      .populate('scores.interview.interviewSessions', 'roomId status createdAt');
+      .populate('scores.interview.interviewId', 'roomId status scheduledAt duration');
 
     if (!app) return res.status(404).json({ success: false, error: 'Application not found' });
     res.status(200).json({ success: true, data: app });
@@ -284,13 +282,13 @@ exports.deleteApplication = async (req, res) => {
   try {
     const app = await Application.findById(req.params.appId);
     if (!app) return res.status(404).json({ success: false, error: 'Application not found' });
-    
+
     // optionally delete file if it exists, though storage.service logic would be better
     if (app.scores?.resume?.resumeUrl) {
       const p = path.join(process.cwd(), app.scores.resume.resumeUrl);
       if (fs.existsSync(p)) fs.unlinkSync(p);
     }
-    
+
     await Application.findByIdAndDelete(req.params.appId);
     res.status(200).json({ success: true, message: 'Application deleted. Candidate can re-apply.' });
   } catch (error) {
@@ -313,7 +311,7 @@ exports.overrideApplicationStatus = async (req, res) => {
       message = 'ATS Resume result overridden. Candidate can now take the MCQ round.';
     } else if (action === 'retry_mcq' && app.status === 'mcq_failed') {
       app.status = 'mcq_pending';
-      app.set('scores.mcq', undefined); 
+      app.set('scores.mcq', undefined);
       message = 'MCQ score reset. Candidate can retake the MCQ round.';
     } else if (action === 'retry_coding' && app.status === 'coding_failed') {
       app.status = 'coding_pending';
