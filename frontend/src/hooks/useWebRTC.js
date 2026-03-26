@@ -49,7 +49,15 @@ const useWebRTC = ({ roomId, userId, userName, role }) => {
       setLocalStream(stream);
       return stream;
     } catch (err) {
-      setError(`Camera/mic access denied: ${err.message}`);
+      let msg = err.message;
+      if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+        msg = 'No camera or microphone found on this device. Please plug one in and refresh.';
+      } else if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        msg = 'Camera/Microphone permission was denied. Please allow access in your browser settings.';
+      } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+        msg = 'Camera/Microphone is already in use by another application.';
+      }
+      setError(`Media Error: ${msg}`);
       throw err;
     }
   }, []);

@@ -29,7 +29,7 @@ const InterviewerRoom = () => {
         const { data } = await api.get(`/interviews/room/${roomId}`);
         setInterview(data.data);
       } catch (err) {
-        setError('Room not found or access denied.');
+        setError(err.response?.data?.message || 'Room not found or access denied.');
       } finally {
         setLoading(false);
       }
