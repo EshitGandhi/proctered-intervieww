@@ -65,6 +65,8 @@ const CandidateRoom = () => {
     roomId,
   });
 
+  const [isEnding, setIsEnding] = useState(false);
+
   // Join when interview loaded
   useEffect(() => {
     if (interview) {
@@ -85,6 +87,16 @@ const CandidateRoom = () => {
       });
     }
   }, [interview?._id]);
+
+  // Handle auto-navigation after uploads complete
+  useEffect(() => {
+    if (isEnding && !recorder.isUploading) {
+      const timer = setTimeout(() => {
+        navigate('/join?ended=1');
+      }, 1500); // Small buffer
+      return () => clearTimeout(timer);
+    }
+  }, [isEnding, recorder.isUploading, navigate]);
 
   // Chat via socket
   useEffect(() => {
@@ -121,18 +133,22 @@ const CandidateRoom = () => {
   };
 
   const handleEndSession = async () => {
+    if (isEnding) return;
+    setIsEnding(true);
     recorder.stopRecording();
-    recorder.stopScreenCapture(); // stops screen recording + uploads transcript
+    recorder.stopScreenCapture(); 
     webRTC.leaveRoom();
     setSessionEnded(true);
-    navigate('/join?ended=1');
+    // Navigation now handled by useEffect waiting for recorder.isUploading
   };
 
-  if (joining) {
+  if (joining || isEnding) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ flexDirection: 'column', gap: 16 }}>
         <div className="spinner" />
-        <p style={{ color: 'var(--text-secondary)' }}>Joining interview room…</p>
+        <p style={{ color: 'var(--text-secondary)' }}>
+          {isEnding ? 'Saving your session recordings... please wait' : 'Joining interview room…'}
+        </p>
       </div>
     );
   }

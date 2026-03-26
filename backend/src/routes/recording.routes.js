@@ -22,12 +22,19 @@ const streamToString = (stream) =>
   });
 
 // POST /api/recordings/upload
-router.post('/upload', protect, uploadRecording.single('recording'), async (req, res) => {
+router.post('/upload', protect, (req, res, next) => {
+  console.log('[Upload] Starting upload request for user:', req.user?._id);
+  next();
+}, uploadRecording.single('recording'), async (req, res) => {
+  console.log('[Upload] Multer parsed file:', req.file ? `Yes (${req.file.fieldname})` : 'No');
+  
   if (!req.file) {
     return res.status(400).json({ success: false, message: 'No file uploaded' });
   }
 
   const { interviewId, type, duration } = req.body;
+  console.log('[Upload] Meta:', { interviewId, type, duration });
+
   if (!interviewId) {
     return res.status(400).json({ success: false, message: 'interviewId is required' });
   }
@@ -38,34 +45,44 @@ router.post('/upload', protect, uploadRecording.single('recording'), async (req,
   if (STORAGE_TYPE === 's3') {
     fileUrl = req.file.location;
     s3Key = req.file.key;
+    console.log('[Upload] S3 URL:', fileUrl);
   } else {
     let subDir;
     if (type === 'transcript') subDir = 'transcripts';
     else if (req.file.mimetype.startsWith('audio')) subDir = 'audio';
     else subDir = 'recordings';
     fileUrl = `/uploads/${subDir}/${req.file.filename}`;
+    console.log('[Upload] Local URL:', fileUrl);
   }
 
-  const recording = await Recording.create({
-    interview: interviewId,
-    candidate: req.user?._id,
-    type: type || 'video',
-    storageType: STORAGE_TYPE,
-    filePath: fileUrl,
-    fileName: req.file.filename || req.file.key,
-    s3Key: s3Key,
-    s3Url: STORAGE_TYPE === 's3' ? fileUrl : null,
-    mimeType: req.file.mimetype,
-    fileSize: req.file.size,
-    duration: duration ? parseFloat(duration) : 0,
-  });
+  try {
+    const recording = await Recording.create({
+      interview: interviewId,
+      candidate: req.user?._id,
+      type: type || 'video',
+      storageType: STORAGE_TYPE,
+      filePath: fileUrl,
+      fileName: req.file.filename || req.file.key,
+      s3Key: s3Key,
+      s3Url: STORAGE_TYPE === 's3' ? fileUrl : null,
+      mimeType: req.file.mimetype,
+      fileSize: req.file.size,
+      duration: duration ? parseFloat(duration) : 0,
+    });
+    console.log('[Upload] DB Entry created:', recording._id);
 
-  // Trigger transcription asynchronously if it's a video or screen recording
-  if (type === 'video' || type === 'screen') {
-    transcribeFile(fileUrl, recording._id).catch(err => console.error('Async transcription trigger failed:', err));
+    // Trigger transcription asynchronously
+    if (type === 'video' || type === 'screen') {
+      transcribeFile(fileUrl, recording._id).catch(err => {
+        console.error('[Upload] Async transcription failed:', err.message);
+      });
+    }
+
+    res.status(201).json({ success: true, data: recording, url: fileUrl });
+  } catch (err) {
+    console.error('[Upload] DB Save error:', err.message);
+    res.status(500).json({ success: false, message: 'Database save failed' });
   }
-
-  res.status(201).json({ success: true, data: recording, url: fileUrl });
 });
 
 // GET /api/recordings/interview/:interviewId

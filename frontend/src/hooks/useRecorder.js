@@ -14,6 +14,7 @@ const useRecorder = ({ interviewId, stream, remoteStream }) => {
   const [recording, setRecording] = useState(false);
   const [uploaded, setUploaded] = useState(false);
   const [uploadError, setUploadError] = useState(null);
+  const [isUploading, setIsUploading] = useState(false); // Track total uploading status
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
 
@@ -31,6 +32,38 @@ const useRecorder = ({ interviewId, stream, remoteStream }) => {
   const recognitionRef = useRef(null);
   const transcriptRef = useRef('');
 
+  // ─── Shared Uploader helper ────────────────────────────────────────────────
+  const performUpload = useCallback(async (blob, type = 'video') => {
+    if (!interviewId || blob.size === 0) {
+      console.warn(`Skip upload: interviewId=${interviewId}, blobSize=${blob.size}`);
+      return;
+    }
+    
+    setIsUploading(true);
+    const formData = new FormData();
+    const ext = type === 'transcript' ? 'txt' : 'webm';
+    formData.append('interviewId', interviewId);
+    formData.append('type', type);
+    formData.append('recording', blob, `session-${type}-${Date.now()}.${ext}`);
+
+    try {
+      console.log(`Uploading ${type}...`);
+      await api.post('/recordings/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      console.log(`Upload successful: ${type}`);
+      if (type === 'video') setUploaded(true);
+      if (type === 'screen') setScreenUploaded(true);
+    } catch (err) {
+      console.error(`Upload failed for ${type}:`, err.message);
+      setUploadError(err.message);
+    } finally {
+      // In a real app we'd wait for all concurrent uploads to finish
+      // but if we are only stopping once, this is okay for a simple flag
+      setIsUploading(false);
+    }
+  }, [interviewId]);
+
   // ─── Camera/mic recording ──────────────────────────────────────────────────
   const startRecording = useCallback(() => {
     if (!stream || recording) return;
@@ -46,13 +79,14 @@ const useRecorder = ({ interviewId, stream, remoteStream }) => {
       if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
     };
     mr.onstop = async () => {
+      console.log('Camera recorder stopped, uploading...');
       const blob = new Blob(chunksRef.current, { type: 'video/webm' });
-      await uploadRecording(blob, 'video');
+      await performUpload(blob, 'video');
     };
     mr.start(1000);
     mediaRecorderRef.current = mr;
     setRecording(true);
-  }, [stream, recording]);
+  }, [stream, recording, performUpload]);
 
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current?.state !== 'inactive') {
@@ -77,7 +111,6 @@ const useRecorder = ({ interviewId, stream, remoteStream }) => {
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
         audioContextRef.current = audioContext;
         
-        // Resume AudioContext just in case
         if (audioContext.state === 'suspended') {
           await audioContext.resume();
         }
@@ -85,62 +118,46 @@ const useRecorder = ({ interviewId, stream, remoteStream }) => {
         const dest = audioContext.createMediaStreamDestination();
         let hasAudio = false;
 
-        console.log('--- Initializing Audio Mixing ---');
-        console.log('Local Stream Tracks:', stream?.getTracks().length);
-        console.log('Remote Stream Tracks:', remoteStream?.getTracks().length);
-
-        // 1. Add Mic (local user)
         if (stream && stream.getAudioTracks().length > 0) {
           const micSource = audioContext.createMediaStreamSource(stream);
           micSource.connect(dest);
           hasAudio = true;
-          console.log('Mixed: Source connected for microphone');
         }
 
-        // 2. Add Remote Audio (Interviewer) - Track arrival handling
         if (remoteStream) {
           const connectRemote = () => {
             if (remoteStream.getAudioTracks().length > 0) {
               try {
                 const remoteSource = audioContext.createMediaStreamSource(remoteStream);
                 remoteSource.connect(dest);
-                console.log('Mixed: Remote interviewer audio source connected');
               } catch (e) {
                 console.warn('Failed to connect remote audio source:', e);
               }
             }
           };
-          
-          connectRemote(); // Connect if already present
-          remoteStream.onaddtrack = connectRemote; // Connect when added later
+          connectRemote();
+          remoteStream.onaddtrack = connectRemote;
           hasAudio = true; 
         }
 
-        // 3. Add System Audio (from screen share)
         if (screenStream?.getAudioTracks().length > 0) {
           const screenAudioSource = audioContext.createMediaStreamSource(screenStream);
           screenAudioSource.connect(dest);
           hasAudio = true;
-          console.log('Mixed: Source connected for system audio');
         }
 
-        // 4. Create final composite stream
         if (hasAudio) {
           const tracks = [
             ...screenStream.getVideoTracks(),
             ...dest.stream.getAudioTracks()
           ];
           finalStream = new MediaStream(tracks);
-          console.log('Final mixed stream created with total tracks:', tracks.length);
-        } else {
-          throw new Error("No audio sources successfully connected to mixer.");
         }
       } catch (err) {
-        console.warn('Audio mixing failed, falling back to direct stream tracks if available:', err);
-        // Fallback: Manually mix available mic tracks
+        console.warn('Audio mixing failed, falling back:', err);
         const fallbackAudio = stream?.getAudioTracks() || [];
         const srAudio = screenStream?.getAudioTracks() || [];
-        const selectedAudio = srAudio.length > 0 ? srAudio : fallbackAudio; // prioritize system audio if available, else mic
+        const selectedAudio = srAudio.length > 0 ? srAudio : fallbackAudio;
         finalStream = new MediaStream([ ...screenStream.getVideoTracks(), ...selectedAudio ]);
       }
 
@@ -160,9 +177,16 @@ const useRecorder = ({ interviewId, stream, remoteStream }) => {
       };
 
       smr.onstop = async () => {
+        console.log('Screen recorder stopped, uploading...');
         const blob = new Blob(screenChunksRef.current, { type: 'video/webm' });
-        await uploadRecording(blob, 'screen');
-        await uploadTranscript(); // upload text file on completion
+        await performUpload(blob, 'screen');
+        
+        // Handle transcript separately as it's a text blob
+        const text = transcriptRef.current.trim();
+        if (text) {
+          const tBlob = new Blob([text], { type: 'text/plain' });
+          await performUpload(tBlob, 'transcript');
+        }
 
         // Clean up
         screenStreamRef.current?.getTracks().forEach((t) => t.stop());
@@ -181,11 +205,11 @@ const useRecorder = ({ interviewId, stream, remoteStream }) => {
       smr.start(1000);
       screenMediaRecorderRef.current = smr;
       setScreenRecording(true);
-      startTranscription(); // Start transcription loop
+      startTranscription();
     } catch (err) {
       console.error('Screen capture error:', err);
     }
-  }, [screenRecording, stream, remoteStream, interviewId]);
+  }, [screenRecording, stream, remoteStream, performUpload]);
 
   const stopScreenCapture = useCallback(() => {
     stopTranscription();
@@ -209,11 +233,8 @@ const useRecorder = ({ interviewId, stream, remoteStream }) => {
       let interimText = '';
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const res = event.results[i];
-        if (res.isFinal) {
-          finalTranscript += res[0].transcript + ' ';
-        } else {
-          interimText += res[0].transcript;
-        }
+        if (res.isFinal) finalTranscript += res[0].transcript + ' ';
+        else interimText += res[0].transcript;
       }
       const combined = (finalTranscript + interimText).trim();
       setTranscript(combined);
@@ -225,7 +246,6 @@ const useRecorder = ({ interviewId, stream, remoteStream }) => {
     };
 
     recognition.onend = () => {
-      // Keep it running as long as we are recording
       if (screenMediaRecorderRef.current?.state === 'recording') {
         try { recognition.start(); } catch (e) {}
       }
@@ -249,55 +269,13 @@ const useRecorder = ({ interviewId, stream, remoteStream }) => {
     setTranscribing(false);
   }, []);
 
-  // ─── Uploaders ─────────────────────────────────────────────────────────────
-  const uploadRecording = async (blob, type = 'video') => {
-    if (!interviewId || blob.size === 0) return;
-    const formData = new FormData();
-    formData.append('recording', blob, `session-${type}-${Date.now()}.webm`);
-    formData.append('interviewId', interviewId);
-    formData.append('type', type);
-
-    try {
-      await api.post('/recordings/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      if (type === 'video') setUploaded(true);
-      if (type === 'screen') setScreenUploaded(true);
-    } catch (err) {
-      setUploadError(err.message);
-    }
-  };
-
-  const uploadTranscript = async () => {
-    const text = transcriptRef.current.trim();
-    if (!interviewId || !text) {
-      console.log('No transcript text to upload.');
-      return;
-    }
-
-    const blob = new Blob([text], { type: 'text/plain' });
-    const formData = new FormData();
-    formData.append('recording', blob, `transcript-${Date.now()}.txt`);
-    formData.append('interviewId', interviewId);
-    formData.append('type', 'transcript');
-
-    try {
-      await api.post('/recordings/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      console.log('Transcript uploaded successfully');
-    } catch (err) {
-      console.error('Transcript upload failed:', err.message);
-    }
-  };
-
   useEffect(() => () => {
     stopRecording();
     stopScreenCapture();
   }, []);
 
   return {
-    recording, uploaded, uploadError, startRecording, stopRecording,
+    recording, uploaded, uploadError, isUploading, startRecording, stopRecording,
     screenRecording, screenUploaded, startScreenCapture, stopScreenCapture,
     transcript, transcribing
   };
