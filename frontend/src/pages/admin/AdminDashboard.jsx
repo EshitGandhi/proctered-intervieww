@@ -316,7 +316,7 @@ const CandidatesTab = ({ onSelectCandidate }) => {
   const [apps, setApps] = useState([]);
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState({ jobId: '', minResume: '', minMcq: '', minCoding: '', status: '' });
+  const [filters, setFilters] = useState({ jobId: '', domain: '', minResume: '', minMcq: '', minCoding: '', status: '' });
 
   const fetchData = async () => {
     setLoading(true);
@@ -363,6 +363,13 @@ const CandidatesTab = ({ onSelectCandidate }) => {
             </select>
           </div>
           <div>
+            <label style={{ fontSize: '0.72rem', fontWeight: 600, display: 'block', marginBottom: 4, color: 'var(--text-muted)' }}>DOMAIN</label>
+            <select style={inputStyle} value={filters.domain} onChange={e => setFilters(f => ({ ...f, domain: e.target.value }))}>
+              <option value="">All Domains</option>
+              {DOMAINS.map(d => <option key={d} value={d}>{d}</option>)}
+            </select>
+          </div>
+          <div>
             <label style={{ fontSize: '0.72rem', fontWeight: 600, display: 'block', marginBottom: 4, color: 'var(--text-muted)' }}>STATUS</label>
             <select style={inputStyle} value={filters.status} onChange={e => setFilters(f => ({ ...f, status: e.target.value }))}>
               <option value="">All Stages</option>
@@ -372,6 +379,9 @@ const CandidatesTab = ({ onSelectCandidate }) => {
               <option value="coding_pending">Coding Pending</option>
               <option value="interview_pending">Interview Pending</option>
               <option value="interview_scheduled">Interview Scheduled</option>
+              <option value="interview_completed">Interview Completed</option>
+              <option value="hired">Hired</option>
+              <option value="rejected">Rejected</option>
             </select>
           </div>
           <div>
@@ -607,6 +617,24 @@ const CandidateDetail = ({ appId, onBack }) => {
         </div>
       )}
 
+      {/* Interview history */}
+      {app.scores?.interview?.interviewSessions?.length > 0 && (
+        <div className="card" style={{ marginBottom: 20 }}>
+          <h3 style={{ fontSize: '0.95rem', marginBottom: 14 }}>Previous Interview Rounds</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {app.scores.interview.interviewSessions.map((session, idx) => (
+              <div key={session._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-secondary)', padding: 12, borderRadius: 8 }}>
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>Round {idx + 1}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{new Date(session.createdAt).toLocaleDateString()}</div>
+                </div>
+                <button className="btn btn-ghost btn-sm" onClick={() => navigate(`/playback/${session._id}`)}>View History →</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Interview section */}
       <div className="card">
         <h3 style={{ fontSize: '0.95rem', marginBottom: 14 }}>Interview Stage</h3>
@@ -616,13 +644,34 @@ const CandidateDetail = ({ appId, onBack }) => {
             <div className="alert alert-success" style={{ marginBottom: 14 }}>
               Interview session provisioned · Status: <strong>{app.scores.interview.interviewId.status || 'scheduled'}</strong>
             </div>
-            {app.scores.interview.interviewId.roomId && (
-              <div style={{ display: 'flex', gap: 10 }}>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              {app.scores.interview.interviewId.roomId && (
                 <button className="btn btn-primary" onClick={() => navigate(`/monitor/${app.scores.interview.interviewId.roomId}`)}>
                   Join as Interviewer
                 </button>
-                <button className="btn btn-secondary" onClick={() => navigate(`/playback/${app.scores.interview.interviewId._id}`)}>
-                  View Recording / Transcript
+              )}
+              <button className="btn btn-secondary" onClick={() => navigate(`/playback/${app.scores.interview.interviewId._id}`)}>
+                View Recording / Transcript
+              </button>
+            </div>
+
+            {app.scores.interview.interviewId.status === 'completed' && (
+              <div style={{ marginTop: 20, paddingTop: 20, borderTop: '1px solid var(--border)' }}>
+                <h4 style={{ fontSize: '0.85rem', marginBottom: 10 }}>Subsequent Round</h4>
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={async () => {
+                    if (window.confirm("Reschedule? This will create a NEW round and move this one to history.")) {
+                      const time = prompt("Enter time (YYYY-MM-DDTHH:mm):", new Date().toISOString().slice(0, 16));
+                      if (!time) return;
+                      try {
+                        await api.post(`/interviews/${app.scores.interview.interviewId._id}/reschedule`, { scheduledAt: new Date(time) });
+                        window.location.reload();
+                      } catch (e) { alert(e.response?.data?.message || e.message); }
+                    }
+                  }}
+                >
+                  🔁 Create New Interview Round
                 </button>
               </div>
             )}

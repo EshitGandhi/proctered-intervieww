@@ -141,7 +141,7 @@ exports.getMyApplications = async (req, res) => {
 // GET /api/applications/admin/all
 exports.getAdminAllApplications = async (req, res) => {
   try {
-    const { jobId, minResume, minMcq, minCoding, status } = req.query;
+    const { jobId, domain, minResume, minMcq, minCoding, status } = req.query;
 
     const filter = {};
     if (jobId) filter.jobId = jobId;
@@ -153,10 +153,11 @@ exports.getAdminAllApplications = async (req, res) => {
       .populate('scores.interview.interviewId', 'roomId status')
       .sort('-createdAt');
 
-    // Apply score filters in JS (simpler than complex mongo aggregation)
+    // Apply score and domain filters in JS
     if (minResume) apps = apps.filter(a => (a.scores.resume?.score || 0) >= Number(minResume));
     if (minMcq) apps = apps.filter(a => (a.scores.mcq?.score || 0) >= Number(minMcq));
     if (minCoding) apps = apps.filter(a => (a.scores.coding?.score || 0) >= Number(minCoding));
+    if (domain) apps = apps.filter(a => a.jobId?.domain === domain);
 
     res.status(200).json({ success: true, count: apps.length, data: apps });
   } catch (error) {
@@ -185,7 +186,8 @@ exports.getApplicationDetail = async (req, res) => {
     const app = await Application.findById(req.params.appId)
       .populate('candidateId', 'name email avatar')
       .populate('jobId', 'title domain resumeThreshold mcqThreshold codingThreshold resumeWeight mcqWeight codingWeight interviewWeight')
-      .populate('scores.interview.interviewId', 'roomId status scheduledAt duration');
+      .populate('scores.interview.interviewId', 'roomId status scheduledAt duration')
+      .populate('scores.interview.interviewSessions', 'roomId status createdAt');
 
     if (!app) return res.status(404).json({ success: false, error: 'Application not found' });
     res.status(200).json({ success: true, data: app });

@@ -1,6 +1,7 @@
 const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const Interview = require('../models/Interview');
+const Application = require('../models/Application'); // Ensure Application model is imported
 const { protect, requireRole } = require('../middleware/auth.middleware');
 
 const router = express.Router();
@@ -69,6 +70,12 @@ router.patch('/:id/end', protect, requireRole('interviewer', 'admin'), async (re
   const interview = await Interview.findByIdAndUpdate(
     req.params.id, { status: 'completed', endedAt: new Date() }, { new: true }
   );
+  if (interview) {
+    await Application.findOneAndUpdate(
+      { 'scores.interview.interviewId': req.params.id },
+      { status: 'interview_completed' }
+    );
+  }
   if (!interview) return res.status(404).json({ success: false, message: 'Interview not found' });
   res.json({ success: true, data: interview });
 });
@@ -94,6 +101,21 @@ router.post('/:id/reschedule', protect, requireRole('interviewer', 'admin'), asy
       status: 'scheduled',
       roomId: uuidv4(), // New room for the new session
     });
+
+    // Update Application if linked
+    const application = await Application.findOne({ 'scores.interview.interviewId': oldInterview._id });
+    if (application) {
+      // Push old one to sessions history
+      if (!application.scores.interview.interviewSessions) {
+        application.scores.interview.interviewSessions = [];
+      }
+      application.scores.interview.interviewSessions.push(oldInterview._id);
+      
+      // Update active interview and status
+      application.scores.interview.interviewId = newInterview._id;
+      application.status = 'interview_scheduled';
+      await application.save();
+    }
 
     res.status(201).json({ success: true, data: newInterview });
   } catch (error) {
