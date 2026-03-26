@@ -10,21 +10,22 @@ import api from '../services/api';
  * NOTE: For best accuracy, we now mix local + remote audio for the recording.
  */
 const useRecorder = ({ interviewId, stream, remoteStream }) => {
-  // --- Camera recording state ---
+  // --- Recording state ---
   const [recording, setRecording] = useState(false);
   const [uploaded, setUploaded] = useState(false);
   const [uploadError, setUploadError] = useState(null);
-  const [isUploading, setIsUploading] = useState(false); // Track total uploading status
+  const [isUploading, setIsUploading] = useState(false);
+  
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
-
-  // --- Screen recording state ---
-  const [screenRecording, setScreenRecording] = useState(false);
-  const [screenUploaded, setScreenUploaded] = useState(false);
-  const screenMediaRecorderRef = useRef(null);
-  const screenChunksRef = useRef([]);
-  const screenStreamRef = useRef(null);
+  const canvasRef = useRef(null);
+  const animationFrameRef = useRef(null);
   const audioContextRef = useRef(null);
+  const mixedStreamRef = useRef(null);
+
+  // Hidden video elements for canvas composition
+  const localVideoRef = useRef(document.createElement('video'));
+  const remoteVideoRef = useRef(document.createElement('video'));
 
   // --- Transcription state ---
   const [transcript, setTranscript] = useState('');
@@ -53,169 +54,136 @@ const useRecorder = ({ interviewId, stream, remoteStream }) => {
       });
       console.log(`Upload successful: ${type}`);
       if (type === 'video') setUploaded(true);
-      if (type === 'screen') setScreenUploaded(true);
     } catch (err) {
       console.error(`Upload failed for ${type}:`, err.message);
       setUploadError(err.message);
     } finally {
-      // In a real app we'd wait for all concurrent uploads to finish
-      // but if we are only stopping once, this is okay for a simple flag
       setIsUploading(false);
     }
   }, [interviewId]);
 
-  // ─── Camera/mic recording ──────────────────────────────────────────────────
+  // ─── WebRTC Compositor & Recorder ──────────────────────────────────────────
   const startRecording = useCallback(() => {
-    if (!stream || recording) return;
-    chunksRef.current = [];
-    const options = { mimeType: 'video/webm;codecs=vp9,opus' };
-    let mr;
-    try {
-      mr = new MediaRecorder(stream, options);
-    } catch {
-      mr = new MediaRecorder(stream);
+    if (recording || !stream || !remoteStream) {
+      console.warn('Cannot start recording: missing stream, remoteStream, or already recording.');
+      return;
     }
-    mr.ondataavailable = (e) => {
-      if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
-    };
-    mr.onstop = async () => {
-      console.log('Camera recorder stopped, uploading...');
-      const blob = new Blob(chunksRef.current, { type: 'video/webm' });
-      await performUpload(blob, 'video');
-    };
-    mr.start(1000);
-    mediaRecorderRef.current = mr;
-    setRecording(true);
-  }, [stream, recording, performUpload]);
 
-  const stopRecording = useCallback(() => {
-    if (mediaRecorderRef.current?.state !== 'inactive') {
-      mediaRecorderRef.current?.stop();
-    }
-    setRecording(false);
-  }, []);
-
-  // ─── Screen capture + Composite Audio ──────────────────────────────────────
-  const startScreenCapture = useCallback(async () => {
-    if (screenRecording) return;
     try {
-      const screenStream = await navigator.mediaDevices.getDisplayMedia({
-        video: { frameRate: 20, displaySurface: 'monitor' },
-        audio: true, // system audio
-      });
-
-      // MIXING AUDIO: Microphone (stream) + System Audio (screenStream)
-      let finalStream = screenStream;
+      console.log('--- Initializing Multi-Stream Recording ---');
       
-      try {
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        audioContextRef.current = audioContext;
+      // 1. Setup Audio Mixing
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      audioContextRef.current = audioContext;
+      const dest = audioContext.createMediaStreamDestination();
+
+      if (stream.getAudioTracks().length > 0) {
+        const localSource = audioContext.createMediaStreamSource(stream);
+        localSource.connect(dest);
+      }
+      if (remoteStream.getAudioTracks().length > 0) {
+        const remoteSource = audioContext.createMediaStreamSource(remoteStream);
+        remoteSource.connect(dest);
+      }
+
+      // 2. Setup Video Composition via Canvas
+      const canvas = document.createElement('canvas');
+      canvas.width = 1280;
+      canvas.height = 720;
+      canvasRef.current = canvas;
+      const ctx = canvas.getContext('2d');
+
+      // Setup hidden video elements to provide frames
+      localVideoRef.current.srcObject = stream;
+      localVideoRef.current.muted = true;
+      localVideoRef.current.play().catch(e => console.warn('Local video play delay:', e));
+
+      remoteVideoRef.current.srcObject = remoteStream;
+      remoteVideoRef.current.muted = true;
+      remoteVideoRef.current.play().catch(e => console.warn('Remote video play delay:', e));
+
+      const drawFrame = () => {
+        // Clear background
+        ctx.fillStyle = '#111827';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Draw Local Video (Left Half)
+        ctx.drawImage(localVideoRef.current, 0, 0, 640, 720);
         
-        if (audioContext.state === 'suspended') {
-          await audioContext.resume();
-        }
+        // Draw Remote Video (Right Half)
+        ctx.drawImage(remoteVideoRef.current, 640, 0, 640, 720);
 
-        const dest = audioContext.createMediaStreamDestination();
-        let hasAudio = false;
+        // Overlay participants name if needed (optional polish)
+        ctx.fillStyle = 'rgba(0,0,0,0.4)';
+        ctx.fillRect(10, 680, 150, 30);
+        ctx.fillRect(650, 680, 150, 30);
+        ctx.fillStyle = 'white';
+        ctx.font = '16px Inter, sans-serif';
+        ctx.fillText('Candidate', 20, 700);
+        ctx.fillText('Interviewer', 660, 700);
 
-        if (stream && stream.getAudioTracks().length > 0) {
-          const micSource = audioContext.createMediaStreamSource(stream);
-          micSource.connect(dest);
-          hasAudio = true;
-        }
+        animationFrameRef.current = requestAnimationFrame(drawFrame);
+      };
+      drawFrame();
 
-        if (remoteStream) {
-          const connectRemote = () => {
-            if (remoteStream.getAudioTracks().length > 0) {
-              try {
-                const remoteSource = audioContext.createMediaStreamSource(remoteStream);
-                remoteSource.connect(dest);
-              } catch (e) {
-                console.warn('Failed to connect remote audio source:', e);
-              }
-            }
-          };
-          connectRemote();
-          remoteStream.onaddtrack = connectRemote;
-          hasAudio = true; 
-        }
+      // 3. Create Combined Stream
+      const canvasStream = canvas.captureStream(30);
+      const combinedTracks = [
+        ...canvasStream.getVideoTracks(),
+        ...dest.stream.getAudioTracks()
+      ];
+      const finalStream = new MediaStream(combinedTracks);
+      mixedStreamRef.current = finalStream;
 
-        if (screenStream?.getAudioTracks().length > 0) {
-          const screenAudioSource = audioContext.createMediaStreamSource(screenStream);
-          screenAudioSource.connect(dest);
-          hasAudio = true;
-        }
-
-        if (hasAudio) {
-          const tracks = [
-            ...screenStream.getVideoTracks(),
-            ...dest.stream.getAudioTracks()
-          ];
-          finalStream = new MediaStream(tracks);
-        }
-      } catch (err) {
-        console.warn('Audio mixing failed, falling back:', err);
-        const fallbackAudio = stream?.getAudioTracks() || [];
-        const srAudio = screenStream?.getAudioTracks() || [];
-        const selectedAudio = srAudio.length > 0 ? srAudio : fallbackAudio;
-        finalStream = new MediaStream([ ...screenStream.getVideoTracks(), ...selectedAudio ]);
-      }
-
-      screenStreamRef.current = screenStream;
-      screenChunksRef.current = [];
-
-      const opts = { mimeType: 'video/webm;codecs=vp9,opus' };
-      let smr;
+      // 4. Initialize MediaRecorder
+      chunksRef.current = [];
+      const options = { mimeType: 'video/webm;codecs=vp9,opus' };
+      let mr;
       try {
-        smr = new MediaRecorder(finalStream, opts);
+        mr = new MediaRecorder(finalStream, options);
       } catch {
-        smr = new MediaRecorder(finalStream);
+        mr = new MediaRecorder(finalStream);
       }
 
-      smr.ondataavailable = (e) => {
-        if (e.data && e.data.size > 0) screenChunksRef.current.push(e.data);
+      mr.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
       };
 
-      smr.onstop = async () => {
-        console.log('Screen recorder stopped, uploading...');
-        const blob = new Blob(screenChunksRef.current, { type: 'video/webm' });
-        await performUpload(blob, 'screen');
+      mr.onstop = async () => {
+        console.log('Recording stopped, processing upload...');
+        const blob = new Blob(chunksRef.current, { type: 'video/webm' });
+        await performUpload(blob, 'video');
         
-        // Handle transcript separately as it's a text blob
         const text = transcriptRef.current.trim();
         if (text) {
           const tBlob = new Blob([text], { type: 'text/plain' });
           await performUpload(tBlob, 'transcript');
         }
 
-        // Clean up
-        screenStreamRef.current?.getTracks().forEach((t) => t.stop());
-        screenStreamRef.current = null;
-        if (audioContextRef.current) {
-          audioContextRef.current.close();
-          audioContextRef.current = null;
-        }
-        setScreenRecording(false);
+        // Cleanup
+        if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+        if (audioContextRef.current) audioContextRef.current.close();
+        localVideoRef.current.srcObject = null;
+        remoteVideoRef.current.srcObject = null;
       };
 
-      screenStream.getVideoTracks()[0].onended = () => {
-        if (smr.state !== 'inactive') smr.stop();
-      };
-
-      smr.start(1000);
-      screenMediaRecorderRef.current = smr;
-      setScreenRecording(true);
+      mr.start(1000);
+      mediaRecorderRef.current = mr;
+      setRecording(true);
       startTranscription();
-    } catch (err) {
-      console.error('Screen capture error:', err);
-    }
-  }, [screenRecording, stream, remoteStream, performUpload]);
 
-  const stopScreenCapture = useCallback(() => {
-    stopTranscription();
-    if (screenMediaRecorderRef.current?.state !== 'inactive') {
-      screenMediaRecorderRef.current?.stop();
+    } catch (err) {
+      console.error('Failed to start multi-stream recording:', err);
+      setUploadError(`Recording failed: ${err.message}`);
     }
+  }, [recording, stream, remoteStream, performUpload]);
+
+  const stopRecording = useCallback(() => {
+    if (mediaRecorderRef.current?.state !== 'inactive') {
+      mediaRecorderRef.current?.stop();
+    }
+    stopTranscription();
+    setRecording(false);
   }, []);
 
   // ─── SpeechRecognition ─────────────────────────────────────────────────────
@@ -246,7 +214,7 @@ const useRecorder = ({ interviewId, stream, remoteStream }) => {
     };
 
     recognition.onend = () => {
-      if (screenMediaRecorderRef.current?.state === 'recording') {
+      if (mediaRecorderRef.current?.state === 'recording') {
         try { recognition.start(); } catch (e) {}
       }
     };
@@ -270,15 +238,17 @@ const useRecorder = ({ interviewId, stream, remoteStream }) => {
   }, []);
 
   useEffect(() => () => {
-    stopRecording();
-    stopScreenCapture();
+    if (mediaRecorderRef.current?.state === 'recording') {
+      mediaRecorderRef.current.stop();
+    }
+    if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
   }, []);
 
   return {
     recording, uploaded, uploadError, isUploading, startRecording, stopRecording,
-    screenRecording, screenUploaded, startScreenCapture, stopScreenCapture,
     transcript, transcribing
   };
 };
+
 
 export default useRecorder;

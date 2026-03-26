@@ -71,8 +71,6 @@ const CandidateRoom = () => {
   useEffect(() => {
     if (interview) {
       webRTC.joinRoom().then(() => {
-        recorder.startRecording();
-        recorder.startScreenCapture(); // starts screen recording + transcription
         proctoring.requestFullscreen();
       }).catch((err) => {
         let msg = err.message;
@@ -87,6 +85,14 @@ const CandidateRoom = () => {
       });
     }
   }, [interview?._id]);
+
+  // Auto-start recording when both participants are connected
+  useEffect(() => {
+    if (webRTC.localStream && webRTC.remoteStream && !recorder.recording && !isEnding) {
+      console.log('Both streams detected, starting session recording...');
+      recorder.startRecording();
+    }
+  }, [webRTC.localStream, webRTC.remoteStream, recorder.recording, isEnding]);
 
   // Handle auto-navigation after uploads complete
   useEffect(() => {
@@ -136,7 +142,6 @@ const CandidateRoom = () => {
     if (isEnding) return;
     setIsEnding(true);
     recorder.stopRecording();
-    recorder.stopScreenCapture(); 
     webRTC.leaveRoom();
     setSessionEnded(true);
     // Navigation now handled by useEffect waiting for recorder.isUploading
@@ -193,7 +198,7 @@ const CandidateRoom = () => {
             </div>
             <div style={{ flex: 1 }} />
             {/* Screen recording status */}
-            {recorder.screenRecording && (
+            {recorder.recording && (
               <div style={{
                 display: 'flex', alignItems: 'center', gap: 6,
                 background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.35)',
@@ -203,7 +208,7 @@ const CandidateRoom = () => {
                   width: 7, height: 7, borderRadius: '50%', background: '#ef4444',
                   animation: 'pulse 1.4s infinite',
                 }} />
-                🖥 Screen Recording
+                🎥 Session Recording
               </div>
             )}
             {recorder.transcribing && recorder.transcript && (
