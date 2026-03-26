@@ -6,8 +6,10 @@ import api from '../services/api';
  *  1. Camera/mic stream recording (WebRTC stream) → uploads as `video`
  *  2. Screen recording (getDisplayMedia) with MIXED audio (Mic + System) → uploads as `screen`
  *  3. Live speech transcription (SpeechRecognition) → uploads as `transcript` (.txt)
+ *
+ * NOTE: For best accuracy, we now mix local + remote audio for the recording.
  */
-const useRecorder = ({ interviewId, stream }) => {
+const useRecorder = ({ interviewId, stream, remoteStream }) => {
   // --- Camera recording state ---
   const [recording, setRecording] = useState(false);
   const [uploaded, setUploaded] = useState(false);
@@ -86,7 +88,15 @@ const useRecorder = ({ interviewId, stream }) => {
           console.log('Mixed: Microphone tracks added to screen recording');
         }
 
-        // 2. Add System Audio (from screen share)
+        // 2. Add Remote Audio (Interviewer)
+        if (remoteStream && remoteStream.getAudioTracks().length > 0) {
+          const remoteSource = audioContext.createMediaStreamSource(remoteStream);
+          remoteSource.connect(dest);
+          hasAudio = true;
+          console.log('Mixed: Remote (interviewer) tracks added to screen recording');
+        }
+
+        // 3. Add System Audio (from screen share - fallback or additional)
         if (screenStream.getAudioTracks().length > 0) {
           const screenAudioSource = audioContext.createMediaStreamSource(screenStream);
           screenAudioSource.connect(dest);
@@ -94,7 +104,7 @@ const useRecorder = ({ interviewId, stream }) => {
           console.log('Mixed: System audio tracks added to screen recording');
         }
 
-        // 3. Create final stream
+        // 4. Create final stream
         if (hasAudio) {
           const tracks = [
             ...screenStream.getVideoTracks(),
@@ -147,7 +157,7 @@ const useRecorder = ({ interviewId, stream }) => {
     } catch (err) {
       console.error('Screen capture error:', err);
     }
-  }, [screenRecording, stream, interviewId]);
+  }, [screenRecording, stream, remoteStream, interviewId]);
 
   const stopScreenCapture = useCallback(() => {
     stopTranscription();
