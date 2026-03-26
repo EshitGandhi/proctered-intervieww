@@ -149,6 +149,7 @@ const InterviewerRoom = () => {
               flexDirection: 'column',
               gap: 8
             }}>
+              {/* Maximized Video Stage for Interviewer */}
               <div className="glass" style={{ flex: 1, borderRadius: 12, overflow: 'hidden', display: 'flex' }}>
                  <VideoPanel
                     localStream={webRTC.localStream}
@@ -163,25 +164,13 @@ const InterviewerRoom = () => {
                   />
               </div>
 
-              {/* Side Alerts / Violations (Teams Style) */}
-              <div className="glass" style={{ height: '300px', borderRadius: 12, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--border)', fontSize: '13px', fontWeight: 600, display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Violations</span>
-                  <span className="badge badge-danger">{liveViolations.length}</span>
+              {/* Smaller, cleaner violations status bar instead of a full panel */}
+              {viewMode === 'split' && (
+                <div className="glass" style={{ padding: '8px 16px', borderRadius: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                   <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Live Violations</span>
+                   <span className="badge badge-danger">{liveViolations.length}</span>
                 </div>
-                <div style={{ flex: 1, overflowY: 'auto', padding: 12 }}>
-                  {liveViolations.map((v, i) => (
-                    <div key={i} className="violation-item" style={{ marginBottom: 8 }}>
-                      <div className={`violation-dot ${v.severity}`} />
-                      <div style={{ fontSize: '12px' }}>
-                        <span style={{ fontWeight: 600 }}>{v.eventType}</span>
-                        <div style={{ color: 'var(--text-muted)' }}>{v.description}</div>
-                      </div>
-                    </div>
-                  ))}
-                  {liveViolations.length === 0 && <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '12px', marginTop: 20 }}>No violations detected</div>}
-                </div>
-              </div>
+              )}
             </div>
           )}
         </div>

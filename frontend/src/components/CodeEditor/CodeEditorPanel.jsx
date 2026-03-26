@@ -131,13 +131,7 @@ const CodeEditorPanel = ({ interviewId, readOnly = false, onSubmit, socket, room
 
         {/* 3. Main Editor Stage */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#1e1e1e' }}>
-          {/* Breadcrumbs */}
-          <div style={{ padding: '8px 16px', fontSize: '12px', color: '#969696', display: 'flex', gap: 6, alignItems: 'center', borderBottom: '1px solid #252526' }}>
-            <span>PROJECT_ROOT</span>
-            <span>›</span>
-            <span style={{ color: '#fff' }}>solution.py</span>
-          </div>
-
+          
           <div style={{ flex: 1 }}>
             <Editor
               height="100%"
