@@ -372,6 +372,8 @@ const CandidatesTab = ({ onSelectCandidate }) => {
               <option value="coding_pending">Coding Pending</option>
               <option value="interview_pending">Interview Pending</option>
               <option value="interview_scheduled">Interview Scheduled</option>
+              <option value="interview_completed">Interview Completed</option>
+              <option value="hired">Hired</option>
             </select>
           </div>
           <div>
@@ -626,6 +628,34 @@ const CandidateDetail = ({ appId, onBack }) => {
                 </button>
               </div>
             )}
+            <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
+              <h4 style={{ fontSize: '0.85rem', marginBottom: 10 }}>Reschedule Interview</h4>
+              {genError && <div className="alert alert-danger" style={{ marginBottom: 12 }}>{genError}</div>}
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>
+                    NEW SCHEDULE TIME
+                  </label>
+                  <input
+                    type="datetime-local"
+                    id="interviewRescheduleTime"
+                    defaultValue={new Date((app.scores.interview.interviewId.scheduledAt ? new Date(app.scores.interview.interviewId.scheduledAt).getTime() : Date.now()) - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)}
+                    className="input"
+                    style={{ padding: '8px 12px', width: '220px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '6px' }}
+                  />
+                </div>
+                <button
+                  className="btn btn-secondary"
+                  style={{ alignSelf: 'flex-end', height: '40px' }}
+                  onClick={() => {
+                    const el = document.getElementById('interviewRescheduleTime');
+                    handleGenerate(el ? el.value : null);
+                  }}
+                  disabled={generating}>
+                  {generating ? 'Updating...' : '🔄 Reschedule Session'}
+                </button>
+              </div>
+            </div>
           </div>
         ) : app.status === 'interview_pending' ? (
           <div>

@@ -195,14 +195,16 @@ const SessionPlayback = () => {
                       </div>
                     </div>
                   </div>
-                  {rec.filePath && (
+                  <div style={{ background: '#000', borderRadius: 8, overflow: 'hidden', position: 'relative' }}>
                     <video
-                      ref={videoRef}
                       controls
-                      style={{ width: '100%', borderRadius: 8, background: '#000', maxHeight: 400 }}
-                      src={rec.filePath.startsWith('http') ? rec.filePath : `${BACKEND_URL}${rec.filePath}`}
-                    />
-                  )}
+                      preload="metadata"
+                      style={{ width: '100%', display: 'block', maxHeight: 450 }}
+                      src={rec.filePath.startsWith('http') ? rec.filePath : `${BACKEND_URL}${rec.filePath.startsWith('/') ? '' : '/'}${rec.filePath}`}
+                    >
+                      Your browser does not support the video tag.
+                    </video>
+                  </div>
                 </div>
               );
             })}

@@ -242,35 +242,56 @@ exports.generateInterview = async (req, res) => {
       .populate('candidateId');
 
     if (!app) return res.status(404).json({ success: false, error: 'Application not found' });
-    if (app.status !== 'interview_pending') return res.status(400).json({ success: false, error: 'Candidate not in interview_pending status' });
-    if (app.scores?.interview?.interviewId) return res.status(400).json({ success: false, error: 'Interview already generated for this application' });
+    if (app.status !== 'interview_pending' && app.status !== 'interview_scheduled') return res.status(400).json({ success: false, error: 'Candidate not in interview_pending or scheduled status' });
+    let interview;
+    if (app.scores?.interview?.interviewId) {
+      // Reschedule existing interview
+      interview = await Interview.findById(app.scores.interview.interviewId);
+      if (!interview) return res.status(404).json({ success: false, error: 'Linked interview not found' });
+      
+      // Only allow rescheduling if not completed
+      if (interview.status === 'completed') {
+        return res.status(400).json({ success: false, error: 'Cannot reschedule a completed interview' });
+      }
 
-    const { startTime, duration } = req.body || {};
+      interview.scheduledAt = startTime || new Date(Date.now() + 24 * 60 * 60 * 1000);
+      if (duration) interview.duration = duration;
+      // Reset status to scheduled if it was cancelled or something
+      interview.status = 'scheduled';
+      await interview.save();
+    } else {
+      // Create new interview
+      interview = await Interview.create({
+        title: `${app.jobId.title} — Final Interview`,
+        description: `Final interview for candidate ${app.candidateId.name}`,
+        interviewer: req.user.id,
+        candidate: app.candidateId._id,
+        candidateName: app.candidateId.name,
+        candidateEmail: app.candidateId.email,
+        status: 'scheduled',
+        scheduledAt: startTime || new Date(Date.now() + 24 * 60 * 60 * 1000),
+        duration: duration || 60,
+        settings: {
+          allowCamera: true,
+          allowMicrophone: true,
+          enableProctoring: true,
+          codeExecutionEnabled: true,
+          fullscreenRequired: true,
+        },
+      });
 
-    const interview = await Interview.create({
-      title: `${app.jobId.title} — Final Interview`,
-      description: `Final interview for candidate ${app.candidateId.name}`,
-      interviewer: req.user.id,
-      candidate: app.candidateId._id,
-      candidateName: app.candidateId.name,
-      candidateEmail: app.candidateId.email,
-      status: 'scheduled',
-      scheduledAt: startTime || new Date(Date.now() + 24 * 60 * 60 * 1000),
-      duration: duration || 60,
-      settings: {
-        allowCamera: true,
-        allowMicrophone: true,
-        enableProctoring: true,
-        codeExecutionEnabled: true,
-        fullscreenRequired: true,
-      },
-    });
+      app.scores.interview = { interviewId: interview._id, score: 0 };
+      app.status = 'interview_scheduled';
+      await app.save();
+    }
 
-    app.scores.interview = { interviewId: interview._id, score: 0 };
-    app.status = 'interview_scheduled';
-    await app.save();
+    // Refresh application to send back populated data
+    const updatedApp = await Application.findById(app._id)
+      .populate('jobId')
+      .populate('candidateId')
+      .populate('scores.interview.interviewId');
 
-    res.status(201).json({ success: true, data: app, interview });
+    res.status(200).json({ success: true, data: updatedApp, interview });
   } catch (error) {
     res.status(400).json({ success: false, error: error.message });
   }
