@@ -9,10 +9,8 @@ const VideoPanel = ({
   cameraOff,
   connected,
   connectionState,
-  onToggleMic,
-  onToggleCamera,
-  onEndCall,
   recording,
+  layout = 'sidebar' // 'sidebar' | 'grid'
 }) => {
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
@@ -29,82 +27,73 @@ const VideoPanel = ({
     }
   }, [remoteStream, connected]);
 
+  const tileStyle = {
+    position: 'relative',
+    borderRadius: '12px',
+    overflow: 'hidden',
+    background: '#000',
+    aspectRatio: '16/9',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+    border: '1px solid var(--border)'
+  };
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', background: '#000', overflow: 'hidden' }}>
-      {/* Connection status banner */}
-      {connectionState !== 'connected' && connectionState !== 'new' && (
+    <div style={{ 
+      display: 'flex', 
+      flexDirection: layout === 'sidebar' ? 'column' : 'row',
+      flexWrap: 'wrap',
+      gap: 12,
+      padding: 12,
+      background: 'transparent',
+      justifyContent: 'center',
+      alignItems: 'center',
+      width: '100%',
+      height: '100%'
+    }}>
+      {/* Remote Participant */}
+      <div style={{ ...tileStyle, flex: layout === 'sidebar' ? '0 0 auto' : '1 1 400px', maxWidth: layout === 'sidebar' ? '100%' : '800px' }}>
+        {remoteStream && connected ? (
+          <video ref={remoteVideoRef} autoPlay playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        ) : (
+          <div className="video-no-stream" style={{ background: '#1e293b' }}>
+            <span style={{ fontSize: 40 }}>👤</span>
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{connected ? remoteName : 'Connecting…'}</span>
+          </div>
+        )}
         <div style={{
-          display: 'flex', alignItems: 'center', gap: 8, padding: '6px 16px',
-          background: connectionState === 'connecting' ? 'rgba(245,158,11,0.15)' : 'rgba(239,68,68,0.15)',
-          borderBottom: '1px solid rgba(245,158,11,0.3)',
-          fontSize: '0.75rem', color: connectionState === 'connecting' ? '#fcd34d' : '#fca5a5',
-          fontWeight: 600,
+          position: 'absolute', bottom: 12, left: 12,
+          padding: '4px 12px', borderRadius: 8,
+          background: 'rgba(15, 23, 42, 0.6)',
+          backdropFilter: 'blur(8px)',
+          fontSize: '12px', fontWeight: 600, color: '#fff',
+          display: 'flex', alignItems: 'center', gap: 6
         }}>
-          <span>{connectionState === 'connecting' ? '⟳' : '⚠'}</span>
-          {connectionState === 'connecting' && 'Connecting to peer…'}
-          {connectionState === 'disconnected' && 'Peer disconnected. Waiting for reconnect…'}
-          {connectionState === 'failed' && 'Connection failed. Attempting to restart ICE…'}
-        </div>
-      )}
-
-      {/* Video grid */}
-      <div className="video-grid" style={{ flex: 1 }}>
-        {/* Remote video */}
-        <div className="video-tile">
-          {remoteStream && connected ? (
-            <video ref={remoteVideoRef} autoPlay playsInline />
-          ) : (
-            <div className="video-no-stream">
-              <span style={{ fontSize: 40 }}>👤</span>
-              <span>{connected ? remoteName : 'Waiting for participant…'}</span>
-            </div>
-          )}
-          <div className="video-tile-label">
-            {remoteName}
-            {connected && <span style={{ marginLeft: 6, color: '#10b981' }}>● Live</span>}
-          </div>
-        </div>
-
-        {/* Local video */}
-        <div className="video-tile" style={{ maxHeight: 180, maxWidth: 240, justifySelf: 'end' }}>
-          {localStream && !cameraOff ? (
-            <video ref={localVideoRef} autoPlay playsInline muted />
-          ) : (
-            <div className="video-no-stream">
-              <span style={{ fontSize: 28 }}>📷</span>
-              <span style={{ fontSize: '0.7rem' }}>Camera off</span>
-            </div>
-          )}
-          <div className="video-tile-label">
-            {localName} (You)
-            {recording && <span style={{ marginLeft: 6, color: '#ef4444' }}>⬤ REC</span>}
-          </div>
+          <span>{remoteName}</span>
+          {connected && <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--success)' }} />}
         </div>
       </div>
 
-      {/* Controls bar */}
-      <div className="controls-bar">
-        <button
-          className={`control-btn ${micMuted ? 'muted' : ''}`}
-          onClick={onToggleMic}
-          title={micMuted ? 'Unmute' : 'Mute'}
-        >
-          {micMuted ? '🔇' : '🎤'}
-        </button>
-        <button
-          className={`control-btn ${cameraOff ? 'muted' : ''}`}
-          onClick={onToggleCamera}
-          title={cameraOff ? 'Turn camera on' : 'Turn camera off'}
-        >
-          {cameraOff ? '📷' : '🎥'}
-        </button>
-        <button
-          className="control-btn end-call"
-          onClick={onEndCall}
-          title="End call"
-        >
-          📵
-        </button>
+      {/* Local Participant */}
+      <div style={{ ...tileStyle, flex: layout === 'sidebar' ? '0 0 auto' : '1 1 400px', maxWidth: layout === 'sidebar' ? '100%' : '800px' }}>
+        {localStream && !cameraOff ? (
+          <video ref={localVideoRef} autoPlay playsInline muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        ) : (
+          <div className="video-no-stream" style={{ background: '#1e293b' }}>
+            <span style={{ fontSize: 40 }}>📷</span>
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Camera Off</span>
+          </div>
+        )}
+        <div style={{
+          position: 'absolute', bottom: 12, left: 12,
+          padding: '4px 12px', borderRadius: 8,
+          background: 'rgba(15, 23, 42, 0.6)',
+          backdropFilter: 'blur(8px)',
+          fontSize: '12px', fontWeight: 600, color: '#fff',
+          display: 'flex', alignItems: 'center', gap: 6
+        }}>
+          <span>{localName} (You)</span>
+          {micMuted && <span title="Muted">🔇</span>}
+        </div>
       </div>
     </div>
   );

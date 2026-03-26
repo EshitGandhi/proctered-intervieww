@@ -19,6 +19,7 @@ const THEMES = [
 const CodeEditorPanel = ({ interviewId, readOnly = false, onSubmit, socket, roomId }) => {
   const [theme, setTheme] = React.useState('vs-dark');
   const [fontSize, setFontSize] = React.useState(14);
+  const [explorerOpen, setExplorerOpen] = React.useState(true);
 
   const {
     language, setLanguage,
@@ -26,7 +27,6 @@ const CodeEditorPanel = ({ interviewId, readOnly = false, onSubmit, socket, room
     stdin, setStdin,
     stdout, stderr, compileOutput, status, executionTime,
     running, submitting,
-    lastSubmission,
     activeTab, setActiveTab,
     runCode, submitCode,
   } = useCodeExecution({ interviewId, socket, roomId, readOnly });
@@ -46,150 +46,190 @@ const CodeEditorPanel = ({ interviewId, readOnly = false, onSubmit, socket, room
   };
 
   return (
-    <div className="editor-panel">
-      {/* Toolbar */}
-      <div className="editor-toolbar">
-        {/* Language selector */}
-        <select
-          className="input select"
-          style={{ width: 130, padding: '6px 32px 6px 12px' }}
-          value={language}
-          onChange={(e) => setLanguage(e.target.value)}
-          disabled={readOnly}
+    <div className="editor-panel" style={{ background: '#1e1e1e', height: '100%', display: 'flex', flexDirection: 'column' }}>
+      {/* 1. VS Code Style Toolbar / Tabs */}
+      <div style={{ display: 'flex', background: '#252526', height: '35px', alignItems: 'center', borderBottom: '1px solid #333' }}>
+        {/* Explorer Toggle */}
+        <button 
+          onClick={() => setExplorerOpen(!explorerOpen)}
+          style={{ width: '48px', height: '100%', border: 'none', background: 'transparent', cursor: 'pointer', color: explorerOpen ? '#fff' : '#858585' }}
         >
-          {LANGUAGES.map((l) => (
-            <option key={l.id} value={l.id}>{l.label}</option>
-          ))}
-        </select>
-
-        {/* Theme selector */}
-        <select
-          className="input select"
-          style={{ width: 120, padding: '6px 32px 6px 12px' }}
-          value={theme}
-          onChange={(e) => setTheme(e.target.value)}
-        >
-          {THEMES.map((t) => (
-            <option key={t.id} value={t.id}>{t.label}</option>
-          ))}
-        </select>
-
-        {/* Font size */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <button className="btn btn-ghost btn-sm" onClick={() => setFontSize(f => Math.max(10, f - 1))}>A-</button>
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', minWidth: 30, textAlign: 'center' }}>{fontSize}</span>
-          <button className="btn btn-ghost btn-sm" onClick={() => setFontSize(f => Math.min(24, f + 1))}>A+</button>
+          📁
+        </button>
+        
+        {/* Active Tabs */}
+        <div style={{ display: 'flex', height: '100%', overflowX: 'auto' }}>
+          <div style={{ 
+            display: 'flex', alignItems: 'center', padding: '0 16px', gap: 8,
+            background: '#1e1e1e', height: '100%', color: '#fff', borderTop: '1px solid var(--accent-primary)',
+            fontSize: '13px', cursor: 'pointer'
+          }}>
+            <span>🐍</span>
+            <span>solution.py</span>
+            <span style={{ fontSize: '10px', opacity: 0.6 }}>✕</span>
+          </div>
+          <div style={{ 
+            display: 'flex', alignItems: 'center', padding: '0 16px', gap: 8,
+            background: '#2d2d2d', height: '100%', color: '#969696',
+            fontSize: '13px', cursor: 'pointer'
+          }}>
+            <span>📄</span>
+            <span>readme.md</span>
+          </div>
         </div>
 
         <div style={{ flex: 1 }} />
-
-        {/* Status indicator */}
-        {status && (
-          <span style={{
-            fontSize: '0.75rem', fontWeight: 700, color: getStatusColor(),
-            background: `${getStatusColor()}20`, padding: '3px 10px',
-            borderRadius: 20, border: `1px solid ${getStatusColor()}40`,
-          }}>
-            {status}
-            {executionTime && ` · ${executionTime}s`}
-          </span>
-        )}
-
-        {!readOnly && (
-          <>
-            <button
-              className="btn btn-secondary btn-sm"
-              onClick={runCode}
+        
+        {/* Execution Controls */}
+        <div style={{ display: 'flex', gap: 8, paddingRight: 8 }}>
+          <button 
+            className="btn btn-primary" 
+            style={{ height: '24px', padding: '0 12px', fontSize: '12px' }}
+            onClick={runCode}
+            disabled={running || submitting}
+          >
+            {running ? '⟳' : '▶ Run'}
+          </button>
+          {!readOnly && (
+            <button 
+              className="btn btn-success" 
+              style={{ height: '24px', padding: '0 12px', fontSize: '12px' }}
+              onClick={handleSubmit}
               disabled={running || submitting}
             >
-              {running ? '⟳ Running…' : '▶ Run'}
+              ✓ Submit
             </button>
-            <button
-              className="btn btn-success btn-sm"
-              onClick={handleSubmit}
-              disabled={running || submitting || !interviewId}
-            >
-              {submitting ? '⟳ Submitting…' : '✓ Submit'}
-            </button>
-          </>
-        )}
-      </div>
-
-      {/* Monaco Editor */}
-      <div style={{ flex: 1, overflow: 'hidden' }}>
-        <Editor
-          height="100%"
-          language={currentLang?.monacoLang || 'python'}
-          value={sourceCode}
-          onChange={(val) => !readOnly && setSourceCode(val || '')}
-          theme={theme}
-          options={{
-            fontSize,
-            minimap: { enabled: false },
-            scrollBeyondLastLine: false,
-            wordWrap: 'on',
-            lineNumbers: 'on',
-            renderLineHighlight: 'all',
-            cursorBlinking: 'smooth',
-            smoothScrolling: true,
-            readOnly,
-            contextmenu: false, // disable right-click context menu in editor
-            fontFamily: "'JetBrains Mono', 'Courier New', monospace",
-            fontLigatures: true,
-            padding: { top: 12, bottom: 12 },
-          }}
-        />
-      </div>
-
-      {/* I/O Console */}
-      <div className="io-console" style={{ maxHeight: 220, display: 'flex', flexDirection: 'column' }}>
-        <div className="console-tabs" style={{ flexShrink: 0 }}>
-          {[
-            { id: 'input', label: 'Input (stdin)' },
-            { id: 'output', label: 'Output' },
-            { id: 'errors', label: `Errors${(stderr || compileOutput) ? ' ⚠' : ''}` },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              className={`console-tab ${activeTab === tab.id ? 'active' : ''}`}
-              onClick={() => setActiveTab(tab.id)}
-            >
-              {tab.label}
-            </button>
-          ))}
+          )}
         </div>
+      </div>
 
-        <div className="console-content">
-          {activeTab === 'input' && (
-            <textarea
-              style={{
-                width: '100%', background: 'transparent', border: 'none', outline: 'none',
-                color: 'var(--text-primary)', fontFamily: 'JetBrains Mono, monospace',
-                fontSize: '0.8rem', resize: 'none', minHeight: 80,
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+        {/* 2. Left File Explorer (VS Code Style) */}
+        {explorerOpen && (
+          <div style={{ width: '220px', background: '#252526', borderRight: '1px solid #333', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ padding: '10px 16px', fontSize: '11px', color: '#bbb', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Explorer
+            </div>
+            <div style={{ padding: '4px 16px', fontSize: '13px', color: '#ccc', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span>⌄</span>
+              <span style={{ fontWeight: 700 }}>PROJECT_ROOT</span>
+            </div>
+            <div style={{ padding: '4px 28px', fontSize: '13px', color: '#fff', background: '#37373d', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span>🐍</span>
+              <span>solution.py</span>
+            </div>
+            <div style={{ padding: '4px 28px', fontSize: '13px', color: '#ccc', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span>📄</span>
+              <span>readme.md</span>
+            </div>
+            <div style={{ padding: '4px 28px', fontSize: '13px', color: '#ccc', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span>⚙️</span>
+              <span>utils.py</span>
+            </div>
+          </div>
+        )}
+
+        {/* 3. Main Editor Stage */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#1e1e1e' }}>
+          {/* Breadcrumbs */}
+          <div style={{ padding: '8px 16px', fontSize: '12px', color: '#969696', display: 'flex', gap: 6, alignItems: 'center', borderBottom: '1px solid #252526' }}>
+            <span>PROJECT_ROOT</span>
+            <span>›</span>
+            <span style={{ color: '#fff' }}>solution.py</span>
+          </div>
+
+          <div style={{ flex: 1 }}>
+            <Editor
+              height="100%"
+              language={currentLang?.monacoLang || 'python'}
+              value={sourceCode}
+              onChange={(val) => !readOnly && setSourceCode(val || '')}
+              theme={theme}
+              options={{
+                fontSize,
+                minimap: { enabled: false },
+                scrollBeyondLastLine: false,
+                wordWrap: 'on',
+                lineNumbers: 'on',
+                renderLineHighlight: 'all',
+                cursorBlinking: 'smooth',
+                smoothScrolling: true,
+                readOnly,
+                contextmenu: false,
+                fontFamily: "'Fira Code', monospace",
+                fontLigatures: true,
+                padding: { top: 12, bottom: 12 },
+                scrollbar: {
+                  vertical: 'visible',
+                  horizontal: 'visible',
+                  verticalScrollbarSize: 10,
+                  horizontalScrollbarSize: 10
+                }
               }}
-              placeholder="Enter stdin here (optional)…"
-              value={stdin}
-              onChange={(e) => setStdin(e.target.value)}
-              readOnly={readOnly}
             />
-          )}
+          </div>
 
-          {activeTab === 'output' && (
-            stdout
-              ? <pre className="console-stdout">{stdout}</pre>
-              : <span className="console-empty">Run code to see output…</span>
-          )}
+          {/* 4. Console Section (LeetCode Style) */}
+          <div style={{ height: '30%', borderTop: '2px solid #333', display: 'flex', flexDirection: 'column', background: '#1e1e1e' }}>
+             <div style={{ display: 'flex', borderBottom: '1px solid #333', background: '#252526' }}>
+                <button 
+                  className={`console-tab ${activeTab === 'input' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('input')}
+                  style={{ border: 'none', background: 'transparent', padding: '8px 16px', fontSize: '12px', color: activeTab === 'input' ? '#fff' : '#858585', borderBottom: activeTab === 'input' ? '2px solid #fff' : 'none' }}
+                >
+                  Test Case
+                </button>
+                <button 
+                  className={`console-tab ${activeTab === 'output' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('output')}
+                  style={{ border: 'none', background: 'transparent', padding: '8px 16px', fontSize: '12px', color: activeTab === 'output' ? '#fff' : '#858585', borderBottom: activeTab === 'output' ? '2px solid #fff' : 'none' }}
+                >
+                  Result
+                </button>
+             </div>
+             <div style={{ flex: 1, padding: 16, overflowY: 'auto' }}>
+                {activeTab === 'input' && (
+                  <textarea
+                    style={{
+                      width: '100%', height: '100%', background: 'transparent', border: 'none', outline: 'none',
+                      color: '#ddd', fontFamily: 'Fira Code, monospace',
+                      fontSize: '13px', resize: 'none',
+                    }}
+                    placeholder="Enter stdin here…"
+                    value={stdin}
+                    onChange={(e) => setStdin(e.target.value)}
+                    readOnly={readOnly}
+                  />
+                )}
+                {activeTab === 'output' && (
+                  <div style={{ fontFamily: 'Fira Code, monospace', fontSize: '13px' }}>
+                    {status && (
+                      <div style={{ marginBottom: 12, color: getStatusColor(), fontWeight: 700 }}>
+                        {status} {executionTime && `| Time: ${executionTime}s`}
+                      </div>
+                    )}
+                    {stdout && <pre style={{ color: '#86efac' }}>{stdout}</pre>}
+                    {stderr && <pre style={{ color: '#fca5a5' }}>{stderr}</pre>}
+                    {!stdout && !stderr && <span style={{ color: '#555' }}>Run your code to see results...</span>}
+                  </div>
+                )}
+             </div>
+          </div>
 
-          {activeTab === 'errors' && (
-            (stderr || compileOutput)
-              ? (
-                <>
-                  {compileOutput && <pre className="console-stderr">{compileOutput}</pre>}
-                  {stderr && <pre className="console-stderr">{stderr}</pre>}
-                </>
-              )
-              : <span className="console-empty">No errors 🎉</span>
-          )}
+          {/* 5. VS Code Status Bar */}
+          <div style={{ height: '22px', background: 'var(--accent-primary)', color: '#fff', fontSize: '12px', display: 'flex', alignItems: 'center', padding: '0 12px', gap: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span>⎇</span>
+              <span style={{ fontWeight: 600 }}>main</span>
+            </div>
+            <div style={{ flex: 1 }} />
+            <div>
+              Ln {sourceCode.split('\n').length}, Col 1
+            </div>
+            <div style={{ borderLeft: '1px solid rgba(255,255,255,0.2)', paddingLeft: 12 }}>
+              {currentLang?.label} {currentLang?.id === 'python' ? '3.x' : ''}
+            </div>
+          </div>
         </div>
       </div>
     </div>

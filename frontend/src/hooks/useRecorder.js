@@ -3,9 +3,8 @@ import api from '../services/api';
 
 /**
  * useRecorder — handles:
- *  1. Camera/mic stream recording (WebRTC stream) → uploads as `video`
- *  2. Screen recording (getDisplayMedia) with MIXED audio (Mic + System) → uploads as `screen`
- *  3. Live speech transcription (SpeechRecognition) → uploads as `transcript` (.txt)
+ *  1. Multi-stream session recording (Canvas compositor + AudioContext mixer) → uploads as `video`
+ *  2. Live speech transcription (SpeechRecognition) → uploads as `transcript` (.txt)
  *
  * NOTE: For best accuracy, we now mix local + remote audio for the recording.
  */

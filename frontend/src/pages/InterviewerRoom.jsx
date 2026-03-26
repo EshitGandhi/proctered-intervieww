@@ -1,12 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import useWebRTC from '../hooks/useWebRTC';
-import VideoPanel from '../components/VideoModule/VideoPanel';
-import CodeEditorPanel from '../components/CodeEditor/CodeEditorPanel';
-import { ProctoringWidget } from '../components/Proctoring/ProctoringComponents';
-import api from '../services/api';
-import { connectSocket } from '../services/socket';
+import TopBar from '../components/Layout/TopBar';
+import ControlBar from '../components/UI/ControlBar';
 
 const InterviewerRoom = () => {
   const { roomId } = useParams();
@@ -17,10 +10,12 @@ const InterviewerRoom = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [liveViolations, setLiveViolations] = useState([]);
-  
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
-  const [activePanel, setActivePanel] = useState('editor'); // 'editor', 'violations'
+  
+  // UI State
+  const [viewMode, setViewMode] = useState('split');
+  const [chatOpen, setChatOpen] = useState(true);
 
   // Fetch interview details
   useEffect(() => {
@@ -45,56 +40,24 @@ const InterviewerRoom = () => {
     role: 'interviewer',
   });
 
-  // Listen for live proctoring events & Chat
+  // Socket listeners
   useEffect(() => {
     const socket = connectSocket();
-    socket.connect();
-    
-    const handleViolation = (violation) => {
-      setLiveViolations((prev) => [{ ...violation, receivedAt: new Date().toISOString() }, ...prev]);
-    };
-    
-    const handleChat = (msg) => {
-      setChatMessages((prev) => [...prev, msg]);
-    };
-    
-    const handlePeerLeft = ({ role }) => {
-      if (role === 'candidate') {
-        setChatMessages((prev) => [...prev, {
-          message: 'Candidate has left the session.',
-          senderName: 'System',
-          timestamp: new Date().toISOString(),
-          isSystem: true,
-        }]);
-      }
-    };
-
-    socket.on('proctoring-violation', handleViolation);
-    socket.on('chat-message', handleChat);
-    socket.on('peer-left', handlePeerLeft);
-    
-    return () => {
-      socket.off('proctoring-violation', handleViolation);
-      socket.off('chat-message', handleChat);
-      socket.off('peer-left', handlePeerLeft);
-    };
+    socket.on('proctoring-violation', (v) => setLiveViolations((prev) => [{ ...v, receivedAt: new Date().toISOString() }, ...prev]));
+    socket.on('chat-message', (msg) => setChatMessages((prev) => [...prev, msg]));
+    return () => { socket.off('proctoring-violation'); socket.off('chat-message'); };
   }, []);
 
-  // Join automatically when loaded
+  // Join
   useEffect(() => {
-    if (interview) {
-      webRTC.joinRoom().catch((err) => setError(err.message));
-    }
+    if (interview) webRTC.joinRoom().catch((err) => setError(err.message));
   }, [interview?._id]);
 
   const sendChat = () => {
     if (!chatInput.trim()) return;
     const socket = connectSocket();
     socket.emit('chat-message', { roomId, message: chatInput, senderName: user?.name });
-    setChatMessages((prev) => [...prev, {
-      message: chatInput, senderName: user?.name, own: true,
-      timestamp: new Date().toISOString(),
-    }]);
+    setChatMessages((prev) => [...prev, { message: chatInput, senderName: user?.name, own: true, timestamp: new Date().toISOString() }]);
     setChatInput('');
   };
 
@@ -104,8 +67,7 @@ const InterviewerRoom = () => {
         const { data } = await api.patch(`/interviews/${interview._id}/start`);
         setInterview(data.data);
       } catch (err) {
-        console.error('Failed to start interview:', err);
-        alert('Failed to start interview. ' + (err.response?.data?.message || err.message));
+        alert('Failed to start interview.');
       }
     }
   };
@@ -113,164 +75,147 @@ const InterviewerRoom = () => {
   const handleEndCall = async () => {
     webRTC.socket.current?.emit('end-interview', { roomId });
     if (interview?._id) {
-      try {
-        await api.patch(`/interviews/${interview._id}/end`);
-      } catch (err) {
-        console.error('Failed to end interview in DB:', err);
-      }
+      try { await api.patch(`/interviews/${interview._id}/end`); } catch (err) {}
     }
     webRTC.leaveRoom();
-    window.close();
     navigate('/dashboard');
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="spinner" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="card text-center" style={{ maxWidth: 400 }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>❌</div>
-          <h2>Error</h2>
-          <p style={{ color: 'var(--text-secondary)' }}>{error}</p>
-          <button className="btn btn-primary" onClick={() => navigate('/dashboard')} style={{ marginTop: 24 }}>
-            Go to Dashboard
-          </button>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="spinner" /></div>;
 
   return (
-    <div className="room-layout">
-      {/* Main area: shared code editor */}
-      <div className="room-main">
-        {/* Top bar */}
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 12, padding: '8px 16px',
-          borderBottom: '1px solid var(--border)', background: 'var(--bg-secondary)',
-          flexShrink: 0,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 20 }}>👁️</span>
-            <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>Live Monitoring: {interview?.title}</span>
-          </div>
-
-          {interview?.status === 'scheduled' && (
-            <button className="btn btn-primary btn-sm" style={{ marginLeft: 16 }} onClick={handleStartCall}>
-              ▶️ Start Session
-            </button>
-          )}
-
-          <div style={{ flex: 1 }} />
-          <span className={`badge ${liveViolations.length > 5 ? 'badge-danger' : liveViolations.length > 0 ? 'badge-warning' : 'badge-success'}`}>
-            {liveViolations.length} violations
-          </span>
-        </div>
-
-        {/* Code editor (read-only) */}
-        <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
-          <CodeEditorPanel 
-            interviewId={interview?._id} 
-            readOnly={true} 
-            socket={connectSocket()} 
-            roomId={roomId} 
-          />
-          <div style={{
-            position: 'absolute', top: 12, right: 16, background: 'rgba(7, 13, 25, 0.7)',
-            backdropFilter: 'blur(4px)', padding: '4px 12px', borderRadius: 20,
-            fontSize: '0.75rem', color: '#10b981', border: '1px solid #10b981',
-            pointerEvents: 'none',
-          }}>
-            ⬤ Watching candidate type live
-          </div>
-        </div>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--bg-primary)', overflow: 'hidden' }}>
+      
+      {/* Top Bar with unique Interviewer controls */}
+      <div style={{ position: 'relative' }}>
+        <TopBar 
+          title={`Monitoring: ${interview?.title || 'Main Interview'}`}
+          recording={true} // Interviewer always "sees" recording status
+        />
+        {interview?.status === 'scheduled' && (
+          <button 
+            className="btn btn-primary btn-sm" 
+            style={{ position: 'absolute', right: '350px', top: '10px', zIndex: 110 }}
+            onClick={handleStartCall}
+          >
+            ▶ Start Session
+          </button>
+        )}
       </div>
 
-      {/* Right sidebar */}
-      <div className="room-sidebar">
-        {/* Video */}
-        <div style={{ flexShrink: 0 }}>
-          <VideoPanel
-            localStream={webRTC.localStream}
-            remoteStream={webRTC.remoteStream}
-            localName={user?.name}
-            remoteName={interview?.candidateName || 'Candidate'}
-            micMuted={webRTC.micMuted}
-            cameraOff={webRTC.cameraOff}
-            connected={webRTC.connected}
-            connectionState={webRTC.connectionState}
-            onToggleMic={webRTC.toggleMic}
-            onToggleCamera={webRTC.toggleCamera}
-            onEndCall={handleEndCall}
-          />
-        </div>
-
-        {/* Panel tabs */}
-        <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-          {[{ id: 'editor', label: '💬 Chat' }, { id: 'violations', label: `⚠ Alerts (${liveViolations.length})` }].map((tab) => (
-            <button
-              key={tab.id}
-              className={`console-tab ${activePanel === tab.id ? 'active' : ''}`}
-              onClick={() => setActivePanel(tab.id)}
-              style={{ flex: 1 }}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Chat */}
-        {activePanel === 'editor' && (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <div className="chat-messages" style={{ flex: 1 }}>
-              {chatMessages.length === 0 && (
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', textAlign: 'center', marginTop: 20 }}>
-                  Chat with {interview?.candidateName || 'the candidate'} here
-                </p>
-              )}
-              {chatMessages.map((msg, i) => (
-                <div key={i}>
-                  {msg.isSystem ? (
-                    <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.75rem', padding: '4px 0' }}>
-                      {msg.message}
-                    </div>
-                  ) : (
-                    <div className={`chat-bubble ${msg.own ? 'own' : 'other'}`}>
-                      {!msg.own && <div className="chat-sender">{msg.senderName}</div>}
-                      {msg.message}
-                    </div>
-                  )}
-                </div>
-              ))}
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden', position: 'relative' }}>
+        
+        {/* Main Stage */}
+        <div style={{ 
+          flex: 1, 
+          display: 'flex', 
+          flexDirection: viewMode === 'video' ? 'column' : 'row',
+          padding: 8, gap: 8,
+          overflow: 'hidden'
+        }}>
+          {viewMode !== 'video' && (
+            <div style={{ 
+              flex: viewMode === 'split' ? 0.65 : 1, 
+              display: 'flex', 
+              borderRadius: 12, overflow: 'hidden',
+              boxShadow: 'var(--shadow)',
+              border: '1px solid var(--border)',
+              position: 'relative'
+            }}>
+              <CodeEditorPanel interviewId={interview?._id} readOnly={true} socket={connectSocket()} roomId={roomId} />
+              <div style={{
+                position: 'absolute', top: 12, right: 16, background: 'rgba(7, 13, 25, 0.7)',
+                backdropFilter: 'blur(4px)', padding: '4px 12px', borderRadius: 20,
+                fontSize: '0.75rem', color: '#10b981', border: '1px solid #10b981',
+                pointerEvents: 'none', zIndex: 10
+              }}>
+                ⬤ Watching candidate live
+              </div>
             </div>
-            <div style={{ padding: '8px 12px', borderTop: '1px solid var(--border)', display: 'flex', gap: 8 }}>
-              <input
-                className="input"
-                style={{ flex: 1, padding: '8px 12px', fontSize: '0.85rem' }}
-                placeholder="Type a message…"
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && sendChat()}
-              />
+          )}
+
+          {(viewMode === 'split' || viewMode === 'video') && (
+            <div style={{ 
+              flex: viewMode === 'video' ? 1 : 0.35,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 8
+            }}>
+              <div className="glass" style={{ flex: 1, borderRadius: 12, overflow: 'hidden', display: 'flex' }}>
+                 <VideoPanel
+                    localStream={webRTC.localStream}
+                    remoteStream={webRTC.remoteStream}
+                    localName={user?.name}
+                    remoteName={interview?.candidateName}
+                    micMuted={webRTC.micMuted}
+                    cameraOff={webRTC.cameraOff}
+                    connected={webRTC.connected}
+                    connectionState={webRTC.connectionState}
+                    layout={viewMode === 'video' ? 'grid' : 'sidebar'}
+                  />
+              </div>
+
+              {/* Side Alerts / Violations (Teams Style) */}
+              <div className="glass" style={{ height: '300px', borderRadius: 12, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--border)', fontSize: '13px', fontWeight: 600, display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Violations</span>
+                  <span className="badge badge-danger">{liveViolations.length}</span>
+                </div>
+                <div style={{ flex: 1, overflowY: 'auto', padding: 12 }}>
+                  {liveViolations.map((v, i) => (
+                    <div key={i} className="violation-item" style={{ marginBottom: 8 }}>
+                      <div className={`violation-dot ${v.severity}`} />
+                      <div style={{ fontSize: '12px' }}>
+                        <span style={{ fontWeight: 600 }}>{v.eventType}</span>
+                        <div style={{ color: 'var(--text-muted)' }}>{v.description}</div>
+                      </div>
+                    </div>
+                  ))}
+                  {liveViolations.length === 0 && <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '12px', marginTop: 20 }}>No violations detected</div>}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Floating Chat Overlay */}
+        {chatOpen && (viewMode === 'full' || viewMode === 'video') && (
+          <div className="glass" style={{
+            position: 'absolute', top: 8, right: 8, bottom: 8, width: '320px',
+            borderRadius: 12, display: 'flex', flexDirection: 'column', zIndex: 50,
+            boxShadow: 'var(--shadow)'
+          }}>
+            <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+               <span style={{ fontWeight: 600 }}>Chat</span>
+               <button onClick={() => setChatOpen(false)} style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer' }}>✕</button>
+            </div>
+            <div className="chat-messages" style={{ flex: 1 }}>
+                {chatMessages.map((msg, i) => (
+                  <div key={i} className={`chat-bubble ${msg.own ? 'own' : 'other'}`}>
+                    {!msg.own && <div className="chat-sender">{msg.senderName}</div>}
+                    {msg.message}
+                  </div>
+                ))}
+            </div>
+            <div style={{ padding: 12, display: 'flex', gap: 8 }}>
+              <input className="input" style={{ flex: 1, fontSize: '13px' }} placeholder="Type..." value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && sendChat()} />
               <button className="btn btn-primary btn-sm" onClick={sendChat}>Send</button>
             </div>
           </div>
         )}
-
-        {/* Violations Log */}
-        {activePanel === 'violations' && (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <ProctoringWidget violations={liveViolations} candidateName={interview?.candidateName} />
-          </div>
-        )}
       </div>
+
+      <ControlBar 
+        micMuted={webRTC.micMuted}
+        cameraOff={webRTC.cameraOff}
+        onToggleMic={webRTC.toggleMic}
+        onToggleCamera={webRTC.toggleCamera}
+        onEndCall={handleEndCall}
+        viewMode={viewMode}
+        onViewModeToggle={setViewMode}
+        chatOpen={chatOpen}
+        onChatToggle={() => setChatOpen(!chatOpen)}
+      />
     </div>
   );
 };
