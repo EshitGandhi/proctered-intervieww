@@ -1,3 +1,14 @@
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import useWebRTC from '../hooks/useWebRTC';
+import useProctoringMonitor from '../hooks/useProctoringMonitor';
+import useRecorder from '../hooks/useRecorder';
+import VideoPanel from '../components/VideoModule/VideoPanel';
+import CodeEditorPanel from '../components/CodeEditor/CodeEditorPanel';
+import { ViolationOverlay } from '../components/Proctoring/ProctoringComponents';
+import api from '../services/api';
+import { connectSocket } from '../services/socket';
 import TopBar from '../components/Layout/TopBar';
 import ControlBar from '../components/UI/ControlBar';
 
