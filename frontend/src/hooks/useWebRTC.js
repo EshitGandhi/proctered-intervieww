@@ -75,10 +75,13 @@ const useWebRTC = ({ roomId, userId, userName, role }) => {
     setRemoteStream(remoteMediaStream);
 
     pc.ontrack = (e) => {
-      // Bulletproof track adding directly from e.track
       if (e.track) {
         remoteMediaStream.addTrack(e.track);
-        setRemoteStream(new MediaStream(remoteMediaStream.getTracks()));
+        // Important: We don't redefine the MediaStream object itself, 
+        // we just notify React that it has changed if necessary.
+        // However, the AudioContext source will now correctly flow 
+        // as tracks are added to the existing remoteMediaStream.
+        setRemoteStream(remoteMediaStream);
       }
     };
 

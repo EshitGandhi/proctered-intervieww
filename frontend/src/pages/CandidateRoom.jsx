@@ -138,11 +138,12 @@ const CandidateRoom = () => {
   }
 
   if (error) {
+    const isMediaError = error.includes('Media Error:');
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="card" style={{ textAlign: 'center', maxWidth: 400 }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>❌</div>
-          <h2 style={{ marginBottom: 8 }}>Room Not Found</h2>
+          <h2 style={{ marginBottom: 8 }}>{isMediaError ? 'Media Access Error' : 'Room Not Found'}</h2>
           <p style={{ color: 'var(--text-secondary)', marginBottom: 24 }}>{error}</p>
           <button className="btn btn-primary" onClick={() => navigate('/join')}>Go Back</button>
         </div>

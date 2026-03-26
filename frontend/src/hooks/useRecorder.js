@@ -76,44 +76,65 @@ const useRecorder = ({ interviewId, stream, remoteStream }) => {
       try {
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
         audioContextRef.current = audioContext;
-        const dest = audioContext.createMediaStreamDestination();
+        
+        // Resume AudioContext just in case
+        if (audioContext.state === 'suspended') {
+          await audioContext.resume();
+        }
 
+        const dest = audioContext.createMediaStreamDestination();
         let hasAudio = false;
 
-        // 1. Add Mic (from camera/mic stream)
+        console.log('--- Initializing Audio Mixing ---');
+        console.log('Local Stream Tracks:', stream?.getTracks().length);
+        console.log('Remote Stream Tracks:', remoteStream?.getTracks().length);
+
+        // 1. Add Mic (local user)
         if (stream && stream.getAudioTracks().length > 0) {
           const micSource = audioContext.createMediaStreamSource(stream);
           micSource.connect(dest);
           hasAudio = true;
-          console.log('Mixed: Microphone tracks added to screen recording');
+          console.log('Mixed: Source connected for microphone');
         }
 
-        // 2. Add Remote Audio (Interviewer)
-        if (remoteStream && remoteStream.getAudioTracks().length > 0) {
-          const remoteSource = audioContext.createMediaStreamSource(remoteStream);
-          remoteSource.connect(dest);
-          hasAudio = true;
-          console.log('Mixed: Remote (interviewer) tracks added to screen recording');
+        // 2. Add Remote Audio (Interviewer) - Track arrival handling
+        if (remoteStream) {
+          const connectRemote = () => {
+            if (remoteStream.getAudioTracks().length > 0) {
+              try {
+                const remoteSource = audioContext.createMediaStreamSource(remoteStream);
+                remoteSource.connect(dest);
+                console.log('Mixed: Remote interviewer audio source connected');
+              } catch (e) {
+                console.warn('Failed to connect remote audio source:', e);
+              }
+            }
+          };
+          
+          connectRemote(); // Connect if already present
+          remoteStream.onaddtrack = connectRemote; // Connect when added later
+          hasAudio = true; 
         }
 
-        // 3. Add System Audio (from screen share - fallback or additional)
-        if (screenStream.getAudioTracks().length > 0) {
+        // 3. Add System Audio (from screen share)
+        if (screenStream?.getAudioTracks().length > 0) {
           const screenAudioSource = audioContext.createMediaStreamSource(screenStream);
           screenAudioSource.connect(dest);
           hasAudio = true;
-          console.log('Mixed: System audio tracks added to screen recording');
+          console.log('Mixed: Source connected for system audio');
         }
 
-        // 4. Create final stream
+        // 4. Create final composite stream
         if (hasAudio) {
           const tracks = [
             ...screenStream.getVideoTracks(),
             ...dest.stream.getAudioTracks()
           ];
           finalStream = new MediaStream(tracks);
+          console.log('Final mixed stream created with total tracks:', tracks.length);
         }
       } catch (err) {
-        console.warn('Audio mixing failed, falling back to screen-only audio:', err);
+        console.warn('Audio mixing failed, falling back to screen-only stream:', err);
       }
 
       screenStreamRef.current = screenStream;

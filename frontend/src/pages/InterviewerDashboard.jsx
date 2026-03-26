@@ -29,6 +29,7 @@ const InterviewerDashboard = () => {
   
   // Dashboard Tabs: 'interviews' | 'jobs' | 'pipeline'
   const [activeTab, setActiveTab] = useState('interviews');
+  const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'scheduled', 'active', 'completed'
 
   // Fetch interviews
   const fetchInterviews = async () => {
@@ -104,10 +105,12 @@ const InterviewerDashboard = () => {
   };
 
   const rescheduleInterview = async (id) => {
+    if (!window.confirm("This will create a NEW interview session for this candidate while keeping the old one as history. Proceed?")) return;
+
     const newDate = prompt("Enter new scheduled time (e.g., 2026-03-27T10:00):", new Date().toISOString().slice(0, 16));
     if (!newDate) return;
     try {
-      await api.patch(`/interviews/${id}/reschedule`, { scheduledAt: new Date(newDate) });
+      await api.post(`/interviews/${id}/reschedule`, { scheduledAt: new Date(newDate) });
       fetchInterviews();
     } catch (err) {
       alert("Failed to reschedule: " + (err.response?.data?.message || err.message));
@@ -133,6 +136,11 @@ const InterviewerDashboard = () => {
     scheduled: 'badge-neutral', active: 'badge-success',
     completed: 'badge-primary', cancelled: 'badge-danger',
   };
+
+  const filteredInterviews = interviews.filter((iv) => {
+    if (statusFilter === 'all') return true;
+    return iv.status === statusFilter;
+  });
 
   return (
     <div className="dashboard-page">
@@ -210,8 +218,27 @@ const InterviewerDashboard = () => {
         {/* Tab Content: Interviews table */}
         {activeTab === 'interviews' && (
           <div className="card">
-          <div className="card-header">
-            <h2 style={{ fontSize: '1.1rem' }}>Interview Sessions</h2>
+          <div className="card-header" style={{ flexWrap: 'wrap', gap: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <h2 style={{ fontSize: '1.1rem', margin: 0 }}>Interview Sessions</h2>
+              {/* Filter pills */}
+              <div style={{ display: 'flex', gap: 8, marginLeft: 16 }}>
+                {['all', 'scheduled', 'active', 'completed'].map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setStatusFilter(f)}
+                    style={{
+                      padding: '4px 12px', borderRadius: 20, cursor: 'pointer',
+                      border: '1px solid var(--border)', fontSize: '0.75rem',
+                      background: statusFilter === f ? 'var(--primary)' : 'var(--bg-secondary)',
+                      color: statusFilter === f ? 'white' : 'var(--text-secondary)',
+                    }}
+                  >
+                    {f.charAt(0).toUpperCase() + f.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
             <button className="btn btn-primary btn-sm" onClick={() => setShowModal(true)}>
               + New Interview
             </button>
@@ -221,10 +248,10 @@ const InterviewerDashboard = () => {
             <div style={{ padding: '40px', textAlign: 'center' }}>
               <div className="spinner" style={{ margin: '0 auto' }} />
             </div>
-          ) : interviews.length === 0 ? (
+          ) : filteredInterviews.length === 0 ? (
             <div style={{ padding: '48px', textAlign: 'center', color: 'var(--text-muted)' }}>
               <div style={{ fontSize: 48, marginBottom: 12 }}>📋</div>
-              <p>No interviews yet. Create your first one!</p>
+              <p>No {statusFilter === 'all' ? '' : `${statusFilter} `}interviews found.</p>
             </div>
           ) : (
             <table className="table">
@@ -239,7 +266,7 @@ const InterviewerDashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {interviews.map((iv) => (
+                {filteredInterviews.map((iv) => (
                   <tr key={iv._id}>
                     <td>
                       <div style={{ fontWeight: 600 }}>{iv.title}</div>
