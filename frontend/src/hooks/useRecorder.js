@@ -132,9 +132,16 @@ const useRecorder = ({ interviewId, stream, remoteStream }) => {
           ];
           finalStream = new MediaStream(tracks);
           console.log('Final mixed stream created with total tracks:', tracks.length);
+        } else {
+          throw new Error("No audio sources successfully connected to mixer.");
         }
       } catch (err) {
-        console.warn('Audio mixing failed, falling back to screen-only stream:', err);
+        console.warn('Audio mixing failed, falling back to direct stream tracks if available:', err);
+        // Fallback: Manually mix available mic tracks
+        const fallbackAudio = stream?.getAudioTracks() || [];
+        const srAudio = screenStream?.getAudioTracks() || [];
+        const selectedAudio = srAudio.length > 0 ? srAudio : fallbackAudio; // prioritize system audio if available, else mic
+        finalStream = new MediaStream([ ...screenStream.getVideoTracks(), ...selectedAudio ]);
       }
 
       screenStreamRef.current = screenStream;

@@ -106,7 +106,8 @@ router.get('/:id/transcript', protect, async (req, res) => {
       content = fs.readFileSync(fullPath, 'utf-8');
     }
 
-    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    let contentType = recording.filePath.endsWith('.json') ? 'application/json; charset=utf-8' : 'text/plain; charset=utf-8';
+    res.setHeader('Content-Type', contentType);
     res.send(content);
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

@@ -139,7 +139,7 @@ const SessionPlayback = () => {
                 <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Submissions</div>
               </div>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#10b981' }}>{recordings.length}</div>
+                <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#10b981' }}>{recordings.filter(r => r.type !== 'transcript').length}</div>
                 <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Recordings</div>
               </div>
             </div>
@@ -231,27 +231,48 @@ const SessionPlayback = () => {
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                {transcriptsData.map((tr, idx) => (
-                  <div key={tr.id} style={{ borderBottom: idx < transcriptsData.length - 1 ? '1px solid var(--border)' : 'none', paddingBottom: 24 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                      <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-                        FRAGMENT {idx + 1} — {new Date(tr.date).toLocaleString()}
-                      </span>
-                      <button className="btn btn-ghost btn-xs" onClick={() => downloadTranscript(tr.content, tr.date)}>
-                        ⬇ Download .txt
-                      </button>
+                {transcriptsData.map((tr, idx) => {
+                  let parsed = null;
+                  try {
+                    parsed = JSON.parse(tr.content);
+                  } catch(e) { /* content is plain text */ }
+
+                  return (
+                    <div key={tr.id} style={{ borderBottom: idx < transcriptsData.length - 1 ? '1px solid var(--border)' : 'none', paddingBottom: 24 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                          FRAGMENT {idx + 1} — {new Date(tr.date).toLocaleString()}
+                        </span>
+                        <button className="btn btn-ghost btn-xs" onClick={() => downloadTranscript(tr.content, tr.date)}>
+                          ⬇ Download
+                        </button>
+                      </div>
+                      
+                      {parsed && parsed.segments && parsed.segments.length > 0 ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                          {parsed.segments.map((seg, sIdx) => (
+                            <div key={sIdx} style={{ background: 'var(--bg-secondary)', padding: 12, borderRadius: 8 }}>
+                              <div style={{ fontSize: '0.7rem', color: 'var(--accent-primary)', fontWeight: 600, marginBottom: 4 }}>
+                                {new Date(seg.start * 1000).toISOString().substr(14, 5)} - {new Date(seg.end * 1000).toISOString().substr(14, 5)}
+                              </div>
+                              <div style={{ fontSize: '0.88rem', color: 'var(--text-primary)' }}>{seg.text}</div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <pre style={{
+                          whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                          background: 'var(--bg-secondary)', padding: 16, borderRadius: 8,
+                          fontSize: '0.88rem', lineHeight: 1.6, color: 'var(--text-primary)',
+                          border: '1px solid var(--border)', maxHeight: 300, overflowY: 'auto',
+                          fontFamily: 'Inter, sans-serif',
+                        }}>
+                          {parsed && parsed.text ? parsed.text : tr.content}
+                        </pre>
+                      )}
                     </div>
-                    <pre style={{
-                      whiteSpace: 'pre-wrap', wordBreak: 'break-word',
-                      background: 'var(--bg-secondary)', padding: 16, borderRadius: 8,
-                      fontSize: '0.88rem', lineHeight: 1.6, color: 'var(--text-primary)',
-                      border: '1px solid var(--border)', maxHeight: 300, overflowY: 'auto',
-                      fontFamily: 'Inter, sans-serif',
-                    }}>
-                      {tr.content}
-                    </pre>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

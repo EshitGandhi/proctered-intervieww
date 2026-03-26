@@ -56,16 +56,19 @@ const transcribeFile = async (filePath, recordingId) => {
       response_format: 'verbose_json',
     });
 
-    // Save transcript as a .txt file and update DB
-    const transcriptText = transcription.text;
-    const transcriptFileName = `transcript-${recordingId}-${Date.now()}.txt`;
+    // Save transcript as a .json file and update DB
+    const transcriptData = JSON.stringify({
+      text: transcription.text,
+      segments: transcription.segments || [],
+    });
+    const transcriptFileName = `transcript-${recordingId}-${Date.now()}.json`;
     const transcriptPath = path.join('uploads', 'transcripts', transcriptFileName);
     const fullTranscriptPath = path.resolve(process.cwd(), transcriptPath);
 
     if (!fs.existsSync(path.dirname(fullTranscriptPath))) {
       fs.mkdirSync(path.dirname(fullTranscriptPath), { recursive: true });
     }
-    fs.writeFileSync(fullTranscriptPath, transcriptText);
+    fs.writeFileSync(fullTranscriptPath, transcriptData);
 
     // Create a new Recording entry for the transcript
     await Recording.create({
@@ -75,8 +78,8 @@ const transcribeFile = async (filePath, recordingId) => {
       storageType: 'local',
       filePath: `/${transcriptPath.replace(/\\/g, '/')}`,
       fileName: transcriptFileName,
-      mimeType: 'text/plain',
-      fileSize: Buffer.byteLength(transcriptText),
+      mimeType: 'application/json',
+      fileSize: Buffer.byteLength(transcriptData),
     });
 
     console.log(`Transcription completed for ${recordingId}`);
