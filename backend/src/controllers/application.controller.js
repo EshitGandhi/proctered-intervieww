@@ -246,6 +246,8 @@ exports.generateInterview = async (req, res) => {
       return res.status(400).json({ success: false, error: 'Candidate status does not allow scheduling' });
     }
     
+    const { startTime, duration } = req.body || {};
+    
     let interview;
     if (app.scores?.interview?.interviewId) {
       // Reschedule/Reset existing interview
