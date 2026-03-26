@@ -103,7 +103,7 @@ const SessionPlayback = () => {
     <div style={{ minHeight: '100vh', background: 'var(--bg-primary)' }}>
       {/* Navbar */}
       <nav className="navbar">
-        <div className="navbar-brand">🎯 InterviewPro</div>
+        <div className="navbar-brand">🎯 KL Prarambh</div>
         <button className="btn btn-ghost btn-sm" onClick={() => navigate('/dashboard')}>
           ← Back to Dashboard
         </button>

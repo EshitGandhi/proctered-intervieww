@@ -138,7 +138,7 @@ const InterviewerDashboard = () => {
     <div className="dashboard-page">
       {/* Navbar */}
       <nav className="navbar">
-        <div className="navbar-brand">🎯 InterviewPro</div>
+        <div className="navbar-brand">🎯 KL Prarambh</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>{user?.name}</span>
           <span className="badge badge-primary">Interviewer</span>

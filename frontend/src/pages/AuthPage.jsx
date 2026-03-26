@@ -47,7 +47,7 @@ const AuthPage = () => {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: 28, margin: '0 auto 16px',
           }}>🎯</div>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: 4 }}>InterviewPro</h1>
+          <h1 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: 4 }}>KL Prarambh</h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
             {mode === 'login' ? 'Welcome back! Sign in to continue.' : 'Create your account to get started.'}
           </p>
