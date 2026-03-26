@@ -103,6 +103,17 @@ const InterviewerDashboard = () => {
     } catch {}
   };
 
+  const rescheduleInterview = async (id) => {
+    const newDate = prompt("Enter new scheduled time (e.g., 2026-03-27T10:00):", new Date().toISOString().slice(0, 16));
+    if (!newDate) return;
+    try {
+      await api.patch(`/interviews/${id}/reschedule`, { scheduledAt: new Date(newDate) });
+      fetchInterviews();
+    } catch (err) {
+      alert("Failed to reschedule: " + (err.response?.data?.message || err.message));
+    }
+  };
+
   const copyRoomLink = (roomId) => {
     const link = `${window.location.origin}/room/${roomId}`;
     navigator.clipboard.writeText(link).then(() => {
@@ -141,7 +152,7 @@ const InterviewerDashboard = () => {
           {[
             { label: 'Total Interviews', value: stats.total, icon: '📋' },
             { label: 'Active Now', value: stats.active, icon: '🟢' },
-            { label: 'Completed', value: stats.completed, icon: '✅' },
+            { label: 'Interview Completed', value: stats.completed, icon: '✅' },
             { label: 'Scheduled', value: stats.scheduled, icon: '📅' },
           ].map((s) => (
             <div key={s.label} className="stat-card">
@@ -241,7 +252,11 @@ const InterviewerDashboard = () => {
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{iv.candidateEmail}</div>
                     </td>
                     <td>{iv.duration} min</td>
-                    <td><span className={`badge ${STATUS_COLORS[iv.status]}`}>{iv.status}</span></td>
+                    <td>
+                      <span className={`badge ${STATUS_COLORS[iv.status]}`}>
+                        {iv.status === 'completed' ? 'Interview Completed' : iv.status}
+                      </span>
+                    </td>
                     <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                       {new Date(iv.createdAt).toLocaleDateString()}
                     </td>
@@ -275,9 +290,19 @@ const InterviewerDashboard = () => {
                           </>
                         )}
                         {iv.status === 'completed' && (
-                          <button className="btn btn-secondary btn-sm" onClick={() => navigate(`/playback/${iv._id}`)}>
-                            ▶ Playback
-                          </button>
+                          <>
+                            <button className="btn btn-secondary btn-sm" onClick={() => navigate(`/playback/${iv._id}`)}>
+                              ▶ Playback
+                            </button>
+                            <button className="btn btn-ghost btn-sm" onClick={() => rescheduleInterview(iv._id)}>
+                              🔁 Reschedule
+                            </button>
+                          </>
+                        )}
+                        {(iv.status === 'cancelled' || (iv.status === 'scheduled' && new Date(iv.scheduledAt) < new Date())) && (
+                           <button className="btn btn-ghost btn-sm" onClick={() => rescheduleInterview(iv._id)}>
+                            🔁 Reschedule
+                           </button>
                         )}
                       </div>
                     </td>

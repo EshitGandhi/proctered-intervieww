@@ -73,6 +73,22 @@ router.patch('/:id/end', protect, requireRole('interviewer', 'admin'), async (re
   res.json({ success: true, data: interview });
 });
 
+// PATCH /api/interviews/:id/reschedule
+router.patch('/:id/reschedule', protect, requireRole('interviewer', 'admin'), async (req, res) => {
+  const interview = await Interview.findByIdAndUpdate(
+    req.params.id, 
+    { 
+      status: 'scheduled', 
+      scheduledAt: req.body.scheduledAt || new Date(),
+      startedAt: null, 
+      endedAt: null 
+    }, 
+    { new: true }
+  );
+  if (!interview) return res.status(404).json({ success: false, message: 'Interview not found' });
+  res.json({ success: true, data: interview });
+});
+
 // PATCH /api/interviews/:id
 router.patch('/:id', protect, requireRole('interviewer', 'admin'), async (req, res) => {
   const interview = await Interview.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
