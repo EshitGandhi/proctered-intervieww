@@ -51,7 +51,7 @@ const Sidebar = () => {
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: 16, flexShrink: 0,
         }}>🎯</div>
-        <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>HireFlow</span>
+        <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>KL Prarambh</span>
       </div>
 
       {/* User info */}
