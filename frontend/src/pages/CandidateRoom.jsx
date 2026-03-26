@@ -52,6 +52,7 @@ const CandidateRoom = () => {
   const recorder = useRecorder({
     interviewId: interview?._id,
     stream: webRTC.localStream,
+    remoteStream: webRTC.remoteStream,
   });
 
   // Proctoring

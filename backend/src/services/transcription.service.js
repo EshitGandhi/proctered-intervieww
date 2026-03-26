@@ -1,12 +1,17 @@
-const OpenAI = require('openai');
+const Groq = require('groq-sdk');
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
 const Recording = require('../models/Recording');
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+let groq;
+if (process.env.GROQ_API_KEY) {
+  groq = new Groq({
+    apiKey: process.env.GROQ_API_KEY,
+  });
+} else {
+  console.warn('⚠️ GROQ_API_KEY is missing in environment variables. Transcription features will be disabled.');
+}
 
 /**
  * Transcribe an audio/video file using OpenAI Whisper.
@@ -40,12 +45,15 @@ const transcribeFile = async (filePath, recordingId) => {
       throw new Error(`File not found: ${fileToTranscribe}`);
     }
 
-    // Call OpenAI Whisper
-    const transcription = await openai.audio.transcriptions.create({
+    // Call Groq Whisper (much faster than standard OpenAI)
+    if (!groq) {
+      throw new Error('Groq client not initialized. Please set GROQ_API_KEY in your .env file.');
+    }
+
+    const transcription = await groq.audio.transcriptions.create({
       file: fs.createReadStream(fileToTranscribe),
-      model: 'whisper-1',
+      model: 'whisper-large-v3', // Highest quality and usually supports free tier
       response_format: 'verbose_json',
-      timestamp_granularities: ['word'],
     });
 
     // Save transcript as a .txt file and update DB
