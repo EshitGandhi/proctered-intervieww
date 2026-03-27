@@ -1,3 +1,6 @@
+const Report = require('../models/Report');
+const path = require('path');
+const fs = require('fs');
 const { generateManualReport } = require('../services/report.service');
 
 /**
@@ -61,4 +64,4 @@ const downloadReport = async (req, res) => {
   }
 };
 
-module.exports = { getReports, downloadReport };
+module.exports = { getReports, downloadReport, createManualReport };
