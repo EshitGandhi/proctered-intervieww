@@ -5,14 +5,22 @@ const reportSchema = new mongoose.Schema(
     interview: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Interview',
-      required: true,
+      required: false, // Now optional for manual reports
       index: true,
     },
     candidate: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
+      required: false, // Now optional for manual reports
       index: true,
+    },
+    candidateName: {
+      type: String,
+      default: '', // Added for manual reports
+    },
+    candidateEmail: {
+      type: String,
+      default: '', // Added for manual reports
     },
     evaluation: {
       type: Object, // The raw JSON from HF API

@@ -69,24 +69,85 @@ const generateReport = async (interviewId) => {
       fs.mkdirSync(path.dirname(pdfFullPath), { recursive: true });
     }
 
-    await createPDFReport(pdfFullPath, interview, evaluationData);
+    await createPDFReport(pdfFullPath, interview || { candidateName, candidateEmail, title: 'Manual Transcription Report' }, evaluationData);
 
     report.pdfPath = `/${pdfRelativePath}`;
     report.status = 'completed';
     await report.save();
 
-    console.log(`Report generated successfully for interview ${interviewId}`);
+    console.log(`Report generated successfully for manual upload`);
     return report;
   } catch (err) {
     console.error('Report Generation Error:', err.message);
-    // Update report status to failed if possible
     try {
       await Report.findOneAndUpdate(
-        { interview: interviewId },
+        { candidateEmail },
         { status: 'failed', error: err.message },
         { upsert: true }
       );
     } catch (innerErr) {}
+  }
+};
+
+/**
+ * Generate report for manual transcript.
+ */
+const generateManualReport = async ({ transcript, candidateName, candidateEmail, userId }) => {
+  try {
+    // 1. Create Report entry initial
+    const report = await Report.create({
+      candidateName,
+      candidateEmail,
+      status: 'processing'
+    });
+
+    // 2. Call Evaluation API
+    console.log(`Calling evaluation API for manual transcript...`);
+    let evaluationData;
+    try {
+      const response = await axios.post('https://mahimadangi-ai-hiring-evaluator.hf.space/generate-report', {
+        transcript
+      }, { timeout: 45000 });
+      evaluationData = response.data;
+    } catch (apiErr) {
+      console.error('API Error:', apiErr.message);
+      report.status = 'failed';
+      report.error = `Evaluation API failed: ${apiErr.message}`;
+      await report.save();
+      throw new Error(`Evaluation API failed: ${apiErr.message}`);
+    }
+
+    // 3. Update Report entry
+    report.evaluation = evaluationData;
+    await report.save();
+
+    // 4. Generate PDF
+    const pdfFileName = `report-manual-${Date.now()}.pdf`;
+    const pdfRelativePath = `uploads/reports/${pdfFileName}`;
+    const pdfFullPath = path.resolve(process.cwd(), pdfRelativePath);
+
+    if (!fs.existsSync(path.dirname(pdfFullPath))) {
+      fs.mkdirSync(path.dirname(pdfFullPath), { recursive: true });
+    }
+
+    const mockInterview = {
+      candidateName,
+      candidateEmail,
+      title: 'External Transcription Analysis',
+      endedAt: new Date()
+    };
+
+    await createPDFReport(pdfFullPath, mockInterview, evaluationData);
+
+    report.pdfPath = `/${pdfRelativePath}`;
+    report.status = 'completed';
+    await report.save();
+
+    console.log(`Manual Report generated successfully for ${candidateName}`);
+    return report;
+  } catch (err) {
+    console.error('Manual Report Gen Error:', err.message);
+    throw err;
   }
 };
 
@@ -110,13 +171,13 @@ const createPDFReport = (filePath, interview, evaluation) => {
     doc.fontSize(10).moveDown(0.5);
     doc.text(`Name: ${interview.candidateName || interview.candidate?.name || 'N/A'}`);
     doc.text(`Email: ${interview.candidateEmail || interview.candidate?.email || 'N/A'}`);
-    doc.text(`Interview Title: ${interview.title}`);
+    doc.text(`Title: ${interview.title || 'Interview Analysis'}`);
     doc.text(`Date: ${new Date(interview.endedAt || Date.now()).toLocaleDateString()}`);
     doc.moveDown();
 
     // --- Overall Analysis ---
     if (evaluation && evaluation.analysis) {
-      doc.fontSize(14).text('Interview Analysis', { underline: true });
+      doc.fontSize(14).text('Executive Summary', { underline: true });
       doc.fontSize(10).moveDown(0.5);
       doc.fillColor('#444444').text(evaluation.analysis, { align: 'justify' });
       doc.moveDown();

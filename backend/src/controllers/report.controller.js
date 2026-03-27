@@ -1,9 +1,7 @@
-const Report = require('../models/Report');
-const path = require('path');
-const fs = require('fs');
+const { generateManualReport } = require('../services/report.service');
 
 /**
- * Get all reports (Admin/Interviewer only for now, or filtered by candidate)
+ * Get all reports
  */
 const getReports = async (req, res) => {
   try {
@@ -14,6 +12,29 @@ const getReports = async (req, res) => {
       .sort({ createdAt: -1 });
 
     res.json({ success: true, data: reports });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/**
+ * Generate report from manual transcript upload
+ */
+const createManualReport = async (req, res) => {
+  try {
+    const { transcript, candidateName, candidateEmail } = req.body;
+    if (!transcript || !candidateName || !candidateEmail) {
+      return res.status(400).json({ success: false, message: 'Missing required fields' });
+    }
+
+    const report = await generateManualReport({
+      transcript,
+      candidateName,
+      candidateEmail,
+      userId: req.user._id
+    });
+
+    res.status(201).json({ success: true, data: report });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

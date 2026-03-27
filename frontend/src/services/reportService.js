@@ -28,6 +28,15 @@ const reportService = {
     link.click();
     document.body.removeChild(link);
   },
+
+  createManualReport: async (payload) => {
+    const response = await axios.post(`${API_URL}/reports/manual`, payload, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
+      },
+    });
+    return response.data;
+  },
 };
 
 export default reportService;
