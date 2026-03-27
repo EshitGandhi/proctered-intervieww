@@ -10,6 +10,9 @@ router.get('/', protect, getReports);
 // POST /api/reports/manual
 router.post('/manual', protect, requireRole('admin', 'interviewer'), createManualReport);
 
+// POST /api/reports/download-direct
+router.post('/download-direct', protect, requireRole('admin', 'interviewer'), downloadReportDirect);
+
 // GET /api/reports/:id/download
 router.get('/:id/download', protect, downloadReport);
 

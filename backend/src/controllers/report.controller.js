@@ -1,7 +1,7 @@
 const Report = require('../models/Report');
 const path = require('path');
 const fs = require('fs');
-const { generateManualReport } = require('../services/report.service');
+const { generateManualReport, generateDirectPDFStream } = require('../services/report.service');
 
 /**
  * Get all reports
@@ -64,4 +64,25 @@ const downloadReport = async (req, res) => {
   }
 };
 
-module.exports = { getReports, downloadReport, createManualReport };
+/**
+ * Generate and stream report without saving to DB
+ */
+const downloadReportDirect = async (req, res) => {
+  try {
+    const { transcript, candidateName, candidateEmail } = req.body;
+    if (!transcript) return res.status(400).json({ success: false, message: 'Transcript required' });
+
+    console.log(`Starting direct PDF generation for ${candidateName}...`);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=Report_${candidateName}.pdf`);
+
+    await generateDirectPDFStream(res, { transcript, candidateName, candidateEmail });
+  } catch (err) {
+    console.error('Direct PDF error:', err.message);
+    if (!res.headersSent) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  }
+};
+
+module.exports = { getReports, downloadReport, createManualReport, downloadReportDirect };

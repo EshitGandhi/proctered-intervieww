@@ -129,45 +129,83 @@ const ReportsPage = () => {
             
             <form onSubmit={handleManualSubmit}>
               <div style={{ marginBottom: 16 }}>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: 6 }}>Candidate Name</label>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: 6, color: 'var(--text-primary)' }}>Candidate Name</label>
                 <input 
                   required
                   type="text" 
                   placeholder="John Doe"
                   value={manualData.candidateName}
                   onChange={e => setManualData({...manualData, candidateName: e.target.value})}
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-card)' }}
+                  style={{ 
+                    width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--border)', 
+                    background: 'var(--bg-card)', color: 'var(--text-primary)', outline: 'none' 
+                  }}
                 />
               </div>
               <div style={{ marginBottom: 24 }}>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: 6 }}>Candidate Email</label>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: 6, color: 'var(--text-primary)' }}>Candidate Email</label>
                 <input 
                   required
                   type="email" 
                   placeholder="john@example.com"
                   value={manualData.candidateEmail}
                   onChange={e => setManualData({...manualData, candidateEmail: e.target.value})}
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-card)' }}
+                  style={{ 
+                    width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--border)', 
+                    background: 'var(--bg-card)', color: 'var(--text-primary)', outline: 'none' 
+                  }}
                 />
               </div>
 
-              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
                 <button 
                   type="button"
                   onClick={() => setShowModal(false)}
-                  style={{ padding: '10px 20px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', cursor: 'pointer' }}
+                  style={{ 
+                    padding: '10px 20px', borderRadius: 8, border: '1px solid var(--border)', 
+                    background: 'transparent', cursor: 'pointer', color: 'var(--text-secondary)',
+                    fontSize: '0.85rem', fontWeight: 500
+                  }}
                 >
                   Cancel
                 </button>
+                
+                <button 
+                  type="button"
+                  disabled={isProcessing}
+                  onClick={async () => {
+                    try {
+                      setIsProcessing(true);
+                      await reportService.downloadReportDirect({ 
+                        transcript: manualData.transcript, 
+                        candidateName: manualData.candidateName || 'Candidate', 
+                        candidateEmail: manualData.candidateEmail || 'N/A' 
+                      });
+                    } catch (err) {
+                      alert('Download failed: ' + err.message);
+                    } finally {
+                      setIsProcessing(false);
+                    }
+                  }}
+                  style={{ 
+                    padding: '10px 20px', borderRadius: 8, border: '1px solid var(--primary)', 
+                    background: 'transparent', color: 'var(--primary)', fontWeight: 600, 
+                    cursor: isProcessing ? 'not-allowed' : 'pointer', fontSize: '0.85rem'
+                  }}
+                >
+                  Generate & Download
+                </button>
+
                 <button 
                   type="submit"
                   disabled={isProcessing}
                   style={{ 
                     padding: '10px 24px', borderRadius: 8, border: 'none', background: 'var(--primary)', color: 'white', 
-                    fontWeight: 600, cursor: isProcessing ? 'not-allowed' : 'pointer', opacity: isProcessing ? 0.7 : 1 
+                    fontWeight: 600, cursor: isProcessing ? 'not-allowed' : 'pointer', opacity: isProcessing ? 0.7 : 1,
+                    fontSize: '0.85rem'
                   }}
                 >
-                  {isProcessing ? 'Generating...' : 'Generate & Save'}
+                  {isProcessing ? 'Working...' : 'Generate & Save'}
                 </button>
               </div>
             </form>

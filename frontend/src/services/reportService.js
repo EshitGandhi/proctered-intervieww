@@ -37,6 +37,23 @@ const reportService = {
     });
     return response.data;
   },
+
+  downloadReportDirect: async (payload) => {
+    const response = await axios.post(`${API_URL}/reports/download-direct`, payload, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
+      },
+      responseType: 'blob',
+    });
+
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `Direct_Report_${payload.candidateName || 'Candidate'}.pdf`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  },
 };
 
 export default reportService;
