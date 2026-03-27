@@ -1,7 +1,25 @@
 const Report = require('../models/Report');
 const path = require('path');
 const fs = require('fs');
+const mammoth = require('mammoth');
 const { generateManualReport, generateDirectPDFStream } = require('../services/report.service');
+
+/**
+ * Helper to extract text from uploaded File (.txt, .docx)
+ */
+const extractTextFromFile = async (file) => {
+  if (!file) throw new Error('No file uploaded');
+  const ext = path.extname(file.originalname).toLowerCase();
+  
+  if (ext === '.txt') {
+    return fs.readFileSync(file.path, 'utf8');
+  } else if (ext === '.docx') {
+    const result = await mammoth.extractRawText({ path: file.path });
+    return result.value;
+  } else {
+    throw new Error('Unsupported file format. Please upload .txt or .docx');
+  }
+};
 
 /**
  * Get all reports
@@ -25,10 +43,13 @@ const getReports = async (req, res) => {
  */
 const createManualReport = async (req, res) => {
   try {
-    const { transcript, candidateName, candidateEmail } = req.body;
-    if (!transcript || !candidateName || !candidateEmail) {
-      return res.status(400).json({ success: false, message: 'Missing required fields' });
+    const { candidateName, candidateEmail } = req.body;
+    if (!candidateName || !candidateEmail) {
+      return res.status(400).json({ success: false, message: 'Missing candidate details' });
     }
+
+    // Extract text from file
+    const transcript = await extractTextFromFile(req.file);
 
     const report = await generateManualReport({
       transcript,
@@ -37,8 +58,12 @@ const createManualReport = async (req, res) => {
       userId: req.user._id
     });
 
+    // Cleanup temp file
+    if (req.file) fs.unlinkSync(req.file.path);
+
     res.status(201).json({ success: true, data: report });
   } catch (err) {
+    if (req.file) fs.unlinkSync(req.file.path);
     res.status(500).json({ success: false, message: err.message });
   }
 };
@@ -69,15 +94,21 @@ const downloadReport = async (req, res) => {
  */
 const downloadReportDirect = async (req, res) => {
   try {
-    const { transcript, candidateName, candidateEmail } = req.body;
-    if (!transcript) return res.status(400).json({ success: false, message: 'Transcript required' });
+    const { candidateName, candidateEmail } = req.body;
+    
+    // Extract text from file
+    const transcript = await extractTextFromFile(req.file);
 
     console.log(`Starting direct PDF generation for ${candidateName}...`);
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename=Report_${candidateName}.pdf`);
 
     await generateDirectPDFStream(res, { transcript, candidateName, candidateEmail });
+    
+    // Cleanup
+    if (req.file) fs.unlinkSync(req.file.path);
   } catch (err) {
+    if (req.file) fs.unlinkSync(req.file.path);
     console.error('Direct PDF error:', err.message);
     if (!res.headersSent) {
       res.status(500).json({ success: false, message: err.message });

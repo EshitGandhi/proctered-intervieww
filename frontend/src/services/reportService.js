@@ -29,19 +29,21 @@ const reportService = {
     document.body.removeChild(link);
   },
 
-  createManualReport: async (payload) => {
-    const response = await axios.post(`${API_URL}/reports/manual`, payload, {
+  createManualReport: async (formData) => {
+    const response = await axios.post(`${API_URL}/reports/manual`, formData, {
       headers: {
         Authorization: `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'multipart/form-data',
       },
     });
     return response.data;
   },
 
-  downloadReportDirect: async (payload) => {
-    const response = await axios.post(`${API_URL}/reports/download-direct`, payload, {
+  downloadReportDirect: async (formData) => {
+    const response = await axios.post(`${API_URL}/reports/download-direct`, formData, {
       headers: {
         Authorization: `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'multipart/form-data',
       },
       responseType: 'blob',
     });
@@ -49,7 +51,7 @@ const reportService = {
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `Direct_Report_${payload.candidateName || 'Candidate'}.pdf`);
+    link.setAttribute('download', `Report_${new Date().getTime()}.pdf`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

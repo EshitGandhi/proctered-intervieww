@@ -12,7 +12,7 @@ const ReportsPage = () => {
   const [manualData, setManualData] = useState({
     candidateName: '',
     candidateEmail: '',
-    transcript: ''
+    file: null // Store File object
   });
 
   useEffect(() => {
@@ -38,13 +38,8 @@ const ReportsPage = () => {
     const file = e.target.files[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      setManualData({ ...manualData, transcript: event.target.result });
-      setShowModal(true);
-    };
-    reader.readAsText(file);
-    // Reset input
+    setManualData({ ...manualData, file: file });
+    setShowModal(true);
     e.target.value = '';
   };
 
@@ -52,14 +47,19 @@ const ReportsPage = () => {
     e.preventDefault();
     try {
       setIsProcessing(true);
-      const res = await reportService.createManualReport(manualData);
+      const formData = new FormData();
+      formData.append('candidateName', manualData.candidateName);
+      formData.append('candidateEmail', manualData.candidateEmail);
+      formData.append('file', manualData.file);
+
+      const res = await reportService.createManualReport(formData);
       if (res.success) {
         setShowModal(false);
-        setManualData({ candidateName: '', candidateEmail: '', transcript: '' });
-        fetchReports(); // Refresh list
+        setManualData({ candidateName: '', candidateEmail: '', file: null });
+        fetchReports();
       }
     } catch (err) {
-      alert('Failed to generate manual report: ' + (err.response?.data?.message || err.message));
+      alert('Failed: ' + (err.response?.data?.message || err.message));
     } finally {
       setIsProcessing(false);
     }
@@ -105,7 +105,7 @@ const ReportsPage = () => {
             <input 
               type="file" 
               id="transcript-upload" 
-              accept=".txt" 
+              accept=".txt,.docx,.doc" 
               onChange={handleFileUpload} 
               style={{ display: 'none' }}
             />
@@ -124,8 +124,10 @@ const ReportsPage = () => {
             background: 'var(--bg-surface)', padding: 32, borderRadius: 16, width: '100%', maxWidth: 500,
             boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)'
           }}>
-            <h2 style={{ marginBottom: 8, fontSize: '1.5rem' }}>Save Manual Report</h2>
-            <p style={{ color: 'var(--text-muted)', marginBottom: 24, fontSize: '0.9rem' }}>Enter candidate details to save this transcription report to your dashboard.</p>
+            <h2 style={{ marginBottom: 8, fontSize: '1.5rem' }}>Generate Transcription Report</h2>
+            <p style={{ color: 'var(--text-muted)', marginBottom: 24, fontSize: '0.9rem' }}>
+              File selected: <strong>{manualData.file?.name}</strong>
+            </p>
             
             <form onSubmit={handleManualSubmit}>
               <div style={{ marginBottom: 16 }}>
@@ -176,11 +178,11 @@ const ReportsPage = () => {
                   onClick={async () => {
                     try {
                       setIsProcessing(true);
-                      await reportService.downloadReportDirect({ 
-                        transcript: manualData.transcript, 
-                        candidateName: manualData.candidateName || 'Candidate', 
-                        candidateEmail: manualData.candidateEmail || 'N/A' 
-                      });
+                      const formData = new FormData();
+                      formData.append('candidateName', manualData.candidateName);
+                      formData.append('candidateEmail', manualData.candidateEmail);
+                      formData.append('file', manualData.file);
+                      await reportService.downloadReportDirect(formData);
                     } catch (err) {
                       alert('Download failed: ' + err.message);
                     } finally {
