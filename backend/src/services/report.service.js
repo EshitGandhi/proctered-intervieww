@@ -1,66 +1,62 @@
 const axios = require('axios');
-const PDFDocument = require('pdfkit');
-const fs = require('fs');
 const path = require('path');
+const fs = require('fs');
+const PDFDocument = require('pdfkit');
 const Interview = require('../models/Interview');
 const Recording = require('../models/Recording');
 const Report = require('../models/Report');
-const User = require('../models/User');
 
 /**
- * Generate evaluation using HF API and then create a PDF report.
+ * Generate report for an interview session
  */
 const generateReport = async (interviewId) => {
   try {
     const interview = await Interview.findById(interviewId).populate('interviewer candidate');
     if (!interview) throw new Error('Interview not found');
 
-    // 1. Find the transcript
     const transcriptRecording = await Recording.findOne({ interview: interviewId, type: 'transcript' });
     if (!transcriptRecording) {
       console.warn(`No transcript found for interview ${interviewId}. Cannot generate report.`);
       return;
     }
 
-    // Read transcript content
     let transcriptText = '';
     const fullPath = path.resolve(process.cwd(), transcriptRecording.filePath.replace(/^\//, ''));
     if (fs.existsSync(fullPath)) {
       const data = JSON.parse(fs.readFileSync(fullPath, 'utf-8'));
       transcriptText = data.text || '';
-    } else {
-      throw new Error('Transcript file not found on disk');
     }
 
     if (!transcriptText) throw new Error('Transcript is empty');
 
-    // 2. Call Evaluation API
+    // Call Evaluation API
     console.log(`Calling evaluation API for interview ${interviewId}...`);
     let evaluationData;
     try {
       const response = await axios.post('https://mahimadangi-ai-hiring-evaluator.hf.space/generate-report', {
-        transcript: transcriptText
-      }, { timeout: 30000 });
+        transcript: transcriptText,
+        resume_score: 8,
+        coding_score: 7, 
+        mcq_score: 6,
+        interview_score: 8
+      }, { timeout: 45000 });
       evaluationData = response.data;
     } catch (apiErr) {
       console.error('API Error:', apiErr.message);
-      // Fallback or mark as failed
       throw new Error(`Evaluation API failed: ${apiErr.message}`);
     }
 
-    // 3. Create/Update Report entry
     let report = await Report.findOne({ interview: interviewId });
     if (!report) {
       report = new Report({
         interview: interviewId,
-        candidate: interview.candidate?._id || interview.interviewer?._id, // fallback if candidate obj missing
+        candidate: interview.candidate?._id,
         status: 'processing'
       });
     }
     report.evaluation = evaluationData;
     await report.save();
 
-    // 4. Generate PDF
     const pdfFileName = `report-${interviewId}-${Date.now()}.pdf`;
     const pdfRelativePath = `uploads/reports/${pdfFileName}`;
     const pdfFullPath = path.resolve(process.cwd(), pdfRelativePath);
@@ -69,59 +65,40 @@ const generateReport = async (interviewId) => {
       fs.mkdirSync(path.dirname(pdfFullPath), { recursive: true });
     }
 
-    await createPDFReport(pdfFullPath, interview || { candidateName, candidateEmail, title: 'Manual Transcription Report' }, evaluationData);
+    await createPDFReport(pdfFullPath, interview, evaluationData);
 
     report.pdfPath = `/${pdfRelativePath}`;
     report.status = 'completed';
     await report.save();
 
-    console.log(`Report generated successfully for manual upload`);
     return report;
   } catch (err) {
     console.error('Report Generation Error:', err.message);
-    try {
-      await Report.findOneAndUpdate(
-        { candidateEmail },
-        { status: 'failed', error: err.message },
-        { upsert: true }
-      );
-    } catch (innerErr) {}
   }
 };
 
 /**
- * Generate report for manual transcript.
+ * Generate report for manual transcript upload
  */
 const generateManualReport = async ({ transcript, candidateName, candidateEmail, userId }) => {
   try {
-    // 1. Create Report entry initial
     const report = await Report.create({
       candidateName,
       candidateEmail,
       status: 'processing'
     });
 
-    // 2. Call Evaluation API
     console.log(`Calling evaluation API for manual transcript...`);
-    let evaluationData;
-    try {
-      const response = await axios.post('https://mahimadangi-ai-hiring-evaluator.hf.space/generate-report', {
-        transcript
-      }, { timeout: 45000 });
-      evaluationData = response.data;
-    } catch (apiErr) {
-      console.error('API Error:', apiErr.message);
-      report.status = 'failed';
-      report.error = `Evaluation API failed: ${apiErr.message}`;
-      await report.save();
-      throw new Error(`Evaluation API failed: ${apiErr.message}`);
-    }
+    const response = await axios.post('https://mahimadangi-ai-hiring-evaluator.hf.space/generate-report', {
+      transcript,
+      resume_score: 0,
+      coding_score: 0,
+      mcq_score: 0,
+      interview_score: 0
+    }, { timeout: 45000 });
+    const evaluationData = response.data;
 
-    // 3. Update Report entry
     report.evaluation = evaluationData;
-    await report.save();
-
-    // 4. Generate PDF
     const pdfFileName = `report-manual-${Date.now()}.pdf`;
     const pdfRelativePath = `uploads/reports/${pdfFileName}`;
     const pdfFullPath = path.resolve(process.cwd(), pdfRelativePath);
@@ -130,20 +107,12 @@ const generateManualReport = async ({ transcript, candidateName, candidateEmail,
       fs.mkdirSync(path.dirname(pdfFullPath), { recursive: true });
     }
 
-    const mockInterview = {
-      candidateName,
-      candidateEmail,
-      title: 'External Transcription Analysis',
-      endedAt: new Date()
-    };
-
-    await createPDFReport(pdfFullPath, mockInterview, evaluationData);
+    await createPDFReport(pdfFullPath, { candidateName, candidateEmail, title: 'External Transcription Analysis', endedAt: new Date() }, evaluationData);
 
     report.pdfPath = `/${pdfRelativePath}`;
     report.status = 'completed';
     await report.save();
 
-    console.log(`Manual Report generated successfully for ${candidateName}`);
     return report;
   } catch (err) {
     console.error('Manual Report Gen Error:', err.message);
@@ -152,71 +121,98 @@ const generateManualReport = async ({ transcript, candidateName, candidateEmail,
 };
 
 /**
- * Creates a professional PDF report using pdfkit.
+ * Helper to build the professional PDF
  */
-const createPDFReport = (filePath, interview, evaluation) => {
+const createPDFReport = (filePath, interview, evaluationResponse) => {
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ margin: 50 });
+    const evRaw = evaluationResponse?.report || {};
+    const scores = evRaw.scores || {};
+    const analysis = evRaw.analysis || {};
+    const recommendation = evRaw.recommendation || {};
+    const insights = evRaw.insights || {};
+
+    const doc = new PDFDocument({ margin: 50, size: 'A4' });
     const stream = fs.createWriteStream(filePath);
     doc.pipe(stream);
 
-    // --- Header ---
-    doc.fillColor('#444444').fontSize(20).text('Interview Evaluation Report', { align: 'center' });
-    doc.moveDown();
-    doc.strokeColor('#cccccc').lineWidth(1).moveTo(50, doc.y).lineTo(550, doc.y).stroke();
-    doc.moveDown();
+    // Header
+    doc.fillColor('#1e40af').fontSize(24).text('Hiring Evaluation Report', { align: 'center' });
+    doc.moveDown(0.2);
+    doc.fillColor('#64748b').fontSize(10).text('KL Prarambh Interview Engine • Powered by AI', { align: 'center' });
+    doc.moveDown(0.5);
+    doc.strokeColor('#e2e8f0').lineWidth(1).moveTo(50, doc.y).lineTo(550, doc.y).stroke();
+    doc.moveDown(1.5);
 
-    // --- Candidate & Interview Info ---
-    doc.fillColor('#333333').fontSize(14).text('Candidate Details', { underline: true });
-    doc.fontSize(10).moveDown(0.5);
-    doc.text(`Name: ${interview.candidateName || interview.candidate?.name || 'N/A'}`);
-    doc.text(`Email: ${interview.candidateEmail || interview.candidate?.email || 'N/A'}`);
-    doc.text(`Title: ${interview.title || 'Interview Analysis'}`);
-    doc.text(`Date: ${new Date(interview.endedAt || Date.now()).toLocaleDateString()}`);
-    doc.moveDown();
+    // Profile
+    doc.fillColor('#1e293b').fontSize(16).text('Candidate Profile', { underline: false });
+    doc.moveDown(0.5);
+    const startY = doc.y;
+    doc.fontSize(10).fillColor('#64748b').text('CANDIDATE NAME', 50, startY);
+    doc.fillColor('#1e293b').fontSize(11).text(interview.candidateName || interview.candidate?.name || 'N/A', 50, startY + 15);
+    doc.fillColor('#64748b').fontSize(10).text('EMAIL ADDRESS', 300, startY);
+    doc.fillColor('#1e293b').fontSize(11).text(interview.candidateEmail || interview.candidate?.email || 'N/A', 300, startY + 15);
+    doc.moveDown(3);
+    
+    // Recommendation
+    const decisionColor = recommendation.decision === 'Hire' ? '#166534' : (recommendation.decision?.includes('Reject') ? '#991b1b' : '#854d0e');
+    doc.rect(50, doc.y, 500, 60).fill('#f8fafc');
+    const boxY = doc.y;
+    doc.fillColor('#64748b').fontSize(10).text('FINAL DECISION', 70, boxY + 15);
+    doc.fillColor(decisionColor).fontSize(18).text(recommendation.decision || 'Under Review', 70, boxY + 30);
+    doc.fillColor('#64748b').fontSize(10).text('RISK LEVEL', 400, boxY + 15);
+    doc.fillColor('#1e293b').fontSize(12).text(recommendation.risk_level || 'Normal', 400, boxY + 30);
+    doc.moveDown(4.5);
 
-    // --- Overall Analysis ---
-    if (evaluation && evaluation.analysis) {
-      doc.fontSize(14).text('Executive Summary', { underline: true });
-      doc.fontSize(10).moveDown(0.5);
-      doc.fillColor('#444444').text(evaluation.analysis, { align: 'justify' });
-      doc.moveDown();
-    }
+    // Metrics Chart
+    doc.fillColor('#1e293b').fontSize(14).text('Performance Metrics', { underline: false });
+    doc.moveDown(1);
+    const chartX = 180;
+    let chartY = doc.y;
+    const barMaxWidth = 250;
+    const displayedMetrics = [
+      { label: 'Resume Score', score: scores.resume_score || 0 },
+      { label: 'Coding Proficiency', score: scores.coding_score || 0 },
+      { label: 'MCQ Assessment', score: scores.mcq_score || 0 },
+      { label: 'Interview Performance', score: scores.interview_score || 0 }
+    ];
+    displayedMetrics.forEach(m => {
+      doc.fillColor('#475569').fontSize(10).text(m.label, 50, chartY + 5);
+      doc.rect(chartX, chartY, barMaxWidth, 16).fill('#f1f5f9');
+      const progress = (m.score / 10) * barMaxWidth;
+      if (progress > 0) doc.rect(chartX, chartY, Math.min(progress, barMaxWidth), 16).fill('#3b82f6');
+      doc.fillColor('#1e293b').text(`${m.score}/10`, chartX + barMaxWidth + 10, chartY + 5);
+      chartY += 25;
+    });
+    doc.y = chartY + 20;
 
-    // --- Scores & Visualization ---
-    if (evaluation && evaluation.scores) {
-      doc.fontSize(14).fillColor('#333333').text('Evaluation Metrics', { underline: true });
-      doc.moveDown(1);
+    // Analysis
+    doc.fillColor('#1e293b').fontSize(14).text('Executive Analysis', { underline: false });
+    doc.moveDown(0.5);
+    doc.fillColor('#334155').fontSize(10).text(insights.candidate_summary || 'No summary provided.', { align: 'justify', lineGap: 2 });
+    doc.moveDown(1.5);
 
-      // Manual Bar Chart
-      const chartX = 100;
-      let chartY = doc.y;
-      const barMaxWidth = 300;
-      const barHeight = 20;
+    const currentY = doc.y;
+    doc.fillColor('#166534').fontSize(12).text('Strengths', 50, currentY);
+    let sy = currentY + 15;
+    (analysis.strengths || []).forEach(s => {
+      doc.fontSize(9).fillColor('#334155').text(`• ${s}`, 50, sy);
+      sy += 12;
+    });
 
-      Object.entries(evaluation.scores).forEach(([metric, score]) => {
-        // Label
-        doc.fontSize(10).fillColor('#333333').text(metric, 50, chartY + 5);
-        
-        // Bar background
-        doc.rect(chartX, chartY, barMaxWidth, barHeight).fill('#eeeeee');
-        
-        // Bar progress
-        const progressWidth = (score / 10) * barMaxWidth; // Assuming score out of 10
-        doc.rect(chartX, chartY, progressWidth, barHeight).fill('#4f46e5');
-        
-        // Score value
-        doc.fillColor('#ffffff').text(`${score}/10`, chartX + 5, chartY + 5);
-        
-        chartY += 30;
-      });
-      
-      doc.y = chartY + 20;
-    }
+    doc.fillColor('#991b1b').fontSize(12).text('Weaknesses', 300, currentY);
+    let wy = currentY + 15;
+    (analysis.weaknesses || []).forEach(w => {
+      doc.fontSize(9).fillColor('#334155').text(`• ${w}`, 300, wy);
+      wy += 12;
+    });
 
-    // --- Footer ---
+    doc.y = Math.max(sy, wy) + 20;
+    doc.fillColor('#1e293b').fontSize(13).text('Recommendation Detail', { underline: false });
+    doc.moveDown(0.5);
+    doc.fillColor('#475569').fontSize(10).text(recommendation.reason || 'No detailed reason provided.', { align: 'justify' });
+
     const bottom = doc.page.height - 50;
-    doc.fontSize(8).fillColor('#999999').text('Generated by KL Prarambh Interview Platform', 50, bottom, { align: 'center' });
+    doc.fillColor('#94a3b8').fontSize(8).text('CONFIDENTIAL REPORT • GENERATED ON ' + new Date().toLocaleString(), 50, bottom, { align: 'center' });
 
     doc.end();
     stream.on('finish', resolve);
@@ -225,62 +221,48 @@ const createPDFReport = (filePath, interview, evaluation) => {
 };
 
 /**
- * Generate PDF and stream it directly back to response (without saving to disk/DB)
+ * PDF generation for direct stream (instant)
  */
 const generateDirectPDFStream = async (res, { transcript, candidateName, candidateEmail }) => {
-  // 1. Call Evaluation API
-  console.log(`Calling evaluation API for direct download...`);
-  const response = await axios.post('https://mahimadangi-ai-hiring-evaluator.hf.space/generate-report', {
-    transcript
-  }, { timeout: 45000 });
-  const evaluationData = response.data;
+  try {
+    const response = await axios.post('https://mahimadangi-ai-hiring-evaluator.hf.space/generate-report', {
+      transcript,
+      resume_score: 0,
+      coding_score: 0,
+      mcq_score: 0,
+      interview_score: 0
+    }, { timeout: 45000 });
+    const evaluationData = response.data;
+    const evRaw = evaluationData.report || {};
 
-  // 2. Create PDF Stream
-  const doc = new PDFDocument({ margin: 50 });
-  doc.pipe(res);
-
-  // Use the existing logic (simplified copy or shared helper but let's just write here for simplicity)
-  doc.fillColor('#444444').fontSize(22).text('Interview Evaluation Report (Direct)', { align: 'center' });
-  doc.moveDown();
-  doc.strokeColor('#cccccc').lineWidth(1).moveTo(50, doc.y).lineTo(550, doc.y).stroke();
-  doc.moveDown();
-
-  doc.fillColor('#333333').fontSize(14).text('Candidate Details', { underline: true });
-  doc.fontSize(10).moveDown(0.5);
-  doc.text(`Name: ${candidateName || 'N/A'}`);
-  doc.text(`Email: ${candidateEmail || 'N/A'}`);
-  doc.text(`Generated At: ${new Date().toLocaleString()}`);
-  doc.moveDown();
-
-  if (evaluationData.analysis) {
-    doc.fontSize(14).text('Executive Summary', { underline: true });
-    doc.fontSize(10).moveDown(0.5);
-    doc.fillColor('#444444').text(evaluationData.analysis, { align: 'justify' });
-    doc.moveDown();
-  }
-
-  if (evaluationData.scores) {
-    doc.fontSize(14).fillColor('#333333').text('Evaluation Metrics', { underline: true });
+    const doc = new PDFDocument({ margin: 50, size: 'A4' });
+    doc.pipe(res);
+    
+    doc.fillColor('#1e40af').fontSize(24).text('Immediate Hiring Evaluation', { align: 'center' });
+    doc.moveDown(0.5);
+    doc.strokeColor('#e2e8f0').lineWidth(1).moveTo(50, doc.y).lineTo(550, doc.y).stroke();
+    doc.moveDown(1.5);
+    
+    doc.fontSize(14).fillColor('#1e293b').text(`Candidate: ${candidateName}`);
+    doc.fontSize(10).fillColor('#64748b').text(`Status: ${evRaw.recommendation?.decision || 'Processed'}`);
     doc.moveDown(1);
-    const chartX = 100;
-    let chartY = doc.y;
-    const barMaxWidth = 300;
-    const barHeight = 20;
+    
+    doc.fillColor('#334155').fontSize(11).text('Executive Summary:', { underline: true });
+    doc.fontSize(10).text(evRaw.insights?.candidate_summary || 'Analysis completed.', { align: 'justify' });
+    doc.moveDown(2);
+    
+    if (evRaw.scores) {
+        doc.fillColor('#1e293b').fontSize(12).text('Assessment Scores:');
+        doc.moveDown(0.5);
+        Object.entries(evRaw.scores).forEach(([k, v]) => {
+          doc.fontSize(9).fillColor('#475569').text(`${k.replace('_', ' ').toUpperCase()}: ${v}/10`);
+        });
+    }
 
-    Object.entries(evaluationData.scores).forEach(([metric, score]) => {
-      doc.fontSize(10).fillColor('#333333').text(metric, 50, chartY + 5);
-      doc.rect(chartX, chartY, barMaxWidth, barHeight).fill('#eeeeee');
-      const progressWidth = (score / 10) * barMaxWidth;
-      doc.rect(chartX, chartY, progressWidth, barHeight).fill('#4f46e5');
-      doc.fillColor('#ffffff').text(`${score}/10`, chartX + 5, chartY + 5);
-      chartY += 30;
-    });
+    doc.end();
+  } catch (err) {
+    throw err;
   }
-
-  const bottom = doc.page.height - 50;
-  doc.fontSize(8).fillColor('#999999').text('Generated by KL Prarambh Interview Platform', 50, bottom, { align: 'center' });
-
-  doc.end();
 };
 
 module.exports = { generateReport, generateManualReport, generateDirectPDFStream };
