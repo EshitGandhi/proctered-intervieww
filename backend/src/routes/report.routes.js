@@ -1,5 +1,5 @@
 const express = require('express');
-const { getReports, downloadReport, createManualReport } = require('../controllers/report.controller');
+const { getReports, downloadReport, createManualReport, downloadReportDirect } = require('../controllers/report.controller');
 const { protect, requireRole } = require('../middleware/auth.middleware');
 
 const router = express.Router();
