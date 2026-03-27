@@ -108,10 +108,16 @@ const downloadReportDirect = async (req, res) => {
     // Cleanup
     if (req.file) fs.unlinkSync(req.file.path);
   } catch (err) {
-    if (req.file) fs.unlinkSync(req.file.path);
-    console.error('Direct PDF error:', err.message);
+    if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    console.error('[Direct PDF Error]:', err);
+    
+    const errorMessage = err.response?.data?.message || err.message || 'Failed to generate report';
+    
     if (!res.headersSent) {
-      res.status(500).json({ success: false, message: err.message });
+      res.status(500).json({ 
+        success: false, 
+        message: `Report generation failed: ${errorMessage}` 
+      });
     }
   }
 };

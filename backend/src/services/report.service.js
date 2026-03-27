@@ -225,42 +225,67 @@ const createPDFReport = (filePath, interview, evaluationResponse) => {
  */
 const generateDirectPDFStream = async (res, { transcript, candidateName, candidateEmail }) => {
   try {
+    console.log(`[AI Evaluator] Sending request for ${candidateName}...`);
+    
+    if (!transcript || transcript.trim().length < 50) {
+      throw new Error('Transcript is too short or empty for analysis. Please provide a valid interview transcript.');
+    }
+
     const response = await axios.post('https://mahimadangi-ai-hiring-evaluator.hf.space/generate-report', {
       transcript,
       resume_score: 0,
       coding_score: 0,
       mcq_score: 0,
       interview_score: 0
-    }, { timeout: 45000 });
-    const evaluationData = response.data;
-    const evRaw = evaluationData.report || {};
+    }, { 
+      timeout: 30000, // Reduced to 30s to stay closer to platform limits
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    console.log('[AI Evaluator] Received response successfully.');
+    
+    const evaluationData = response.data || {};
+    const evRaw = evaluationData.report || evaluationData || {}; // Handle variations in API response
 
     const doc = new PDFDocument({ margin: 50, size: 'A4' });
     doc.pipe(res);
     
-    doc.fillColor('#1e40af').fontSize(24).text('Immediate Hiring Evaluation', { align: 'center' });
-    doc.moveDown(0.5);
+    doc.fillColor('#1e40af').fontSize(24).text('Quick AI Evaluation', { align: 'center' });
+    doc.moveDown(0.2);
+    doc.fillColor('#64748b').fontSize(10).text('KL Prarambh • Professional Candidate Analysis', { align: 'center' });
+    doc.moveDown(1);
     doc.strokeColor('#e2e8f0').lineWidth(1).moveTo(50, doc.y).lineTo(550, doc.y).stroke();
     doc.moveDown(1.5);
     
-    doc.fontSize(14).fillColor('#1e293b').text(`Candidate: ${candidateName}`);
+    doc.fontSize(14).fillColor('#1e293b').text(`Candidate: ${candidateName || 'N/A'}`);
+    doc.fontSize(11).fillColor('#64748b').text(`Email: ${candidateEmail || 'N/A'}`);
     doc.fontSize(10).fillColor('#64748b').text(`Status: ${evRaw.recommendation?.decision || 'Processed'}`);
-    doc.moveDown(1);
+    doc.moveDown(1.5);
     
-    doc.fillColor('#334155').fontSize(11).text('Executive Summary:', { underline: true });
-    doc.fontSize(10).text(evRaw.insights?.candidate_summary || 'Analysis completed.', { align: 'justify' });
+    doc.fillColor('#1e293b').fontSize(12).text('Executive Summary:', { underline: false });
+    doc.moveDown(0.5);
+    doc.fillColor('#334155').fontSize(10).text(evRaw.insights?.candidate_summary || 'No summary provided by analysis.', { align: 'justify' });
     doc.moveDown(2);
     
     if (evRaw.scores) {
-        doc.fillColor('#1e293b').fontSize(12).text('Assessment Scores:');
-        doc.moveDown(0.5);
+        doc.fillColor('#1e293b').fontSize(12).text('Assessment Domain Scores:');
+        doc.moveDown(0.7);
         Object.entries(evRaw.scores).forEach(([k, v]) => {
-          doc.fontSize(9).fillColor('#475569').text(`${k.replace('_', ' ').toUpperCase()}: ${v}/10`);
+          doc.fontSize(9).fillColor('#475569').text(`${k.replace(/_/g, ' ').toUpperCase()}: ${v}/10`);
+          doc.moveDown(0.2);
         });
     }
 
+    doc.moveDown(2);
+    doc.fillColor('#94a3b8').fontSize(8).text('GENERATED AUTOMATICALLY • ' + new Date().toLocaleString(), { align: 'center' });
+
     doc.end();
+    console.log('[PDF] Direct stream completed successfully.');
   } catch (err) {
+    console.error('[Service Error] generateDirectPDFStream:', err.message);
+    if (err.code === 'ECONNABORTED') {
+      throw new Error('AI Evaluation service timed out. The transcript may be too long or the service is temporarily slow.');
+    }
     throw err;
   }
 };

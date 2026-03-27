@@ -111,13 +111,17 @@ const PORT = process.env.PORT || 5000;
 const start = async () => {
   await connectDB();
   
-  // Ensure directories exist
+  // Ensure directories exist (wrapped in try-catch for read-only environments like Vercel)
   const dirs = ['uploads/reports', 'uploads/temp'];
   dirs.forEach(d => {
-    const p = path.resolve(process.cwd(), d);
-    if (!fs.existsSync(p)) {
-      fs.mkdirSync(p, { recursive: true });
-      console.log(`Created directory: ${p}`);
+    try {
+      const p = path.resolve(process.cwd(), d);
+      if (!fs.existsSync(p)) {
+        fs.mkdirSync(p, { recursive: true });
+        console.log(`Created directory: ${p}`);
+      }
+    } catch (dirErr) {
+      console.warn(`[Warning] Could not ensure directory '${d}': ${dirErr.message}`);
     }
   });
 

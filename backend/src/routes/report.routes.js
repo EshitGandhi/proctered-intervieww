@@ -3,8 +3,9 @@ const multer = require('multer');
 const { getReports, downloadReport, createManualReport, downloadReportDirect } = require('../controllers/report.controller');
 const { protect, requireRole } = require('../middleware/auth.middleware');
 
+const os = require('os');
 const router = express.Router();
-const upload = multer({ dest: 'uploads/temp/' }); // Temp storage for extraction
+const upload = multer({ dest: os.tmpdir() }); // Use system temp for extraction
 
 // GET /api/reports
 router.get('/', protect, getReports);
