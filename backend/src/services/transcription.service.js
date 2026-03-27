@@ -82,14 +82,14 @@ const transcribeFile = async (filePath, recordingId) => {
       fileSize: Buffer.byteLength(transcriptData),
     });
 
-    console.log(`Transcription completed for ${recordingId}`);
+    // Trigger report generation after transcription
+    const { generateReport } = require('./report.service');
+    // Note: We don't await this as we want to return the transcript result immediately
+    generateReport(recording.interview).catch(err => {
+      console.error('Post-transcription report trigger failed:', err.message);
+    });
 
-    // Cleanup temp file
-    if (isTempFile && fs.existsSync(fileToTranscribe)) {
-      fs.unlinkSync(fileToTranscribe);
-    }
-
-    return transcriptText;
+    return transcription.text;
   } catch (err) {
     console.error('Transcription error:', err.message);
     // Log error but don't crash

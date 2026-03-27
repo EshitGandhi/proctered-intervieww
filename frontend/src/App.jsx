@@ -13,6 +13,7 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import InterviewerDashboard from './pages/InterviewerDashboard';
 import InterviewerRoom from './pages/InterviewerRoom';
 import SessionPlayback from './pages/SessionPlayback';
+import ReportsPage from './pages/ReportsPage';
 
 import './index.css';
 
@@ -93,10 +94,9 @@ const AppRouter = () => {
           <AdminDashboard />
         </ProtectedRoute>
       } />
-      {/* Legacy dashboard (interview sessions) */}
-      <Route path="/interviews" element={
+      <Route path="/reports" element={
         <ProtectedRoute roles={['admin', 'interviewer']}>
-          <InterviewerDashboard />
+          <ReportsPage />
         </ProtectedRoute>
       } />
       <Route path="/monitor/:roomId" element={

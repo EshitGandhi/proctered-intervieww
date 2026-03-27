@@ -78,7 +78,9 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Serve uploaded files statically
 app.use('/uploads', express.static(path.resolve(process.cwd(), 'uploads')));
 
-// ─── Routes ───────────────────────────────────────────────────────────────────
+const reportRoutes = require('./routes/report.routes');
+
+// ─── App Setup ────────────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
 app.use('/api/interviews', interviewRoutes);
 app.use('/api/code', codeRoutes);
@@ -88,6 +90,7 @@ app.use('/api/mcq', mcqRoutes);
 app.use('/api/applications', applicationRoutes);
 app.use('/api/proctoring', proctoringRoutes);
 app.use('/api/coding-questions', codingQuestionRoutes);
+app.use('/api/reports', reportRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

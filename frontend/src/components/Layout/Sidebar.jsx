@@ -105,7 +105,7 @@ const Sidebar = () => {
         {/* Admin also has access to Interviews via old dashboard */}
         {isAdmin && (
           <Link
-            to="/dashboard"
+            to="/reports"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -116,13 +116,13 @@ const Sidebar = () => {
               fontWeight: 500,
               fontSize: '0.875rem',
               textDecoration: 'none',
-              color: location.pathname === '/dashboard' ? 'var(--primary)' : 'var(--text-secondary)',
-              background: location.pathname === '/dashboard' ? 'var(--primary-light)' : 'transparent',
+              color: location.pathname === '/reports' ? 'var(--primary)' : 'var(--text-secondary)',
+              background: location.pathname === '/reports' ? 'var(--primary-light)' : 'transparent',
               transition: 'all 0.15s',
             }}
           >
-            <span style={{ fontSize: 16 }}>🎥</span>
-            Interviews
+            <span style={{ fontSize: 16 }}>📄</span>
+            Reports
           </Link>
         )}
       </nav>
