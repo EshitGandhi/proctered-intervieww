@@ -1,3 +1,4 @@
+const express = require('express');
 const { getReports, downloadReport, createManualReport } = require('../controllers/report.controller');
 const { protect, requireRole } = require('../middleware/auth.middleware');
 
