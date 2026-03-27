@@ -184,7 +184,8 @@ const ReportsPage = () => {
                       formData.append('file', manualData.file);
                       await reportService.downloadReportDirect(formData);
                     } catch (err) {
-                      alert('Download failed: ' + err.message);
+                      const msg = err.response?.data?.message || err.message;
+                      alert('Download failed: ' + msg);
                     } finally {
                       setIsProcessing(false);
                     }
