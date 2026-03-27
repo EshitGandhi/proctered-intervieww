@@ -110,6 +110,17 @@ const PORT = process.env.PORT || 5000;
 
 const start = async () => {
   await connectDB();
+  
+  // Ensure directories exist
+  const dirs = ['uploads/reports', 'uploads/temp'];
+  dirs.forEach(d => {
+    const p = path.resolve(process.cwd(), d);
+    if (!fs.existsSync(p)) {
+      fs.mkdirSync(p, { recursive: true });
+      console.log(`Created directory: ${p}`);
+    }
+  });
+
   httpServer.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT} [${process.env.NODE_ENV}]`);
     console.log(`📡 Socket.io ready`);
