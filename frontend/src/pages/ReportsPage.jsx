@@ -104,7 +104,7 @@ const ReportsPage = () => {
           <label htmlFor="transcript-upload" style={{
             padding: '10px 20px',
             background: 'var(--bg-secondary)',
-            color: 'var(--primary)',
+            color: 'var(--accent-primary)',
             borderRadius: 8,
             cursor: 'pointer',
             border: '1px solid var(--border)',
@@ -211,14 +211,24 @@ const ReportsPage = () => {
                       await reportService.downloadReportDirect(formData);
                       setShowModal(false);
                     } catch (err) {
-                      setFormError(err.response?.data?.message || 'The AI parsing service timed out. Please try again.');
+                      let msg = 'The AI parsing service timed out. Please try again.';
+                      if (err.response?.data instanceof Blob) {
+                        try {
+                          const text = await err.response.data.text();
+                          const json = JSON.parse(text);
+                          if (json.message) msg = json.message;
+                        } catch (e) {}
+                      } else if (err.response?.data?.message) {
+                        msg = err.response.data.message;
+                      }
+                      setFormError(msg);
                     } finally {
                       setIsProcessing(false);
                     }
                   }}
                   style={{
-                    padding: '10px 20px', borderRadius: 8, border: '1px solid var(--primary)',
-                    background: 'var(--bg-secondary)', color: 'var(--primary)', fontWeight: 600,
+                    padding: '10px 20px', borderRadius: 8, border: '1px solid var(--accent-primary)',
+                    background: 'var(--bg-secondary)', color: 'var(--accent-primary)', fontWeight: 600,
                     cursor: isProcessing ? 'not-allowed' : 'pointer', fontSize: '0.85rem'
                   }}
                 >
@@ -229,7 +239,7 @@ const ReportsPage = () => {
                   type="submit"
                   disabled={isProcessing}
                   style={{
-                    padding: '10px 24px', borderRadius: 8, border: 'none', background: 'var(--primary)', color: 'white',
+                    padding: '10px 24px', borderRadius: 8, border: 'none', background: 'var(--accent-primary)', color: 'white',
                     fontWeight: 600, cursor: isProcessing ? 'not-allowed' : 'pointer', opacity: isProcessing ? 0.7 : 1,
                     fontSize: '0.85rem'
                   }}
@@ -301,7 +311,7 @@ const ReportsPage = () => {
                       style={{
                         padding: '8px 16px',
                         borderRadius: 8,
-                        background: report.status === 'completed' ? 'var(--primary)' : 'var(--border)',
+                        background: report.status === 'completed' ? 'var(--accent-primary)' : 'var(--border)',
                         color: 'white',
                         border: 'none',
                         cursor: report.status === 'completed' ? 'pointer' : 'not-allowed',
