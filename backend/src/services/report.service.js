@@ -484,10 +484,23 @@ const createPDFReport = async (filePath, interview, evaluationResponse) => {
       evaluation: evaluationResponse
     });
 
-    browser = await puppeteer.launch({
-      headless: "new",
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
+    try {
+      browser = await puppeteer.launch({
+        headless: "new",
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+      });
+    } catch (pptErr) {
+      if (pptErr.message.includes('Could not find Chrome') || pptErr.message.includes('executablePath')) {
+        console.warn('Chrome not found in runtime. Self-healing: downloading dynamically...');
+        require('child_process').execSync('npx puppeteer browsers install chrome');
+        browser = await puppeteer.launch({
+          headless: "new",
+          args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+        });
+      } else {
+        throw pptErr;
+      }
+    }
 
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'networkidle0' });
@@ -551,10 +564,23 @@ const generateDirectPDFStream = async (res, { transcript, candidateName, candida
       evaluation: evaluationData
     });
 
-    browser = await puppeteer.launch({
-      headless: "new",
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
+    try {
+      browser = await puppeteer.launch({
+        headless: "new",
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+      });
+    } catch (pptErr) {
+      if (pptErr.message.includes('Could not find Chrome') || pptErr.message.includes('executablePath')) {
+        console.warn('Chrome not found in runtime. Self-healing: downloading dynamically...');
+        require('child_process').execSync('npx puppeteer browsers install chrome');
+        browser = await puppeteer.launch({
+          headless: "new",
+          args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+        });
+      } else {
+        throw pptErr;
+      }
+    }
 
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'networkidle0' });

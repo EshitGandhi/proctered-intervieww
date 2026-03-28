@@ -1,7 +1,7 @@
 {
   "name": "backend",
-  "version": "1.0.0",
-  "description": "",
+  "version": "1.0.1",
+  "description": "Render deployment cache bust",
   "main": "index.js",
   "scripts": {
     "dev": "nodemon src/server.js",
