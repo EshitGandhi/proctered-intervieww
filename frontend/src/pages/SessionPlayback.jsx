@@ -14,6 +14,8 @@ const SessionPlayback = () => {
   const [selectedSubmission, setSelectedSubmission] = useState(null);
   const [transcriptsData, setTranscriptsData] = useState([]);
   const [transcriptLoading, setTranscriptLoading] = useState(false);
+  const [transcribeStatus, setTranscribeStatus] = useState({}); // { [recordingId]: 'loading' | 'done' | 'error' | 'msg' }
+  const [videoErrors, setVideoErrors] = useState({});
   const videoRef = useRef(null);
 
   const BACKEND_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
@@ -46,6 +48,18 @@ const SessionPlayback = () => {
     const m = Math.floor(diff / 60);
     const s = diff % 60;
     return `${m}m ${s}s`;
+  };
+
+  // Trigger Groq transcription for a specific recording
+  const triggerTranscription = async (recordingId) => {
+    setTranscribeStatus(prev => ({ ...prev, [recordingId]: 'loading' }));
+    try {
+      const res = await api.post(`/recordings/${recordingId}/transcribe`);
+      setTranscribeStatus(prev => ({ ...prev, [recordingId]: res.data.message || 'done' }));
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Transcription failed';
+      setTranscribeStatus(prev => ({ ...prev, [recordingId]: `error: ${msg}` }));
+    }
   };
 
   // Fetch transcripts text when Transcript tab is opened
@@ -181,6 +195,8 @@ const SessionPlayback = () => {
             ) : recordings.filter(r => r.type !== 'transcript').map((rec) => {
               const icon = rec.type === 'screen' ? '🖥️' : rec.type === 'audio' ? '🎵' : '🎬';
               const label = rec.type === 'screen' ? 'Screen Recording' : rec.type === 'audio' ? 'Audio Recording' : 'Camera Recording';
+              const tsStatus = transcribeStatus[rec._id];
+              const hasVideoError = videoErrors[rec._id];
               return (
                 <div key={rec._id} className="card">
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
@@ -194,16 +210,60 @@ const SessionPlayback = () => {
                         </div>
                       </div>
                     </div>
+                    {/* Transcribe with Groq button */}
+                    {(rec.type === 'video' || rec.type === 'screen') && (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                        <button
+                          onClick={() => triggerTranscription(rec._id)}
+                          disabled={tsStatus === 'loading'}
+                          style={{
+                            padding: '6px 14px', borderRadius: 8, border: '1px solid var(--accent-primary)',
+                            background: tsStatus === 'loading' ? 'var(--bg-tertiary)' : 'var(--accent-primary)',
+                            color: tsStatus === 'loading' ? 'var(--accent-primary)' : 'white',
+                            fontSize: '0.78rem', fontWeight: 600, cursor: tsStatus === 'loading' ? 'not-allowed' : 'pointer',
+                          }}
+                        >
+                          {tsStatus === 'loading' ? '⏳ Transcribing...' : '🎙 Transcribe with Groq'}
+                        </button>
+                        {tsStatus && tsStatus !== 'loading' && (
+                          <div style={{
+                            fontSize: '0.72rem', maxWidth: 260, textAlign: 'right',
+                            color: tsStatus.startsWith('error') ? '#ef4444' : '#10b981',
+                          }}>
+                            {tsStatus.startsWith('error') ? tsStatus.replace('error: ', '⚠ ') : `✓ ${tsStatus}`}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <div style={{ background: '#000', borderRadius: 8, overflow: 'hidden', position: 'relative' }}>
-                    <video
-                      controls
-                      preload="metadata"
-                      style={{ width: '100%', display: 'block', maxHeight: 450 }}
-                      src={rec.filePath.startsWith('http') ? rec.filePath : `${BACKEND_URL}${rec.filePath.startsWith('/') ? '' : '/'}${rec.filePath}`}
-                    >
-                      Your browser does not support the video tag.
-                    </video>
+                    {hasVideoError ? (
+                      <div style={{
+                        height: 200, display: 'flex', flexDirection: 'column',
+                        alignItems: 'center', justifyContent: 'center', gap: 12,
+                        background: '#111', color: 'var(--text-muted)', fontSize: '0.85rem'
+                      }}>
+                        <div style={{ fontSize: 32 }}>📹</div>
+                        <div>Video not available — recordings are stored temporarily on the server.</div>
+                        <a
+                          href={rec.filePath.startsWith('http') ? rec.filePath : `${BACKEND_URL}${rec.filePath.startsWith('/') ? '' : '/'}${rec.filePath}`}
+                          download
+                          style={{ color: 'var(--accent-primary)', fontSize: '0.8rem', fontWeight: 600 }}
+                        >
+                          ⬇ Try Direct Download
+                        </a>
+                      </div>
+                    ) : (
+                      <video
+                        controls
+                        preload="metadata"
+                        style={{ width: '100%', display: 'block', maxHeight: 450 }}
+                        src={rec.filePath.startsWith('http') ? rec.filePath : `${BACKEND_URL}${rec.filePath.startsWith('/') ? '' : '/'}${rec.filePath}`}
+                        onError={() => setVideoErrors(prev => ({ ...prev, [rec._id]: true }))}
+                      >
+                        Your browser does not support the video tag.
+                      </video>
+                    )}
                   </div>
                 </div>
               );
@@ -229,7 +289,13 @@ const SessionPlayback = () => {
             ) : transcriptsData.length === 0 ? (
               <div style={{ textAlign: 'center', padding: 40 }}>
                 <div style={{ fontSize: 40, marginBottom: 12 }}>📭</div>
-                <p style={{ color: 'var(--text-muted)' }}>No transcripts found for this interview</p>
+                <p style={{ color: 'var(--text-muted)', marginBottom: 16 }}>No transcripts found for this interview.</p>
+                {recordings.filter(r => r.type === 'video' || r.type === 'screen').length > 0 && (
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                    <strong style={{ color: 'var(--accent-primary)' }}>Tip:</strong> Go to the <strong>Recordings</strong> tab and click{' '}
+                    <strong>"🎙 Transcribe with Groq"</strong> on any video recording to generate a transcript using AI.
+                  </div>
+                )}
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>

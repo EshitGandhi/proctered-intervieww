@@ -137,4 +137,42 @@ router.delete('/:id', protect, requireRole('interviewer', 'admin'), async (req, 
   res.json({ success: true, message: 'Recording deleted' });
 });
 
+// POST /api/recordings/:id/transcribe — trigger Groq transcription on demand
+router.post('/:id/transcribe', protect, requireRole('interviewer', 'admin'), async (req, res) => {
+  try {
+    const recording = await Recording.findById(req.params.id);
+    if (!recording) {
+      return res.status(404).json({ success: false, message: 'Recording not found' });
+    }
+    if (recording.type === 'transcript') {
+      return res.status(400).json({ success: false, message: 'This recording is already a transcript' });
+    }
+
+    // Check if Groq is available
+    const groqKey = process.env.GROQ_API_KEY;
+    if (!groqKey) {
+      return res.status(503).json({ success: false, message: 'GROQ_API_KEY is not configured on the server' });
+    }
+
+    // Check if a transcript for this recording already exists
+    const existingTranscript = await Recording.findOne({
+      interview: recording.interview,
+      type: 'transcript',
+    });
+    if (existingTranscript) {
+      return res.json({ success: true, message: 'A transcript already exists for this interview', alreadyExists: true });
+    }
+
+    // Trigger transcription asynchronously and return immediately
+    res.json({ success: true, message: 'Transcription started — this may take 30–60 seconds. Refresh the transcript tab when done.' });
+
+    transcribeFile(recording.filePath, recording._id).catch(err => {
+      console.error('[On-Demand Transcription] Failed:', err.message);
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 module.exports = router;
+
