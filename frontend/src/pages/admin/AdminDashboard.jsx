@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import AppLayout from '../../components/Layout/AppLayout';
 import api from '../../services/api';
 import { DOMAINS } from '../../utils/constants';
@@ -987,8 +987,27 @@ const CodingQuestionsTab = () => {
 
 // ─── Admin Dashboard Shell ─────────────────────────────────────────────────────
 const AdminDashboard = () => {
-  const [tab, setTab] = useState('jobs');
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const getTabFromPath = () => {
+    const path = location.pathname;
+    if (path.includes('mcq')) return 'mcq';
+    if (path.includes('candidates')) return 'candidates';
+    if (path.includes('coding')) return 'coding';
+    return 'jobs';
+  };
+
+  const [tab, setTab] = useState(getTabFromPath());
   const [selectedAppId, setSelectedAppId] = useState(null);
+
+  useEffect(() => {
+    const routeTab = getTabFromPath();
+    if (tab !== routeTab) {
+      setTab(routeTab);
+      setSelectedAppId(null);
+    }
+  }, [location.pathname]);
 
   const nav = [
     { id: 'jobs', label: '💼 Jobs' },
@@ -1015,7 +1034,7 @@ const AdminDashboard = () => {
           {nav.map(n => {
             const isActive = tab === n.id;
             return (
-              <button key={n.id} onClick={() => { setTab(n.id); setSelectedAppId(null); }} style={{
+              <button key={n.id} onClick={() => { navigate(`/admin/${n.id}`); }} style={{
                 padding: '8px 16px',
                 border: isActive ? '1px solid var(--accent-primary)' : '1px solid var(--border)',
                 borderRadius: 8,
