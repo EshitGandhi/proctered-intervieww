@@ -143,25 +143,74 @@ const JobsTab = () => {
       {loading ? <div style={{ textAlign: 'center', padding: 40 }}><div className="spinner" /></div> : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {filteredJobs.length === 0 && <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>No {showInactive ? '' : 'active'} jobs found</div>}
-          {filteredJobs.map(job => (
-            <div key={job._id} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-                  <h3 style={{ margin: 0, fontSize: '1rem' }}>{job.title}</h3>
-                  <span className={`badge ${job.isActive ? 'badge-success' : 'badge-neutral'}`} style={{ fontSize: '0.65rem' }}>{job.isActive ? 'Active' : 'Inactive'}</span>
+          {filteredJobs.map(job => {
+            const skillColors = [
+              { bg: '#dcfce7', color: '#166534' }, // Green
+              { bg: '#fef9c3', color: '#854d0e' }, // Yellow
+              { bg: '#ffedd5', color: '#9a3412' }  // Orange
+            ];
+            return (
+              <div key={job._id} style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 12, padding: '20px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 24, boxShadow: 'var(--shadow)' }}>
+                {/* Info Block */}
+                <div style={{ flex: '1 1 200px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                    <h3 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--text-primary)' }}>{job.title}</h3>
+                    {job.isActive && <span style={{ background: '#dcfce7', color: '#166534', padding: '2px 8px', borderRadius: 4, fontSize: '0.65rem', fontWeight: 700 }}>ACTIVE</span>}
+                  </div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{job.domain}</div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 4 }}>sdlis</div>
                 </div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{job.domain} · Resume ≥{job.resumeThreshold}% · MCQ ≥{job.mcqThreshold}% · Code ≥{job.codingThreshold}%</div>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
-                  {job.requiredSkills.map(s => (
-                    <span key={s} style={{ fontSize: '0.68rem', padding: '2px 8px', borderRadius: 20, background: 'var(--primary-light)', color: 'var(--primary)' }}>{s}</span>
-                  ))}
+
+                {/* Score Stats Block */}
+                <div style={{ display: 'flex', gap: 16, borderLeft: '1px solid var(--border)', borderRight: '1px solid var(--border)', padding: '0 24px' }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                      <span style={{ fontSize: 14, background: 'var(--bg-tertiary)', padding: 4, borderRadius: 6, border: '1px solid var(--border-bright)' }}>📄</span> 
+                      + {job.resumeThreshold}%
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: 4 }}>Resume %</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                      <span style={{ fontSize: 14, background: '#e0f2fe', padding: 4, borderRadius: 6, border: '1px solid #bae6fd' }}>📝</span> 
+                      + {job.mcqThreshold}%
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: 4 }}>MCQ %</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                      <span style={{ fontSize: 14, background: '#dcfce7', padding: 4, borderRadius: 6, border: '1px solid #bbf7d0' }}>&lt;/&gt;</span> 
+                      + {job.codingThreshold}%
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: 4 }}>Code %</div>
+                  </div>
+                </div>
+
+                {/* Skills Block */}
+                <div style={{ flex: '1 1 200px' }}>
+                  <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>Skills</div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {job.requiredSkills.slice(0, 4).map((s, idx) => {
+                      const color = skillColors[idx % skillColors.length];
+                      return (
+                        <span key={s} style={{ fontSize: '0.7rem', fontWeight: 600, padding: '4px 10px', borderRadius: 6, background: color.bg, color: color.color }}>{s}</span>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Action Block */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center', width: 140 }}>
+                  <button className="btn btn-secondary" style={{ width: '100%', fontSize: '0.8rem', padding: '6px 0', border: '1px solid var(--border)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
+                    👁 View Applicants
+                  </button>
+                  <button onClick={() => toggle(job)} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 500 }}>
+                    {job.isActive ? 'Deactivate ⏻' : 'Activate ⏻'}
+                  </button>
                 </div>
               </div>
-              <button className="btn btn-secondary btn-sm" onClick={() => toggle(job)} style={{ flexShrink: 0 }}>
-                {job.isActive ? 'Deactivate' : 'Activate'}
-              </button>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
@@ -962,32 +1011,33 @@ const AdminDashboard = () => {
         </div>
 
         {/* Top nav tabs */}
-        <div style={{ display: 'flex', borderBottom: '2px solid var(--border)', marginBottom: 28, gap: 4 }}>
-          {nav.map(n => (
-            <button key={n.id} onClick={() => { setTab(n.id); setSelectedAppId(null); }} style={{
-              padding: '10px 20px',
-              border: 'none',
-              borderBottom: tab === n.id ? '2px solid var(--primary)' : '2px solid transparent',
-              marginBottom: -2,
-              background: 'transparent',
-              cursor: 'pointer',
-              fontWeight: 600,
-              fontSize: '0.875rem',
-              color: tab === n.id ? 'var(--primary)' : 'var(--text-muted)',
-              transition: 'all 0.15s',
-            }}>{n.label}</button>
-          ))}
+        <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', paddingBottom: 16, marginBottom: 28, gap: 10 }}>
+          {nav.map(n => {
+            const isActive = tab === n.id;
+            return (
+              <button key={n.id} onClick={() => { setTab(n.id); setSelectedAppId(null); }} style={{
+                padding: '8px 16px',
+                border: isActive ? '1px solid var(--accent-primary)' : '1px solid var(--border)',
+                borderRadius: 8,
+                background: isActive ? 'rgba(37,99,235,0.08)' : 'var(--bg-secondary)',
+                cursor: 'pointer',
+                fontWeight: 600,
+                fontSize: '0.85rem',
+                color: isActive ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                transition: 'all 0.15s',
+              }}>{n.label}</button>
+            )
+          })}
           {selectedAppId && (
             <button onClick={() => setTab('detail')} style={{
-              padding: '10px 20px',
-              border: 'none',
-              borderBottom: tab === 'detail' ? '2px solid var(--primary)' : '2px solid transparent',
-              marginBottom: -2,
-              background: 'transparent',
+              padding: '8px 16px',
+              border: tab === 'detail' ? '1px solid var(--accent-primary)' : '1px solid var(--border)',
+              borderRadius: 8,
+              background: tab === 'detail' ? 'rgba(37,99,235,0.08)' : 'var(--bg-secondary)',
               cursor: 'pointer',
               fontWeight: 600,
-              fontSize: '0.875rem',
-              color: tab === 'detail' ? 'var(--primary)' : 'var(--text-muted)',
+              fontSize: '0.85rem',
+              color: tab === 'detail' ? 'var(--accent-primary)' : 'var(--text-muted)',
             }}>🔍 Candidate Detail</button>
           )}
         </div>

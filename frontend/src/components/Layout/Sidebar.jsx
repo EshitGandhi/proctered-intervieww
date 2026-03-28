@@ -7,7 +7,7 @@ const candidateNav = [
 ];
 
 const adminNav = [
-  { path: '/admin', label: 'Overview', icon: '📊' },
+  { path: '/admin', label: 'Overview', icon: '🎛' },
   { path: '/admin/jobs', label: 'Jobs', icon: '💼' },
   { path: '/admin/mcq', label: 'MCQ Management', icon: '📝' },
   { path: '/admin/candidates', label: 'Candidates', icon: '👥' },
@@ -28,79 +28,66 @@ const Sidebar = () => {
 
   return (
     <aside style={{
-      width: 220,
+      width: 260,
       minHeight: '100vh',
-      background: 'var(--bg-surface)',
+      background: 'var(--bg-secondary)',
       borderRight: '1px solid var(--border)',
       display: 'flex',
       flexDirection: 'column',
       padding: '0',
       flexShrink: 0,
     }}>
-      {/* Logo */}
+      {/* Unified Brand + User Info block */}
       <div style={{
-        padding: '20px 20px 16px',
+        padding: '24px 20px',
         borderBottom: '1px solid var(--border)',
         display: 'flex',
         alignItems: 'center',
-        gap: 10,
+        gap: 14,
       }}>
         <div style={{
-          width: 32, height: 32, borderRadius: 8,
-          background: 'linear-gradient(135deg, var(--primary), #7c3aed)',
+          width: 44, height: 44, borderRadius: '50%',
+          background: 'var(--bg-tertiary)',
+          border: '1px solid var(--border)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 16, flexShrink: 0,
-        }}>🎯</div>
-        <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>KL Prarambh</span>
-      </div>
-
-      {/* User info */}
-      <div style={{
-        padding: '12px 20px',
-        borderBottom: '1px solid var(--border)',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 10,
-      }}>
-        <div style={{
-          width: 32, height: 32, borderRadius: '50%',
-          background: 'var(--primary)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: 'white', fontWeight: 700, fontSize: '0.85rem', flexShrink: 0,
+          color: 'var(--text-primary)', fontWeight: 700, fontSize: '1.2rem', flexShrink: 0,
         }}>
-          {user?.name?.charAt(0).toUpperCase()}
+          KL
         </div>
         <div style={{ overflow: 'hidden' }}>
-          <div style={{ fontWeight: 600, fontSize: '0.8rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.name}</div>
-          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'capitalize' }}>{user?.role}</div>
+          <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>KL Prarambh</div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Admin | Interviewer</div>
         </div>
       </div>
 
       {/* Nav links */}
-      <nav style={{ padding: '12px 10px', flex: 1 }}>
-        {navLinks.map(link => (
-          <Link
-            key={link.path}
-            to={link.path}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              padding: '10px 12px',
-              borderRadius: 8,
-              marginBottom: 4,
-              fontWeight: 500,
-              fontSize: '0.875rem',
-              textDecoration: 'none',
-              color: location.pathname === link.path ? 'var(--primary)' : 'var(--text-secondary)',
-              background: location.pathname === link.path ? 'var(--primary-light)' : 'transparent',
-              transition: 'all 0.15s',
-            }}
-          >
-            <span style={{ fontSize: 16 }}>{link.icon}</span>
-            {link.label}
-          </Link>
-        ))}
+      <nav style={{ padding: '24px 0', flex: 1 }}>
+        {navLinks.map(link => {
+          const isActive = location.pathname === link.path;
+          return (
+            <Link
+              key={link.path}
+              to={link.path}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 14,
+                padding: '12px 24px',
+                fontWeight: 600,
+                fontSize: '0.9rem',
+                textDecoration: 'none',
+                color: isActive ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                background: isActive ? 'rgba(37, 99, 235, 0.08)' : 'transparent',
+                borderLeft: isActive ? '4px solid var(--accent-primary)' : '4px solid transparent',
+                transition: 'all 0.15s',
+              }}
+            >
+              <span style={{ fontSize: 18, filter: isActive ? 'none' : 'grayscale(100%) opacity(0.7)' }}>{link.icon}</span>
+              {link.label}
+              {isActive && <div style={{ marginLeft: 'auto', background: '#dcfce7', color: '#166534', padding: '2px 8px', borderRadius: 20, fontSize: '0.65rem' }}>ACTIVE</div>}
+            </Link>
+          );
+        })}
 
         {/* Admin also has access to Interviews via old dashboard */}
         {isAdmin && (
@@ -109,19 +96,18 @@ const Sidebar = () => {
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: 10,
-              padding: '10px 12px',
-              borderRadius: 8,
-              marginBottom: 4,
-              fontWeight: 500,
-              fontSize: '0.875rem',
+              gap: 14,
+              padding: '12px 24px',
+              fontWeight: 600,
+              fontSize: '0.9rem',
               textDecoration: 'none',
-              color: location.pathname === '/reports' ? 'var(--primary)' : 'var(--text-secondary)',
-              background: location.pathname === '/reports' ? 'var(--primary-light)' : 'transparent',
+              color: location.pathname === '/reports' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+              background: location.pathname === '/reports' ? 'rgba(37, 99, 235, 0.08)' : 'transparent',
+              borderLeft: location.pathname === '/reports' ? '4px solid var(--accent-primary)' : '4px solid transparent',
               transition: 'all 0.15s',
             }}
           >
-            <span style={{ fontSize: 16 }}>📄</span>
+            <span style={{ fontSize: 18, filter: location.pathname === '/reports' ? 'none' : 'grayscale(100%) opacity(0.7)' }}>📈</span>
             Reports
           </Link>
         )}

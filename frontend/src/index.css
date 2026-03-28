@@ -2,13 +2,13 @@
 
 :root {
   /* Vanilla & Blue Professional Light Palette */
-  --bg-primary: #f8fafc;     /* Vanilla/Light Slate for overall app bg */
-  --bg-secondary: #ffffff;   /* Pure white */
-  --bg-tertiary: #f1f5f9;    /* Slightly darker contrast */
-  --bg-card: rgba(255, 255, 255, 0.95);
-  --bg-hover: rgba(226, 232, 240, 0.6);
-  --border: rgba(203, 213, 225, 0.8);
-  --border-bright: rgba(148, 163, 184, 0.4);
+  --bg-primary: #f7f6f2;     /* Vanilla background instead of slate */
+  --bg-secondary: #fdfdfa;   /* Bright vanilla replacing pure white */
+  --bg-tertiary: #f0eee6;    /* Slightly darker vanilla for slight contrast */
+  --bg-card: rgba(253, 253, 250, 0.95);
+  --bg-hover: rgba(230, 228, 222, 0.5);
+  --border: rgba(220, 218, 213, 0.8);
+  --border-bright: rgba(200, 198, 193, 0.4);
   
   /* Professional Blue Accent */
   --accent-primary: #2563eb;
