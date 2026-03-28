@@ -17,7 +17,7 @@ const THEMES = [
 ];
 
 const CodeEditorPanel = ({ interviewId, readOnly = false, onSubmit, socket, roomId }) => {
-  const [theme, setTheme] = React.useState('vs-dark');
+  const [theme, setTheme] = React.useState('light');
   const [fontSize, setFontSize] = React.useState(14);
 
   const {
@@ -45,15 +45,15 @@ const CodeEditorPanel = ({ interviewId, readOnly = false, onSubmit, socket, room
   };
 
   return (
-    <div className="editor-panel" style={{ background: '#1e1e1e', height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div className="editor-panel" style={{ background: 'var(--bg-secondary)', height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* 1. Toolbar */}
-      <div style={{ display: 'flex', background: '#252526', height: '40px', alignItems: 'center', borderBottom: '1px solid #333', padding: '0 12px' }}>
+      <div style={{ display: 'flex', background: 'var(--bg-tertiary)', height: '40px', alignItems: 'center', borderBottom: '1px solid var(--border)', padding: '0 12px' }}>
         
         {/* Active Tab View */}
         <div style={{ display: 'flex', height: '100%' }}>
           <div style={{ 
             display: 'flex', alignItems: 'center', padding: '0 16px', gap: 8,
-            background: '#1e1e1e', height: '100%', color: '#fff', borderTop: '1px solid var(--accent-primary)',
+            background: 'var(--bg-secondary)', height: '100%', color: 'var(--text-primary)', borderTop: '1px solid var(--accent-primary)',
             fontSize: '13px'
           }}>
             <span>Code Editor</span>
@@ -69,8 +69,8 @@ const CodeEditorPanel = ({ interviewId, readOnly = false, onSubmit, socket, room
             <select
               className="input"
               style={{ 
-                height: '24px', padding: '0 8px', fontSize: '12px', background: '#3c3c3c', 
-                border: '1px solid #555', color: '#fff', borderRadius: '4px' 
+                height: '24px', padding: '0 8px', fontSize: '12px', background: 'var(--bg-secondary)', 
+                border: '1px solid var(--border)', color: 'var(--text-primary)', borderRadius: '4px' 
               }}
               value={language}
               onChange={(e) => setLanguage(e.target.value)}
@@ -104,7 +104,7 @@ const CodeEditorPanel = ({ interviewId, readOnly = false, onSubmit, socket, room
 
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
         {/* 2. Main Editor Stage */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#1e1e1e' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--bg-secondary)' }}>
           
           <div style={{ flex: 1 }}>
             <Editor
@@ -138,19 +138,19 @@ const CodeEditorPanel = ({ interviewId, readOnly = false, onSubmit, socket, room
           </div>
 
           {/* 3. Console Section (LeetCode Style) */}
-          <div style={{ height: '30%', borderTop: '2px solid #333', display: 'flex', flexDirection: 'column', background: '#1e1e1e' }}>
-             <div style={{ display: 'flex', borderBottom: '1px solid #333', background: '#252526' }}>
+          <div style={{ height: '30%', borderTop: '2px solid var(--border)', display: 'flex', flexDirection: 'column', background: 'var(--bg-secondary)' }}>
+             <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--bg-tertiary)' }}>
                 <button 
                   className={`console-tab ${activeTab === 'input' ? 'active' : ''}`}
                   onClick={() => setActiveTab('input')}
-                  style={{ border: 'none', background: 'transparent', padding: '10px 16px', fontSize: '12px', color: activeTab === 'input' ? '#fff' : '#858585', borderBottom: activeTab === 'input' ? '2px solid #fff' : 'none', cursor: 'pointer' }}
+                  style={{ border: 'none', background: 'transparent', padding: '10px 16px', fontSize: '12px', color: activeTab === 'input' ? 'var(--text-primary)' : 'var(--text-muted)', borderBottom: activeTab === 'input' ? '2px solid var(--accent-primary)' : 'none', cursor: 'pointer' }}
                 >
                   Test Case
                 </button>
                 <button 
                   className={`console-tab ${activeTab === 'output' ? 'active' : ''}`}
                   onClick={() => setActiveTab('output')}
-                  style={{ border: 'none', background: 'transparent', padding: '10px 16px', fontSize: '12px', color: activeTab === 'output' ? '#fff' : '#858585', borderBottom: activeTab === 'output' ? '2px solid #fff' : 'none', cursor: 'pointer' }}
+                  style={{ border: 'none', background: 'transparent', padding: '10px 16px', fontSize: '12px', color: activeTab === 'output' ? 'var(--text-primary)' : 'var(--text-muted)', borderBottom: activeTab === 'output' ? '2px solid var(--accent-primary)' : 'none', cursor: 'pointer' }}
                 >
                   Result
                 </button>
@@ -160,7 +160,7 @@ const CodeEditorPanel = ({ interviewId, readOnly = false, onSubmit, socket, room
                   <textarea
                     style={{
                       width: '100%', height: '100%', background: 'transparent', border: 'none', outline: 'none',
-                      color: '#ddd', fontFamily: 'Fira Code, monospace',
+                      color: 'var(--text-primary)', fontFamily: 'Fira Code, monospace',
                       fontSize: '13px', resize: 'none',
                     }}
                     placeholder="Enter stdin here…"
@@ -176,9 +176,9 @@ const CodeEditorPanel = ({ interviewId, readOnly = false, onSubmit, socket, room
                         {status} {executionTime && `| Time: ${executionTime}s`}
                       </div>
                     )}
-                    {stdout && <pre style={{ color: '#86efac' }}>{stdout}</pre>}
-                    {stderr && <pre style={{ color: '#fca5a5' }}>{stderr}</pre>}
-                    {!stdout && !stderr && <span style={{ color: '#555' }}>Run your code to see results...</span>}
+                    {stdout && <pre style={{ color: '#15803d' }}>{stdout}</pre>}
+                    {stderr && <pre style={{ color: '#dc2626' }}>{stderr}</pre>}
+                    {!stdout && !stderr && <span style={{ color: 'var(--text-muted)' }}>Run your code to see results...</span>}
                   </div>
                 )}
              </div>

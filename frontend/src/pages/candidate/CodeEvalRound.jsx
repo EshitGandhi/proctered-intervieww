@@ -338,7 +338,7 @@ const CodeEvalRound = () => {
           <div style={{ flex: 1, overflow: 'hidden' }}>
             <Editor
               height="100%"
-              theme="vs-dark"
+              theme="light"
               language={LANGUAGES.find(l => l.id === currentQState.language)?.monacoLang || 'python'}
               value={currentQState.code}
               onChange={val => !currentQState.submitted && updateQ(activeQ, { code: val || '' })}
