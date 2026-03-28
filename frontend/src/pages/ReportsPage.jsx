@@ -73,8 +73,15 @@ const ReportsPage = () => {
     }
   };
 
-  if (loading) return <div style={{ padding: 40, color: 'var(--text-muted)' }}>Loading reports...</div>;
-  if (error) return <div style={{ padding: 40, color: 'var(--danger)' }}>{error}</div>;
+  if (loading) {
+    return (
+      <div style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
+        <div className="spinner" />
+        <h2 style={{ color: 'var(--accent-primary)', fontWeight: 600, fontSize: '1.2rem', margin: 0 }}>Loading reports...</h2>
+      </div>
+    );
+  }
+  if (error) return <div style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--danger)' }}>{error}</div>;
 
   return (
     <div style={{ padding: '30px', maxWidth: '1200px', margin: '0 auto', position: 'relative' }}>

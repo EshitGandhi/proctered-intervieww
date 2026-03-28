@@ -92,9 +92,9 @@ const SessionPlayback = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ flexDirection: 'column', gap: 16 }}>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
         <div className="spinner" />
-        <p style={{ color: 'var(--text-secondary)' }}>Loading session data…</p>
+        <h2 style={{ color: 'var(--accent-primary)', fontWeight: 600, fontSize: '1.2rem', margin: 0 }}>Loading session data...</h2>
       </div>
     );
   }

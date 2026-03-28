@@ -150,8 +150,9 @@ const CodeEvalRound = () => {
 
   // ─── Loading ───────────────────────────────────────────────────────────────
   if (loading) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)' }}>
-      <div style={{ textAlign: 'center' }}><div className="spinner" /><p style={{ color: 'var(--text-muted)', marginTop: 12 }}>Loading your coding round…</p></div>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16, background: 'var(--bg-primary)' }}>
+      <div className="spinner" />
+      <h2 style={{ color: 'var(--accent-primary)', fontWeight: 600, fontSize: '1.2rem', margin: 0 }}>Loading your coding round...</h2>
     </div>
   );
 
