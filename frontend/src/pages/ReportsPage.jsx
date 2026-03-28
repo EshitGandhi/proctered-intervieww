@@ -9,6 +9,7 @@ const ReportsPage = () => {
   // Manual Upload States
   const [showModal, setShowModal] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [formError, setFormError] = useState(null);
   const [manualData, setManualData] = useState({
     candidateName: '',
     candidateEmail: '',
@@ -39,12 +40,14 @@ const ReportsPage = () => {
     if (!file) return;
 
     setManualData({ ...manualData, file: file });
+    setFormError(null);
     setShowModal(true);
     e.target.value = '';
   };
 
   const handleManualSubmit = async (e) => {
     e.preventDefault();
+    setFormError(null);
     try {
       setIsProcessing(true);
       const formData = new FormData();
@@ -59,17 +62,23 @@ const ReportsPage = () => {
         fetchReports();
       }
     } catch (err) {
-      alert('Failed: ' + (err.response?.data?.message || err.message));
+      if (err.response?.data?.message) {
+        setFormError(err.response.data.message);
+      } else {
+        setFormError('Failed to generate report. The transcription service might be temporarily unavailable.');
+      }
     } finally {
       setIsProcessing(false);
     }
   };
 
   const handleDownload = async (reportId, candidateName) => {
+    setFormError(null);
     try {
       await reportService.downloadReport(reportId, `Report_${candidateName}_${new Date().toLocaleDateString()}.pdf`);
     } catch (err) {
-      alert('Failed to download report. It may still be processing.');
+      setFormError('Failed to download report. It may still be processing.');
+      setShowModal(true);
     }
   };
 
@@ -87,33 +96,35 @@ const ReportsPage = () => {
     <div style={{ padding: '30px', maxWidth: '1200px', margin: '0 auto', position: 'relative' }}>
       <header style={{ marginBottom: 30, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 700, marginBottom: 8 }}>Candidate Reports</h1>
-          <p style={{ color: 'var(--text-muted)' }}>View and download AI-generated interview evaluation reports.</p>
+          <h1 style={{ fontSize: '1.75rem', fontWeight: 700, marginBottom: 8, color: 'var(--text-primary)' }}>Candidate Reports</h1>
+          <p style={{ color: 'var(--text-secondary)' }}>View and download AI-generated interview evaluation reports.</p>
         </div>
-        
+
         <div style={{ position: 'relative' }}>
           <label htmlFor="transcript-upload" style={{
             padding: '10px 20px',
-            background: 'var(--primary)',
-            color: 'white',
+            background: 'var(--bg-secondary)',
+            color: 'var(--primary)',
             borderRadius: 8,
             cursor: 'pointer',
+            border: '1px solid var(--border)',
             fontWeight: 600,
             fontSize: '0.9rem',
             display: 'flex',
             alignItems: 'center',
             gap: 8,
-            transition: 'opacity 0.2s'
+            transition: 'opacity 0.2s',
+            boxShadow: 'var(--shadow)'
           }}
-          onMouseEnter={e => e.currentTarget.style.opacity = '0.9'}
-          onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+            onMouseEnter={e => e.currentTarget.style.opacity = '0.9'}
+            onMouseLeave={e => e.currentTarget.style.opacity = '1'}
           >
-            <span>📁</span> Upload Transcript
-            <input 
-              type="file" 
-              id="transcript-upload" 
-              accept=".txt,.docx,.doc" 
-              onChange={handleFileUpload} 
+            <span style={{ fontSize: 18 }}>📄</span> Upload Transcript
+            <input
+              type="file"
+              id="transcript-upload"
+              accept=".txt,.docx,.doc"
+              onChange={handleFileUpload}
               style={{ display: 'none' }}
             />
           </label>
@@ -128,61 +139,69 @@ const ReportsPage = () => {
           zIndex: 1000, padding: 20
         }}>
           <div style={{
-            background: 'var(--bg-surface)', padding: 32, borderRadius: 16, width: '100%', maxWidth: 500,
-            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)'
+            background: 'var(--bg-card)', padding: 32, borderRadius: 16, width: '100%', maxWidth: 500,
+            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)',
+            border: '1px solid var(--border)'
           }}>
-            <h2 style={{ marginBottom: 8, fontSize: '1.5rem' }}>Generate Transcription Report</h2>
-            <p style={{ color: 'var(--text-muted)', marginBottom: 24, fontSize: '0.9rem' }}>
-              File selected: <strong>{manualData.file?.name}</strong>
+            <h2 style={{ marginBottom: 8, fontSize: '1.5rem', color: 'var(--text-primary)' }}>Generate Evaluation Report</h2>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: 24, fontSize: '0.9rem' }}>
+              We will evaluate <strong>{manualData.file?.name}</strong>. Provide candidate details to bind to the report.
             </p>
+
+            {formError && (
+              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', padding: '12px 16px', borderRadius: 8, marginBottom: 20, fontSize: '0.85rem' }}>
+                <strong>Error: </strong>{formError}
+              </div>
+            )}
             
             <form onSubmit={handleManualSubmit}>
               <div style={{ marginBottom: 16 }}>
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: 6, color: 'var(--text-primary)' }}>Candidate Name</label>
-                <input 
+                <input
                   required
-                  type="text" 
+                  type="text"
                   placeholder="John Doe"
                   value={manualData.candidateName}
-                  onChange={e => setManualData({...manualData, candidateName: e.target.value})}
-                  style={{ 
-                    width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--border)', 
-                    background: 'var(--bg-card)', color: 'var(--text-primary)', outline: 'none' 
+                  onChange={e => setManualData({ ...manualData, candidateName: e.target.value })}
+                  style={{
+                    width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--border)',
+                    background: 'var(--bg-primary)', color: 'var(--text-primary)', outline: 'none'
                   }}
                 />
               </div>
               <div style={{ marginBottom: 24 }}>
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: 6, color: 'var(--text-primary)' }}>Candidate Email</label>
-                <input 
+                <input
                   required
-                  type="email" 
+                  type="email"
                   placeholder="john@example.com"
                   value={manualData.candidateEmail}
-                  onChange={e => setManualData({...manualData, candidateEmail: e.target.value})}
-                  style={{ 
-                    width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--border)', 
-                    background: 'var(--bg-card)', color: 'var(--text-primary)', outline: 'none' 
+                  onChange={e => setManualData({ ...manualData, candidateEmail: e.target.value })}
+                  style={{
+                    width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--border)',
+                    background: 'var(--bg-primary)', color: 'var(--text-primary)', outline: 'none'
                   }}
                 />
               </div>
 
               <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-                <button 
+                <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  style={{ 
-                    padding: '10px 20px', borderRadius: 8, border: '1px solid var(--border)', 
+                  style={{
+                    padding: '10px 20px', borderRadius: 8, border: '1px solid var(--border)',
                     background: 'transparent', cursor: 'pointer', color: 'var(--text-secondary)',
                     fontSize: '0.85rem', fontWeight: 500
                   }}
                 >
                   Cancel
                 </button>
-                
-                <button 
+
+                <button
                   type="button"
                   disabled={isProcessing}
                   onClick={async () => {
+                    setFormError(null);
                     try {
                       setIsProcessing(true);
                       const formData = new FormData();
@@ -190,27 +209,27 @@ const ReportsPage = () => {
                       formData.append('candidateEmail', manualData.candidateEmail);
                       formData.append('file', manualData.file);
                       await reportService.downloadReportDirect(formData);
+                      setShowModal(false);
                     } catch (err) {
-                      const msg = err.response?.data?.message || err.message;
-                      alert('Download failed: ' + msg);
+                      setFormError(err.response?.data?.message || 'The AI parsing service timed out. Please try again.');
                     } finally {
                       setIsProcessing(false);
                     }
                   }}
-                  style={{ 
-                    padding: '10px 20px', borderRadius: 8, border: '1px solid var(--primary)', 
-                    background: 'transparent', color: 'var(--primary)', fontWeight: 600, 
+                  style={{
+                    padding: '10px 20px', borderRadius: 8, border: '1px solid var(--primary)',
+                    background: 'var(--bg-secondary)', color: 'var(--primary)', fontWeight: 600,
                     cursor: isProcessing ? 'not-allowed' : 'pointer', fontSize: '0.85rem'
                   }}
                 >
-                  Generate & Download
+                  {isProcessing ? 'Generating...' : 'Generate & Download'}
                 </button>
 
-                <button 
+                <button
                   type="submit"
                   disabled={isProcessing}
-                  style={{ 
-                    padding: '10px 24px', borderRadius: 8, border: 'none', background: 'var(--primary)', color: 'white', 
+                  style={{
+                    padding: '10px 24px', borderRadius: 8, border: 'none', background: 'var(--primary)', color: 'white',
                     fontWeight: 600, cursor: isProcessing ? 'not-allowed' : 'pointer', opacity: isProcessing ? 0.7 : 1,
                     fontSize: '0.85rem'
                   }}
@@ -226,7 +245,7 @@ const ReportsPage = () => {
       {reports.length === 0 ? (
         <div style={{
           padding: 60,
-          background: 'var(--bg-surface)',
+          background: 'var(--bg-secondary)',
           borderRadius: 16,
           textAlign: 'center',
           border: '1px dashed var(--border)',
@@ -237,10 +256,10 @@ const ReportsPage = () => {
           <p>Complete an interview to generate an automated report.</p>
         </div>
       ) : (
-        <div style={{ background: 'var(--bg-surface)', borderRadius: 16, border: '1px solid var(--border)', overflow: 'hidden' }}>
+        <div style={{ background: 'var(--bg-secondary)', borderRadius: 16, border: '1px solid var(--border)', overflow: 'hidden', boxShadow: 'var(--shadow)' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-card)' }}>
+              <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-primary)' }}>
                 <th style={{ padding: '16px 24px', fontSize: '0.85rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Candidate</th>
                 <th style={{ padding: '16px 24px', fontSize: '0.85rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Interview</th>
                 <th style={{ padding: '16px 24px', fontSize: '0.85rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Date</th>
