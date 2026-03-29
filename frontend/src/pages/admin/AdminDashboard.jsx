@@ -607,17 +607,6 @@ const CandidateDetail = ({ appId, onBack }) => {
               </button>
             )}
 
-            {/* Fix for stuck interview_scheduled records */}
-            {app.status === 'interview_scheduled' && (
-              <button
-                className="btn btn-primary btn-sm"
-                style={{ background: '#10b981', borderColor: '#10b981' }}
-                onClick={() => handleOverride('mark_interview_completed')}
-                disabled={generating}
-              >
-                ✅ Mark Interview Completed
-              </button>
-            )}
 
             {/* Final disposition after interview */}
             {app.status === 'interview_completed' && (

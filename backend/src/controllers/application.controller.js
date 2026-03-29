@@ -5,6 +5,27 @@ const fs = require('fs');
 const axios = require('axios');
 const FormData = require('form-data');
 
+// ─── Interview Status Auto-Sync Helper ───────────────────────────────────────────
+// Compares the Interview doc status with the Application status and fixes any mismatch.
+const syncInterviewStatus = async (app) => {
+  const interview = app.scores?.interview?.interviewId;
+  if (!interview || !interview.status) return; // nothing to sync
+
+  const appStatus = app.status;
+  const intStatus = interview.status;
+
+  // Interview completed → Application should be interview_completed
+  if (intStatus === 'completed' && appStatus === 'interview_scheduled') {
+    await Application.findByIdAndUpdate(app._id, { status: 'interview_completed' });
+    app.status = 'interview_completed'; // mutate in-memory so response is correct
+  }
+  // Interview rescheduled (back to scheduled/active) → Application should be interview_scheduled
+  else if (['scheduled', 'active'].includes(intStatus) && appStatus === 'interview_completed') {
+    await Application.findByIdAndUpdate(app._id, { status: 'interview_scheduled' });
+    app.status = 'interview_scheduled';
+  }
+};
+
 // ─── External ATS API Integration ─────────────────────────────────────────────
 const mapDomainToATS = (domain) => {
   const supported = [
@@ -153,6 +174,9 @@ exports.getAdminAllApplications = async (req, res) => {
       .populate('scores.interview.interviewId', 'roomId status')
       .sort('-createdAt');
 
+    // Auto-sync all applications whose interview status doesn't match app status
+    await Promise.all(apps.map(a => syncInterviewStatus(a)));
+
     // Apply score filters in JS (simpler than complex mongo aggregation)
     if (minResume) apps = apps.filter(a => (a.scores.resume?.score || 0) >= Number(minResume));
     if (minMcq) apps = apps.filter(a => (a.scores.mcq?.score || 0) >= Number(minMcq));
@@ -188,6 +212,10 @@ exports.getApplicationDetail = async (req, res) => {
       .populate('scores.interview.interviewId', 'roomId status scheduledAt duration');
 
     if (!app) return res.status(404).json({ success: false, error: 'Application not found' });
+
+    // Auto-sync application status based on interview document status
+    await syncInterviewStatus(app);
+
     res.status(200).json({ success: true, data: app });
   } catch (error) {
     res.status(400).json({ success: false, error: error.message });
