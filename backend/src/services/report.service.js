@@ -383,4 +383,83 @@ const generateDirectPDFStream = async (res, { transcript, candidateName, candida
   }
 };
 
-module.exports = { generateReport, generateManualReport, generateDirectPDFStream };
+/**
+ * Generate report from structured feedback (replacing transcription AI)
+ */
+const generateFeedbackReport = async (feedback, interviewScoreStr, application) => {
+  try {
+    const interview = await Interview.findById(feedback.interview).populate('candidate');
+    if (!interview) throw new Error('Interview not found');
+
+    const strengths = feedback.technicalSkills
+      .filter(ts => ts.rating === 'Best' || ts.rating === 'Excellent')
+      .map(ts => ts.skill);
+    
+    if (['Best', 'Excellent'].includes(feedback.communication.verbal)) {
+      strengths.push('Strong verbal communication');
+    }
+
+    const weaknesses = feedback.technicalSkills
+      .filter(ts => ts.rating === 'Poor' || ts.rating === 'Good')
+      .map(ts => ts.skill);
+
+    if (['Poor', 'Good'].includes(feedback.communication.verbal)) {
+      weaknesses.push('Verbal communication needs improvement');
+    }
+
+    const evaluationData = {
+      scores: {
+        resume_score: application?.scores?.resume?.score || 0,
+        coding_score: application?.scores?.coding?.score || 0,
+        mcq_score: application?.scores?.mcq?.score || 0,
+        interview_score: parseFloat(interviewScoreStr) || 0
+      },
+      recommendation: {
+        decision: feedback.recommendation,
+        risk_level: feedback.recommendation === 'Hire' ? 'Low' : 'High',
+        reason: feedback.improvementFeedback.slice(0, 500)
+      },
+      analysis: {
+        strengths: strengths.length ? strengths : ['Solid baseline skills'],
+        weaknesses: weaknesses.length ? weaknesses : ['No major weaknesses identified']
+      },
+      insights: {
+        candidate_summary: 'Evaluation based on structured interviewer feedback covering technical and communication metrics.',
+        improvement_suggestions: [
+          feedback.improvementFeedback
+        ]
+      }
+    };
+
+    let report = await Report.findOne({ interview: feedback.interview });
+    if (!report) {
+      report = new Report({
+        interview: feedback.interview,
+        candidate: feedback.candidate,
+        status: 'processing'
+      });
+    }
+
+    const pdfFileName = `report-feedback-${feedback.interview}-${Date.now()}.pdf`;
+    const pdfRelativePath = `uploads/reports/${pdfFileName}`;
+    const pdfFullPath = path.resolve(process.cwd(), pdfRelativePath);
+
+    if (!fs.existsSync(path.dirname(pdfFullPath))) {
+      fs.mkdirSync(path.dirname(pdfFullPath), { recursive: true });
+    }
+
+    await createPDFReport(pdfFullPath, interview, evaluationData);
+
+    report.evaluation = evaluationData;
+    report.pdfPath = `/${pdfRelativePath}`;
+    report.status = 'completed';
+    await report.save();
+
+    return report;
+  } catch (err) {
+    console.error('Feedback Report Gen Error:', err.message);
+    throw err;
+  }
+};
+
+module.exports = { generateReport, generateManualReport, generateDirectPDFStream, generateFeedbackReport };

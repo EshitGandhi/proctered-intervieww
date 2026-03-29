@@ -86,7 +86,7 @@ const InterviewerRoom = () => {
       try { await api.patch(`/interviews/${interview._id}/end`); } catch (err) {}
     }
     webRTC.leaveRoom();
-    navigate('/dashboard');
+    navigate(interview?._id ? `/admin/feedback/${interview._id}` : '/admin');
   };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="spinner" /></div>;

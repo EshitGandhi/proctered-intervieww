@@ -14,6 +14,7 @@ import InterviewerDashboard from './pages/InterviewerDashboard';
 import InterviewerRoom from './pages/InterviewerRoom';
 import SessionPlayback from './pages/SessionPlayback';
 import ReportsPage from './pages/ReportsPage';
+import FeedbackForm from './pages/admin/FeedbackForm';
 
 import './index.css';
 
@@ -103,6 +104,11 @@ const AppRouter = () => {
       <Route path="/playback/:interviewId" element={
         <ProtectedRoute roles={['admin']}>
           <SessionPlayback />
+        </ProtectedRoute>
+      } />
+      <Route path="/admin/feedback/:interviewId" element={
+        <ProtectedRoute roles={['admin']}>
+          <FeedbackForm />
         </ProtectedRoute>
       } />
 
