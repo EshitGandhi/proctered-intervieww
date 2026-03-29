@@ -349,6 +349,22 @@ exports.overrideApplicationStatus = async (req, res) => {
     } else if (action === 'skip_coding' && (app.status === 'coding_pending' || app.status === 'coding_failed')) {
       app.status = 'interview_pending';
       message = 'Coding round skipped. Candidate proceeds to interview.';
+    } else if (action === 'mark_interview_completed' && app.status === 'interview_scheduled') {
+      app.status = 'interview_completed';
+      // Also mark the linked interview as completed if it's still active/scheduled
+      if (app.scores?.interview?.interviewId) {
+        await Interview.findByIdAndUpdate(app.scores.interview.interviewId, {
+          status: 'completed',
+          endedAt: new Date(),
+        });
+      }
+      message = 'Interview marked as completed.';
+    } else if (action === 'mark_hired' && app.status === 'interview_completed') {
+      app.status = 'hired';
+      message = 'Candidate marked as hired.';
+    } else if (action === 'mark_rejected' && app.status === 'interview_completed') {
+      app.status = 'rejected';
+      message = 'Candidate marked as rejected.';
     } else {
       return res.status(400).json({ success: false, error: `Action '${action}' not available for current stage '${app.status}'` });
     }

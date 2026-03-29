@@ -566,9 +566,9 @@ const CandidateDetail = ({ appId, onBack }) => {
       </div>
 
       {/* Admin Overrides */}
-      {['resume_rejected', 'mcq_pending', 'mcq_failed', 'coding_pending', 'coding_failed'].includes(app.status) && (
+      {['resume_rejected', 'mcq_pending', 'mcq_failed', 'coding_pending', 'coding_failed', 'interview_scheduled', 'interview_completed'].includes(app.status) && (
         <div className="card" style={{ marginBottom: 20, background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
-          <h3 style={{ fontSize: '0.95rem', marginBottom: 10 }}>Admin Controls & Overrides</h3>
+          <h3 style={{ fontSize: '0.95rem', marginBottom: 10 }}>Admin Controls &amp; Overrides</h3>
           <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: 14 }}>
             Manually intervene to progress the candidate or reset scores.
           </p>
@@ -579,7 +579,7 @@ const CandidateDetail = ({ appId, onBack }) => {
 
             {app.status === 'resume_rejected' && (
               <button className="btn btn-primary btn-sm" onClick={() => handleOverride('force_mcq')} disabled={generating}>
-                📝 Ignore Resume & Allow MCQ
+                📝 Ignore Resume &amp; Allow MCQ
               </button>
             )}
 
@@ -606,9 +606,43 @@ const CandidateDetail = ({ appId, onBack }) => {
                 ⏩ Skip Coding Round
               </button>
             )}
+
+            {/* Fix for stuck interview_scheduled records */}
+            {app.status === 'interview_scheduled' && (
+              <button
+                className="btn btn-primary btn-sm"
+                style={{ background: '#10b981', borderColor: '#10b981' }}
+                onClick={() => handleOverride('mark_interview_completed')}
+                disabled={generating}
+              >
+                ✅ Mark Interview Completed
+              </button>
+            )}
+
+            {/* Final disposition after interview */}
+            {app.status === 'interview_completed' && (
+              <>
+                <button
+                  className="btn btn-primary btn-sm"
+                  style={{ background: '#10b981', borderColor: '#10b981' }}
+                  onClick={() => handleOverride('mark_hired')}
+                  disabled={generating}
+                >
+                  🎉 Mark as Hired
+                </button>
+                <button
+                  className="btn btn-danger btn-sm"
+                  onClick={() => handleOverride('mark_rejected')}
+                  disabled={generating}
+                >
+                  ✗ Mark as Rejected
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}
+
 
       {/* Scores */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
