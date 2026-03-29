@@ -558,7 +558,18 @@ const CandidateDetail = ({ appId, onBack }) => {
           <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{app.candidateId?.email}</div>
           <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Applied for: <strong>{app.jobId?.title}</strong> ({app.jobId?.domain})</div>
         </div>
-        <div style={{ marginLeft: 'auto' }}>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
+          {app.scores?.resume?.resumeUrl && (
+            <a
+              href={`${api.defaults.baseURL?.replace('/api', '') || 'http://localhost:5000'}${app.scores.resume.resumeUrl}`}
+              target="_blank"
+              rel="noreferrer"
+              className="btn btn-secondary btn-sm"
+              style={{ textDecoration: 'none', background: 'var(--bg-secondary)' }}
+            >
+              📄 View Resume
+            </a>
+          )}
           <span style={{ fontSize: '0.75rem', fontWeight: 600, background: 'var(--primary-light)', color: 'var(--primary)', padding: '4px 14px', borderRadius: 20, textTransform: 'capitalize' }}>
             {app.status.replace(/_/g, ' ')}
           </span>
@@ -642,7 +653,7 @@ const CandidateDetail = ({ appId, onBack }) => {
       </div>
 
       {/* Resume detail */}
-      {app.scores?.resume?.matchedSkills?.length > 0 && (
+      {(app.scores?.resume?.matchedSkills?.length > 0 || app.scores?.resume?.resumeUrl) && (
         <div className="card" style={{ marginBottom: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
             <h3 style={{ fontSize: '0.95rem', margin: 0 }}>Resume Analysis</h3>
