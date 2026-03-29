@@ -51,11 +51,12 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const logout = useCallback(() => {
+    const isEmployee = user && ['admin', 'interviewer'].includes(user.role);
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
-    window.location.href = '/login';
-  }, []);
+    window.location.href = isEmployee ? '/admin/login' : '/login';
+  }, [user]);
 
   return (
     <AuthContext.Provider value={{ user, loading, login, register, logout, isAuthenticated: !!user }}>

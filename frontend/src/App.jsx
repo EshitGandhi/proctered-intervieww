@@ -2,8 +2,8 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
-// Pages
-import AuthPage from './pages/AuthPage';
+import CandidateLogin from './pages/CandidateLogin';
+import AdminLogin from './pages/AdminLogin';
 import CandidateRegister from './pages/CandidateRegister';
 import CandidateDashboard from './pages/candidate/CandidateDashboard';
 import MCQTest from './pages/candidate/MCQTest';
@@ -30,7 +30,13 @@ const ProtectedRoute = ({ children, roles }) => {
     );
   }
 
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) {
+    if (roles && (roles.includes('admin') || roles.includes('interviewer'))) {
+      return <Navigate to="/admin/login" replace />;
+    }
+    return <Navigate to="/login" replace />;
+  }
+  
   if (roles && !roles.includes(user.role)) {
     return <Navigate to={user.role === 'candidate' ? '/dashboard' : '/admin'} replace />;
   }
@@ -44,11 +50,11 @@ const AppRouter = () => {
   return (
     <Routes>
       {/* Auth */}
-      <Route path="/login" element={<AuthPage />} />
-      <Route path="/register" element={<AuthPage />} />
-      {/* Dedicated shareable candidate registration link */}
-      <Route path="/register/candidate" element={<CandidateRegister />} />
-      {/* Legacy /join redirect */}
+      <Route path="/login" element={<CandidateLogin />} />
+      <Route path="/admin/login" element={<AdminLogin />} />
+      <Route path="/register" element={<CandidateRegister />} />
+      {/* Legacy links bridging to candidate router */}
+      <Route path="/register/candidate" element={<Navigate to="/register" replace />} />
       <Route path="/join" element={<Navigate to="/login" replace />} />
 
       {/* ── Candidate Routes ── */}

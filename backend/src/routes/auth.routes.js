@@ -24,8 +24,8 @@ router.post('/register', async (req, res, next) => {
       return res.status(409).json({ success: false, message: 'Email already registered' });
     }
 
-    const allowedRoles = ['candidate', 'interviewer'];
-    const userRole = allowedRoles.includes(role) ? role : 'candidate';
+    // Force public registration to always create candidates to prevent unauthorized admin/interviewer account creation
+    const userRole = 'candidate';
 
     const user = await User.create({ name, email, password, role: userRole, domain });
     const token = signToken(user._id);
