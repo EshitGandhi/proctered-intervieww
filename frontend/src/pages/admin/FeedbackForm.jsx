@@ -20,7 +20,6 @@ const FeedbackForm = () => {
   const [communication, setCommunication] = useState({ verbal: '', confidence: '' });
   const [techRatings, setTechRatings] = useState({});
   const [improvementFeedback, setImprovementFeedback] = useState('');
-  const [recommendation, setRecommendation] = useState('Hire');
 
   useEffect(() => {
     const fetchContext = async () => {
@@ -65,8 +64,7 @@ const FeedbackForm = () => {
           skill,
           rating: techRatings[skill]
         })),
-        improvementFeedback,
-        recommendation
+        improvementFeedback
       };
 
       await api.post(`/interviews/${interviewId}/feedback`, payload);
@@ -172,9 +170,9 @@ const FeedbackForm = () => {
               )}
             </section>
 
-            {/* C. Candidate Improvement Feedback & Recommendation */}
+            {/* C. Candidate Improvement Feedback */}
             <section>
-               <h3 style={{ fontSize: '1.05rem', marginBottom: 16, color: 'var(--text-secondary)' }}>C. Summary & Recommendation</h3>
+               <h3 style={{ fontSize: '1.05rem', marginBottom: 16, color: 'var(--text-secondary)' }}>C. Summary Feedback</h3>
                
                <div style={{ marginBottom: 16 }}>
                  <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: 8 }}>Candidate Improvement Feedback</label>
@@ -186,20 +184,6 @@ const FeedbackForm = () => {
                     onChange={(e) => setImprovementFeedback(e.target.value)}
                     required
                  />
-               </div>
-
-               <div>
-                  <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: 8 }}>Final Recommendation</label>
-                  <div style={{ display: 'flex', gap: 16 }}>
-                    <label style={{ flex: 1, padding: 16, borderRadius: 12, border: `1px solid ${recommendation === 'Hire' ? '#10b981' : 'var(--border)'}`, background: recommendation === 'Hire' ? 'rgba(16, 185, 129, 0.1)' : 'transparent', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s' }}>
-                      <input type="radio" value="Hire" checked={recommendation === 'Hire'} onChange={() => setRecommendation('Hire')} style={{ display: 'none' }} />
-                      <div style={{ fontSize: '1.1rem', fontWeight: 600, color: recommendation === 'Hire' ? '#10b981' : 'var(--text-muted)' }}>Hire</div>
-                    </label>
-                    <label style={{ flex: 1, padding: 16, borderRadius: 12, border: `1px solid ${recommendation === 'No Hire' ? '#ef4444' : 'var(--border)'}`, background: recommendation === 'No Hire' ? 'rgba(239, 68, 68, 0.1)' : 'transparent', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s' }}>
-                      <input type="radio" value="No Hire" checked={recommendation === 'No Hire'} onChange={() => setRecommendation('No Hire')} style={{ display: 'none' }} />
-                      <div style={{ fontSize: '1.1rem', fontWeight: 600, color: recommendation === 'No Hire' ? '#ef4444' : 'var(--text-muted)' }}>No Hire</div>
-                    </label>
-                  </div>
                </div>
             </section>
 

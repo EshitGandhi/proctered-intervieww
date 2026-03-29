@@ -54,7 +54,7 @@ const feedbackSchema = new mongoose.Schema(
     recommendation: {
       type: String,
       enum: ['Hire', 'No Hire'],
-      required: true,
+      required: false,
     },
   },
   { timestamps: true }

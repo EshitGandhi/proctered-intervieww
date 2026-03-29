@@ -102,15 +102,21 @@ router.post('/:id/feedback', protect, requireRole('admin'), async (req, res) => 
       recommendation,
     });
 
-    // Calculate score (1-4 mapped to 10 scale).
-    const scoreMap = { 'Poor': 1, 'Good': 2, 'Best': 3, 'Excellent': 4 };
-    let totalItems = 2 + technicalSkills.length; // verbal, confidence + tech skills
-    let totalScore = scoreMap[communication.verbal] + scoreMap[communication.confidence];
+    // Calculate score (out of 100) with 80% Tech and 20% Comm weightage
+    const scoreMap = { 'Poor': 25, 'Good': 50, 'Best': 75, 'Excellent': 100 };
+    
+    // 1. Communication Score (Average of 2 fields)
+    const commAvg = (scoreMap[communication.verbal] + scoreMap[communication.confidence]) / 2;
+    
+    // 2. Technical Score (Average of N skills)
+    let techSum = 0;
     technicalSkills.forEach(ts => {
-      totalScore += scoreMap[ts.rating];
+      techSum += scoreMap[ts.rating];
     });
+    const techAvg = technicalSkills.length > 0 ? (techSum / technicalSkills.length) : 100;
 
-    const interviewScore = ((totalScore / (totalItems * 4)) * 10).toFixed(1);
+    // 3. Weighted Final Interview Score (80% Tech, 20% Comm)
+    const interviewScore = ((techAvg * 0.8) + (commAvg * 0.2)).toFixed(1);
 
     // Update Application score
     const application = await Application.findOne({ 'scores.interview.interviewId': interviewId }).populate('jobId');
@@ -126,7 +132,7 @@ router.post('/:id/feedback', protect, requireRole('admin'), async (req, res) => 
         ((application.scores.resume?.score || 0) * resW) +
         ((application.scores.mcq?.score || 0) * mcqW) +
         ((application.scores.coding?.score || 0) * codeW) +
-        (parseFloat(interviewScore) * intW * 10) 
+        (parseFloat(interviewScore) * intW) 
       );
       
       application.scores.finalScore = finalScore;

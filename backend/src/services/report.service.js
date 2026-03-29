@@ -155,77 +155,81 @@ const buildPDFWithKit = (doc, { candidateName, candidateEmail, title, date, eval
   const dateStr = new Date(date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 
   // ─── COLOURS ────────────────────────────────────────────────────────────────
-  const BLUE   = '#2563EB';
-  const DARK   = '#0F172A';
-  const MUTED  = '#64748B';
-  const LIGHT  = '#F8FAFC';
+  const BLUE = '#2563EB';
+  const DARK = '#0F172A';
+  const MUTED = '#64748B';
+  const LIGHT = '#F8FAFC';
   const BORDER = '#E2E8F0';
-  const WHITE  = '#FFFFFF';
-  const GREEN  = '#10B981';
-  const RED    = '#EF4444';
+  const WHITE = '#FFFFFF';
+  const GREEN = '#10B981';
+  const RED = '#EF4444';
 
-  const pageWidth  = doc.page.width;   // 595
+  const pageWidth = doc.page.width;   // 595
   const pageHeight = doc.page.height;  // 842
   const margin = 50;
-  const inner  = pageWidth - margin * 2;
+  const inner = pageWidth - margin * 2;
 
   // ─── HEADER BAND ───────────────────────────────────────────────────────────
   doc.rect(0, 0, pageWidth, 90).fill(BLUE);
 
   doc.fontSize(22).font('Helvetica-Bold').fillColor(WHITE)
-     .text('KL Prarambh', margin, 25, { align: 'left' });
+    .text('KL Prarambh', margin, 25, { align: 'left' });
   doc.fontSize(10).font('Helvetica').fillColor(WHITE)
-     .text('AI-Powered Talent Assessment Report', margin, 52, { align: 'left' });
+    .text('Interviewer-Powered Talent Assessment Report', margin, 52, { align: 'left' });
 
   doc.fontSize(9).font('Helvetica').fillColor(WHITE)
-     .text(`Report ID: ${reportId}`, 0, 28, { align: 'right', width: pageWidth - margin })
-     .text(`Date: ${dateStr}`, 0, 44, { align: 'right', width: pageWidth - margin });
+    .text(`Report ID: ${reportId}`, 0, 28, { align: 'right', width: pageWidth - margin })
+    .text(`Date: ${dateStr}`, 0, 44, { align: 'right', width: pageWidth - margin });
 
   // ─── CANDIDATE INFO STRIP ──────────────────────────────────────────────────
   doc.rect(0, 90, pageWidth, 55).fill(LIGHT);
 
   const emailX = margin + 240;
-  const evalX  = margin + 420;
+  const evalX = margin + 420;
 
   doc.fontSize(8).font('Helvetica').fillColor(MUTED)
-     .text('CANDIDATE', margin, 100)
-     .text('EMAIL', emailX, 100)
-     .text('EVALUATION', evalX, 100);
+    .text('CANDIDATE', margin, 100)
+    .text('EMAIL', emailX, 100)
+    .text('EVALUATION', evalX, 100);
 
   doc.fontSize(11).font('Helvetica-Bold').fillColor(DARK)
-     .text(candidateName || 'Unknown Candidate', margin, 113)
-     .text(candidateEmail || 'N/A', emailX, 113)
-     .text(title || 'Technical Assessment', evalX, 113, { width: pageWidth - evalX - margin });
+    .text(candidateName || 'Unknown Candidate', margin, 113)
+    .text(candidateEmail || 'N/A', emailX, 113)
+    .text(title || 'Technical Assessment', evalX, 113, { width: pageWidth - evalX - margin });
 
   // ─── OVERALL SCORE CIRCLE ─────────────────────────────────────────────────
   const circleX = pageWidth - margin - 42;
   const circleY = 205;
   const circleR = 36;
-  const scoreColor = parseFloat(overallAvg) >= 7.5 ? GREEN : parseFloat(overallAvg) >= 5 ? BLUE : RED;
+  const scoreColor = parseFloat(overallAvg) >= 75 ? GREEN : parseFloat(overallAvg) >= 50 ? BLUE : RED;
 
   doc.circle(circleX, circleY, circleR).fill(scoreColor);
-  doc.fontSize(18).font('Helvetica-Bold').fillColor(WHITE)
-     .text(overallAvg, circleX - circleR, circleY - 11, { width: circleR * 2, align: 'center' });
+  doc.fontSize(16).font('Helvetica-Bold').fillColor(WHITE)
+     .text(overallAvg, circleX - circleR, circleY - 10, { width: circleR * 2, align: 'center' });
   doc.fontSize(7).font('Helvetica').fillColor(MUTED)
-     .text('OVERALL SCORE', circleX - 38, circleY + circleR + 5, { width: 76, align: 'center' });
+     .text('SCORE / 100', circleX - 38, circleY + circleR + 5, { width: 76, align: 'center' });
 
   let y = 165;
 
-  // ─── DECISION BOX ─────────────────────────────────────────────────────────
-  const decision   = recommendation.decision   || 'Under Review';
-  const riskLevel  = recommendation.risk_level || 'Normal';
+  // ─── DECISION BOX (Hiden if no decision) ──────────────────────────────────
+  if (recommendation.decision && recommendation.decision !== 'string') {
+    const decision   = recommendation.decision;
+    const riskLevel  = recommendation.risk_level || 'Normal';
 
-  doc.rect(margin, y, inner - 100, 68).fill(LIGHT);
-  doc.rect(margin, y, 5, 68).fill(BLUE);
+    doc.rect(margin, y, inner - 100, 68).fill(LIGHT);
+    doc.rect(margin, y, 5, 68).fill(BLUE);
 
-  doc.fontSize(8).font('Helvetica').fillColor(MUTED)
-     .text('FINAL DECISION', margin + 14, y + 10);
-  doc.fontSize(17).font('Helvetica-Bold').fillColor(BLUE)
-     .text(decision, margin + 14, y + 23);
-  doc.fontSize(8).font('Helvetica').fillColor(MUTED)
-     .text(`Risk Level: ${riskLevel}`, margin + 14, y + 50);
+    doc.fontSize(8).font('Helvetica').fillColor(MUTED)
+       .text('INTERVIEWER DECISION', margin + 14, y + 10);
+    doc.fontSize(17).font('Helvetica-Bold').fillColor(BLUE)
+       .text(decision, margin + 14, y + 23);
+    doc.fontSize(8).font('Helvetica').fillColor(MUTED)
+       .text(`Risk: ${riskLevel}`, margin + 14, y + 50);
 
-  y += 88;
+    y += 88;
+  } else {
+    y += 20; // Small pad if hidden
+  }
 
   // ─── SECTION: PERFORMANCE METRICS ─────────────────────────────────────────
   doc.fontSize(13).font('Helvetica-Bold').fillColor(DARK).text('Performance Metrics', margin, y);
@@ -239,15 +243,15 @@ const buildPDFWithKit = (doc, { candidateName, candidateEmail, title, date, eval
   metrics.forEach((m, i) => {
     const col = i % 2;
     const row = Math.floor(i / 2);
-    const mx  = margin + col * (colW + 20);
-    const my  = y + row * rowH;
+    const mx = margin + col * (colW + 20);
+    const my = y + row * rowH;
 
-    const fillW    = Math.min(Math.max(m.score / 10, 0), 1) * (colW - 10);
-    const barColor = m.score >= 7.5 ? GREEN : m.score >= 5 ? BLUE : RED;
+    const fillW = Math.min(Math.max(m.score / 100, 0), 1) * (colW - 10);
+    const barColor = m.score >= 75 ? GREEN : m.score >= 50 ? BLUE : RED;
 
     doc.fontSize(10).font('Helvetica-Bold').fillColor(DARK).text(m.label, mx, my);
     doc.fontSize(10).font('Helvetica-Bold').fillColor(barColor)
-       .text(`${m.score}/10`, mx + colW - 45, my, { width: 45, align: 'right' });
+       .text(`${m.score}/100`, mx + colW - 55, my, { width: 55, align: 'right' });
 
     doc.roundedRect(mx, my + 16, colW - 10, barH, 4).fill(BORDER);
     if (fillW > 0) doc.roundedRect(mx, my + 16, fillW, barH, 4).fill(barColor);
@@ -256,7 +260,7 @@ const buildPDFWithKit = (doc, { candidateName, candidateEmail, title, date, eval
   y += Math.ceil(metrics.length / 2) * rowH + 20;
 
   // ─── SECTION: EXECUTIVE SUMMARY ───────────────────────────────────────────
-  doc.fontSize(13).font('Helvetica-Bold').fillColor(DARK).text('Executive AI Insight', margin, y);
+  doc.fontSize(13).font('Helvetica-Bold').fillColor(DARK).text('Interviewer Insight', margin, y);
   doc.moveTo(margin, y + 18).lineTo(margin + inner, y + 18).stroke(BORDER);
   y += 28;
 
@@ -266,7 +270,7 @@ const buildPDFWithKit = (doc, { candidateName, candidateEmail, title, date, eval
 
   doc.rect(margin, y, inner, 70).fill(LIGHT);
   doc.fontSize(10).font('Helvetica').fillColor(MUTED)
-     .text(summaryText, margin + 12, y + 10, { width: inner - 24, lineGap: 4 });
+    .text(summaryText, margin + 12, y + 10, { width: inner - 24, lineGap: 4 });
   y += 84;
 
   // ─── SECTION: STRENGTHS + WEAKNESSES ──────────────────────────────────────
@@ -297,14 +301,14 @@ const buildPDFWithKit = (doc, { candidateName, candidateEmail, title, date, eval
 
   // ─── SECTION: RECOMMENDATION REASON ───────────────────────────────────────
   if (recommendation.reason && recommendation.reason !== 'string') {
-    doc.fontSize(13).font('Helvetica-Bold').fillColor(DARK).text('AI Recommendation', margin, y);
+    doc.fontSize(13).font('Helvetica-Bold').fillColor(DARK).text('Interviewer Recommendation', margin, y);
     doc.moveTo(margin, y + 18).lineTo(margin + inner, y + 18).stroke(BORDER);
     y += 28;
 
     doc.rect(margin, y, inner, 65).fill(LIGHT);
     doc.rect(margin, y, 4, 65).fill(BLUE);
     doc.fontSize(10).font('Helvetica').fillColor(MUTED)
-       .text(`"${recommendation.reason}"`, margin + 14, y + 12, { width: inner - 26, lineGap: 4 });
+      .text(`"${recommendation.reason}"`, margin + 14, y + 12, { width: inner - 26, lineGap: 4 });
     y += 80;
   }
 
@@ -325,10 +329,10 @@ const buildPDFWithKit = (doc, { candidateName, candidateEmail, title, date, eval
   doc.rect(0, footerY - 8, pageWidth, 46).fill(LIGHT);
   doc.moveTo(margin, footerY - 8).lineTo(pageWidth - margin, footerY - 8).stroke(BORDER);
   doc.fontSize(8).font('Helvetica').fillColor(MUTED)
-     .text(
-       'CONFIDENTIAL — Generated by KL Prarambh AI Evaluation Engine — Do Not Distribute',
-       margin, footerY, { align: 'center', width: inner }
-     );
+    .text(
+      'CONFIDENTIAL — Generated by KL Prarambh AI Evaluation Engine — Do Not Distribute',
+      margin, footerY, { align: 'center', width: inner }
+    );
 };
 
 /**
@@ -340,11 +344,11 @@ const createPDFReport = (filePath, interview, evaluationData) => {
     const stream = fs.createWriteStream(filePath);
     doc.pipe(stream);
     buildPDFWithKit(doc, {
-      candidateName:  interview.candidateName || interview.candidate?.name,
+      candidateName: interview.candidateName || interview.candidate?.name,
       candidateEmail: interview.candidateEmail || interview.candidate?.email,
-      title:          interview.title,
-      date:           interview.endedAt || new Date(),
-      evaluation:     evaluationData
+      title: interview.title,
+      date: interview.endedAt || new Date(),
+      evaluation: evaluationData
     });
     doc.end();
     stream.on('finish', resolve);
@@ -371,8 +375,8 @@ const generateDirectPDFStream = async (res, { transcript, candidateName, candida
     buildPDFWithKit(doc, {
       candidateName,
       candidateEmail,
-      title:      'Direct Transcription Evaluation',
-      date:       new Date(),
+      title: 'Direct Transcription Evaluation',
+      date: new Date(),
       evaluation: evaluationData
     });
     doc.end();
@@ -394,7 +398,7 @@ const generateFeedbackReport = async (feedback, interviewScoreStr, application) 
     const strengths = feedback.technicalSkills
       .filter(ts => ts.rating === 'Best' || ts.rating === 'Excellent')
       .map(ts => ts.skill);
-    
+
     if (['Best', 'Excellent'].includes(feedback.communication.verbal)) {
       strengths.push('Strong verbal communication');
     }
