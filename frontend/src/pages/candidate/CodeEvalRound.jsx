@@ -232,9 +232,11 @@ const CodeEvalRound = () => {
             return (
               <button key={i} onClick={() => setActiveQ(i)} style={{
                 padding: '6px 16px', borderRadius: 20, fontSize: '0.82rem', fontWeight: 600, border: 'none', cursor: 'pointer',
-                background: activeQ === i ? 'var(--primary)' : submitted ? '#10b98120' : 'var(--bg-secondary)',
-                color: activeQ === i ? '#fff' : submitted ? '#10b981' : 'var(--text-muted)',
+                background: activeQ === i ? '#2563eb' : submitted ? '#10b98120' : 'var(--bg-secondary)',
+                color: activeQ === i ? '#ffffff' : submitted ? '#10b981' : 'var(--text-primary)',
                 outline: activeQ === i ? 'none' : submitted ? '1px solid #10b981' : 'none',
+                boxShadow: activeQ === i ? '0 4px 6px -1px rgba(37, 99, 235, 0.4)' : 'none',
+                transition: 'all 0.2s'
               }}>
                 Q{i + 1} {submitted ? '✓' : attempted ? '…' : ''}
               </button>
