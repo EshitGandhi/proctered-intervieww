@@ -83,7 +83,7 @@ router.post('/:id/feedback', protect, requireRole('admin'), async (req, res) => 
   try {
     const { communication, technicalSkills, improvementFeedback, recommendation, candidateId, jobId } = req.body;
 
-    if (!communication || !technicalSkills || !improvementFeedback || !recommendation) {
+    if (!communication || !technicalSkills || !improvementFeedback) {
       return res.status(400).json({ success: false, message: 'All feedback fields are required.' });
     }
 
@@ -96,7 +96,6 @@ router.post('/:id/feedback', protect, requireRole('admin'), async (req, res) => 
       feedback.communication = communication;
       feedback.technicalSkills = technicalSkills;
       feedback.improvementFeedback = improvementFeedback;
-      feedback.recommendation = recommendation;
       await feedback.save();
     } else {
       // Create new
@@ -108,7 +107,6 @@ router.post('/:id/feedback', protect, requireRole('admin'), async (req, res) => 
         communication,
         technicalSkills,
         improvementFeedback,
-        recommendation,
       });
     }
 
