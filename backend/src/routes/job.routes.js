@@ -7,11 +7,11 @@ const router = express.Router();
 // Public routes (or candidate routes)
 router.route('/')
   .get(protect, getJobs)
-  .post(protect, requireRole('admin', 'interviewer'), createJob);
+  .post(protect, requireRole('admin'), createJob);
 
 router.route('/:id')
   .get(getJob)
-  .put(protect, requireRole('admin', 'interviewer'), updateJob)
-  .delete(protect, requireRole('admin', 'interviewer'), deleteJob);
+  .put(protect, requireRole('admin'), updateJob)
+  .delete(protect, requireRole('admin'), deleteJob);
 
 module.exports = router;

@@ -31,7 +31,7 @@ const ProtectedRoute = ({ children, roles }) => {
   }
 
   if (!user) {
-    if (roles && (roles.includes('admin') || roles.includes('interviewer'))) {
+    if (roles && roles.includes('admin')) {
       return <Navigate to="/admin/login" replace />;
     }
     return <Navigate to="/login" replace />;
@@ -79,29 +79,29 @@ const AppRouter = () => {
         </ProtectedRoute>
       } />
 
-      {/* ── Admin / Interviewer Routes ── */}
+      {/* ── Admin Routes ── */}
       <Route path="/admin" element={
-        <ProtectedRoute roles={['admin', 'interviewer']}>
+        <ProtectedRoute roles={['admin']}>
           <AdminDashboard />
         </ProtectedRoute>
       } />
       <Route path="/admin/:tab" element={
-        <ProtectedRoute roles={['admin', 'interviewer']}>
+        <ProtectedRoute roles={['admin']}>
           <AdminDashboard />
         </ProtectedRoute>
       } />
       <Route path="/reports" element={
-        <ProtectedRoute roles={['admin', 'interviewer']}>
+        <ProtectedRoute roles={['admin']}>
           <ReportsPage />
         </ProtectedRoute>
       } />
       <Route path="/monitor/:roomId" element={
-        <ProtectedRoute roles={['admin', 'interviewer']}>
+        <ProtectedRoute roles={['admin']}>
           <InterviewerRoom />
         </ProtectedRoute>
       } />
       <Route path="/playback/:interviewId" element={
-        <ProtectedRoute roles={['admin', 'interviewer']}>
+        <ProtectedRoute roles={['admin']}>
           <SessionPlayback />
         </ProtectedRoute>
       } />

@@ -199,11 +199,11 @@ router.post('/:appId/coding/evaluate', protect, async (req, res) => {
 });
 
 // ─── Admin Routes ──────────────────────────────────────────────────────────────
-router.get('/admin/all', protect, requireRole('admin', 'interviewer'), getAdminAllApplications);
-router.get('/job/:jobId', protect, requireRole('admin', 'interviewer'), getJobApplications);
+router.get('/admin/all', protect, requireRole('admin'), getAdminAllApplications);
+router.get('/job/:jobId', protect, requireRole('admin'), getJobApplications);
 router.get('/:appId', protect, getApplicationDetail);
-router.post('/:appId/generate-interview', protect, requireRole('admin', 'interviewer'), generateInterview);
-router.delete('/:appId', protect, requireRole('admin', 'interviewer'), deleteApplication);
-router.post('/:appId/override', protect, requireRole('admin', 'interviewer'), overrideApplicationStatus);
+router.post('/:appId/generate-interview', protect, requireRole('admin'), generateInterview);
+router.delete('/:appId', protect, requireRole('admin'), deleteApplication);
+router.post('/:appId/override', protect, requireRole('admin'), overrideApplicationStatus);
 
 module.exports = router;

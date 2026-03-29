@@ -27,7 +27,7 @@ router.post('/log', protect, async (req, res) => {
 });
 
 // GET /api/proctoring/session/:sessionId
-router.get('/session/:sessionId', protect, requireRole('interviewer', 'admin'), async (req, res) => {
+router.get('/session/:sessionId', protect, requireRole('admin'), async (req, res) => {
   const logs = await ProctoringLog.find({ sessionId: req.params.sessionId })
     .populate('candidate', 'name email')
     .sort({ timestamp: 1 });
@@ -41,7 +41,7 @@ router.get('/session/:sessionId', protect, requireRole('interviewer', 'admin'), 
 });
 
 // GET /api/proctoring/interview/:interviewId
-router.get('/interview/:interviewId', protect, requireRole('interviewer', 'admin'), async (req, res) => {
+router.get('/interview/:interviewId', protect, requireRole('admin'), async (req, res) => {
   const logs = await ProctoringLog.find({ interview: req.params.interviewId })
     .populate('candidate', 'name email')
     .sort({ timestamp: 1 });

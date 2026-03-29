@@ -7,7 +7,7 @@ const { protect, requireRole } = require('../middleware/auth.middleware');
 const router = express.Router();
 
 // POST /api/interviews
-router.post('/', protect, requireRole('interviewer', 'admin'), async (req, res) => {
+router.post('/', protect, requireRole('admin'), async (req, res) => {
   const { title, description, candidateName, candidateEmail, duration, scheduledAt, questions, settings } = req.body;
   const interview = await Interview.create({
     title, description, candidateName, candidateEmail,
@@ -20,8 +20,8 @@ router.post('/', protect, requireRole('interviewer', 'admin'), async (req, res) 
 });
 
 // GET /api/interviews
-router.get('/', protect, requireRole('interviewer', 'admin'), async (req, res) => {
-  const filter = req.user.role === 'admin' ? {} : { interviewer: req.user._id };
+router.get('/', protect, requireRole('admin'), async (req, res) => {
+  const filter = {};
   const interviews = await Interview.find(filter)
     .populate('interviewer', 'name email')
     .populate('candidate', 'name email')
@@ -57,7 +57,7 @@ router.get('/:id', protect, async (req, res) => {
 });
 
 // PATCH /api/interviews/:id/start
-router.patch('/:id/start', protect, requireRole('interviewer', 'admin'), async (req, res) => {
+router.patch('/:id/start', protect, requireRole('admin'), async (req, res) => {
   const interview = await Interview.findByIdAndUpdate(
     req.params.id, { status: 'active', startedAt: new Date() }, { new: true }
   );
@@ -66,7 +66,7 @@ router.patch('/:id/start', protect, requireRole('interviewer', 'admin'), async (
 });
 
 // PATCH /api/interviews/:id/end
-router.patch('/:id/end', protect, requireRole('interviewer', 'admin'), async (req, res) => {
+router.patch('/:id/end', protect, requireRole('admin'), async (req, res) => {
   try {
     const interview = await Interview.findByIdAndUpdate(
       req.params.id, { status: 'completed', endedAt: new Date() }, { new: true }
@@ -86,7 +86,7 @@ router.patch('/:id/end', protect, requireRole('interviewer', 'admin'), async (re
 });
 
 // PATCH /api/interviews/:id/reschedule
-router.patch('/:id/reschedule', protect, requireRole('interviewer', 'admin'), async (req, res) => {
+router.patch('/:id/reschedule', protect, requireRole('admin'), async (req, res) => {
   try {
     const interview = await Interview.findByIdAndUpdate(
       req.params.id,
@@ -113,14 +113,14 @@ router.patch('/:id/reschedule', protect, requireRole('interviewer', 'admin'), as
 });
 
 // PATCH /api/interviews/:id
-router.patch('/:id', protect, requireRole('interviewer', 'admin'), async (req, res) => {
+router.patch('/:id', protect, requireRole('admin'), async (req, res) => {
   const interview = await Interview.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
   if (!interview) return res.status(404).json({ success: false, message: 'Interview not found' });
   res.json({ success: true, data: interview });
 });
 
 // DELETE /api/interviews/:id
-router.delete('/:id', protect, requireRole('interviewer', 'admin'), async (req, res) => {
+router.delete('/:id', protect, requireRole('admin'), async (req, res) => {
   await Interview.findByIdAndDelete(req.params.id);
   res.json({ success: true, message: 'Interview deleted' });
 });

@@ -9,7 +9,7 @@ const AdminLogin = () => {
     name: '', 
     email: '', 
     password: '', 
-    role: 'interviewer',
+    role: 'admin',
     adminKey: '' 
   });
   const [loading, setLoading] = useState(false);
@@ -22,7 +22,7 @@ const AdminLogin = () => {
   // Redirect if already logged in
   React.useEffect(() => {
     if (user) {
-      if (['admin', 'interviewer'].includes(user.role)) {
+      if (user.role === 'admin') {
          navigate('/admin');
       } else {
          navigate('/dashboard');
@@ -51,7 +51,7 @@ const AdminLogin = () => {
     try {
       if (mode === 'login') {
         const u = await login(form.email, form.password);
-        if (['admin', 'interviewer'].includes(u.role)) {
+        if (u.role === 'admin') {
             navigate('/admin');
         } else {
             navigate('/dashboard');
@@ -157,19 +157,6 @@ const AdminLogin = () => {
                       onChange={(e) => setForm({ ...form, name: e.target.value })}
                       required
                     />
-                  </div>
-                  <div className="form-group">
-                    <label className="label" style={labelStyle}>Desired Role</label>
-                    <select
-                      className="input"
-                      style={inputStyle}
-                      value={form.role}
-                      onChange={(e) => setForm({ ...form, role: e.target.value })}
-                      required
-                    >
-                      <option value="interviewer">Interviewer</option>
-                      <option value="admin">Administrator</option>
-                    </select>
                   </div>
                 </>
               )}

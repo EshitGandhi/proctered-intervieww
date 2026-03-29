@@ -31,12 +31,12 @@ router.post('/register', async (req, res, next) => {
 
     // Role Assignment with Secret Key Verification
     let userRole = 'candidate';
-    if (['admin', 'interviewer'].includes(role)) {
+    if (role === 'admin') {
       const secret = process.env.ADMIN_REGISTRATION_KEY || 'FALLBACK_SECRET_CHANGE_ME';
       if (!adminKey || adminKey !== secret) {
         return res.status(403).json({ success: false, message: 'Invalid Admin Registration Key' });
       }
-      userRole = role;
+      userRole = 'admin';
     }
 
     const user = await User.create({ name, email, password, role: userRole, domain });

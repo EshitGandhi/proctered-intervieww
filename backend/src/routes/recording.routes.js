@@ -133,7 +133,7 @@ router.get('/:id/transcript', protect, async (req, res) => {
 
 // POST /api/recordings/:id/transcribe — trigger Groq transcription on demand
 // IMPORTANT: must be defined BEFORE the /:id DELETE route to avoid shadowing
-router.post('/:id/transcribe', protect, requireRole('interviewer', 'admin'), async (req, res) => {
+router.post('/:id/transcribe', protect, requireRole('admin'), async (req, res) => {
   try {
     const recording = await Recording.findById(req.params.id);
     if (!recording) {
@@ -170,7 +170,7 @@ router.post('/:id/transcribe', protect, requireRole('interviewer', 'admin'), asy
 });
 
 // DELETE /api/recordings/:id
-router.delete('/:id', protect, requireRole('interviewer', 'admin'), async (req, res) => {
+router.delete('/:id', protect, requireRole('admin'), async (req, res) => {
   await Recording.findByIdAndDelete(req.params.id);
   res.json({ success: true, message: 'Recording deleted' });
 });

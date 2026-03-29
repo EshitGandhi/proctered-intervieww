@@ -6,10 +6,10 @@ const MCQ = require('../models/MCQ');
 const router = express.Router();
 
 // Admin: Upload Excel file
-router.post('/upload/:jobId', protect, requireRole('admin', 'interviewer'), uploadMiddleware, uploadMCQs);
+router.post('/upload/:jobId', protect, requireRole('admin'), uploadMiddleware, uploadMCQs);
 
 // Admin: Get all MCQs for a job (with correct answers visible)
-router.get('/admin/:jobId', protect, requireRole('admin', 'interviewer'), async (req, res) => {
+router.get('/admin/:jobId', protect, requireRole('admin'), async (req, res) => {
   try {
     const questions = await MCQ.find({ jobId: req.params.jobId }).sort('createdAt');
     res.status(200).json({ success: true, count: questions.length, data: questions });
@@ -19,7 +19,7 @@ router.get('/admin/:jobId', protect, requireRole('admin', 'interviewer'), async 
 });
 
 // Admin: Delete all MCQs for a job
-router.delete('/:jobId', protect, requireRole('admin', 'interviewer'), async (req, res) => {
+router.delete('/:jobId', protect, requireRole('admin'), async (req, res) => {
   try {
     const result = await MCQ.deleteMany({ jobId: req.params.jobId });
     res.status(200).json({ success: true, message: `Deleted ${result.deletedCount} questions` });

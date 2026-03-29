@@ -51,7 +51,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const logout = useCallback(() => {
-    const isEmployee = user && ['admin', 'interviewer'].includes(user.role);
+    const isEmployee = user && user.role === 'admin';
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);

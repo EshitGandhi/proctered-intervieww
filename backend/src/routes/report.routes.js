@@ -11,10 +11,10 @@ const upload = multer({ dest: os.tmpdir() }); // Use system temp for extraction
 router.get('/', protect, getReports);
 
 // POST /api/reports/manual (Upload TXT/DOCX)
-router.post('/manual', protect, requireRole('admin', 'interviewer'), upload.single('file'), createManualReport);
+router.post('/manual', protect, requireRole('admin'), upload.single('file'), createManualReport);
 
 // POST /api/reports/download-direct (Instant generation)
-router.post('/download-direct', protect, requireRole('admin', 'interviewer'), upload.single('file'), downloadReportDirect);
+router.post('/download-direct', protect, requireRole('admin'), upload.single('file'), downloadReportDirect);
 
 // GET /api/reports/:id/download
 router.get('/:id/download', protect, downloadReport);
