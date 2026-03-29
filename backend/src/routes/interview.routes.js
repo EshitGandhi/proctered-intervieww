@@ -1,6 +1,7 @@
 const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const Interview = require('../models/Interview');
+const Application = require('../models/Application');
 const { protect, requireRole } = require('../middleware/auth.middleware');
 
 const router = express.Router();
@@ -66,11 +67,22 @@ router.patch('/:id/start', protect, requireRole('interviewer', 'admin'), async (
 
 // PATCH /api/interviews/:id/end
 router.patch('/:id/end', protect, requireRole('interviewer', 'admin'), async (req, res) => {
-  const interview = await Interview.findByIdAndUpdate(
-    req.params.id, { status: 'completed', endedAt: new Date() }, { new: true }
-  );
-  if (!interview) return res.status(404).json({ success: false, message: 'Interview not found' });
-  res.json({ success: true, data: interview });
+  try {
+    const interview = await Interview.findByIdAndUpdate(
+      req.params.id, { status: 'completed', endedAt: new Date() }, { new: true }
+    );
+    if (!interview) return res.status(404).json({ success: false, message: 'Interview not found' });
+
+    // Also update the linked Application status to 'interview_completed'
+    await Application.findOneAndUpdate(
+      { 'scores.interview.interviewId': req.params.id, status: 'interview_scheduled' },
+      { status: 'interview_completed' }
+    );
+
+    res.json({ success: true, data: interview });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
 });
 
 // PATCH /api/interviews/:id/reschedule
