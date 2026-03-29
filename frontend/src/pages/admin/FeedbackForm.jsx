@@ -26,6 +26,16 @@ const FeedbackForm = () => {
       try {
         const { data } = await api.get(`/interviews/${interviewId}/feedback-context`);
         setContext(data.data);
+        
+        // If feedback already exists, pre-fill it
+        if (data.data.existingFeedback) {
+          const ef = data.data.existingFeedback;
+          setCommunication(ef.communication);
+          const tr = {};
+          ef.technicalSkills.forEach(s => { tr[s.skill] = s.rating; });
+          setTechRatings(tr);
+          setImprovementFeedback(ef.improvementFeedback);
+        }
       } catch (err) {
         setError(err.response?.data?.message || 'Failed to load interview context');
       } finally {
@@ -82,17 +92,19 @@ const FeedbackForm = () => {
         <label 
           key={opt} 
           style={{ 
-            padding: '8px 16px', 
+            padding: '8px 18px', 
             borderRadius: '20px', 
-            border: `1px solid ${value === opt ? 'var(--primary)' : 'var(--border)'}`,
-            background: value === opt ? 'var(--primary-glow)' : 'transparent',
-            color: value === opt ? '#fff' : 'var(--text-secondary)',
+            border: `1px solid ${value === opt ? '#2563eb' : 'var(--border)'}`,
+            background: value === opt ? '#2563eb' : 'transparent',
+            color: value === opt ? '#ffffff' : 'var(--text-secondary)',
             cursor: 'pointer',
             fontSize: '0.85rem',
+            fontWeight: value === opt ? 600 : 400,
             userSelect: 'none',
             display: 'flex',
             alignItems: 'center',
-            gap: '6px'
+            gap: '6px',
+            transition: 'all 0.2s'
           }}
         >
           <input 

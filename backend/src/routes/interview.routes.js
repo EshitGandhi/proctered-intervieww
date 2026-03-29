@@ -62,12 +62,15 @@ router.get('/:id/feedback-context', protect, requireRole('admin'), async (req, r
       return res.status(404).json({ success: false, message: 'Application linked to this interview not found' });
     }
 
+    const existingFeedback = await Feedback.findOne({ interview: interview._id });
+
     res.json({
       success: true,
       data: {
         interview,
         job: application.jobId,
         candidate: interview.candidate,
+        existingFeedback,
       }
     });
   } catch (error) {
@@ -86,21 +89,28 @@ router.post('/:id/feedback', protect, requireRole('admin'), async (req, res) => 
 
     const interviewId = req.params.id;
 
-    const existingFeedback = await Feedback.findOne({ interview: interviewId });
-    if (existingFeedback) {
-      return res.status(400).json({ success: false, message: 'Feedback already submitted for this interview.' });
-    }
+    let feedback = await Feedback.findOne({ interview: interviewId });
 
-    const feedback = await Feedback.create({
-      interview: interviewId,
-      candidate: candidateId,
-      job: jobId,
-      interviewer: req.user._id,
-      communication,
-      technicalSkills,
-      improvementFeedback,
-      recommendation,
-    });
+    if (feedback) {
+      // Update existing
+      feedback.communication = communication;
+      feedback.technicalSkills = technicalSkills;
+      feedback.improvementFeedback = improvementFeedback;
+      feedback.recommendation = recommendation;
+      await feedback.save();
+    } else {
+      // Create new
+      feedback = await Feedback.create({
+        interview: interviewId,
+        candidate: candidateId,
+        job: jobId,
+        interviewer: req.user._id,
+        communication,
+        technicalSkills,
+        improvementFeedback,
+        recommendation,
+      });
+    }
 
     // Calculate score (out of 100) with 80% Tech and 20% Comm weightage
     const scoreMap = { 'Poor': 25, 'Good': 50, 'Best': 75, 'Excellent': 100 };
