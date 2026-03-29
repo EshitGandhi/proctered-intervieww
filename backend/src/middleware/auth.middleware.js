@@ -37,4 +37,17 @@ const requireRole = (...roles) => (req, res, next) => {
   next();
 };
 
-module.exports = { protect, requireRole };
+/**
+ * Verify secret key for administrative actions (e.g., employee registration).
+ */
+const verifyAdminKey = (req, res, next) => {
+  const adminKey = req.body.adminKey;
+  const secret = process.env.ADMIN_REGISTRATION_KEY || 'FALLBACK_SECRET_CHANGE_ME';
+  
+  if (!adminKey || adminKey !== secret) {
+    return res.status(403).json({ success: false, message: 'Invalid Admin Registration Key' });
+  }
+  next();
+};
+
+module.exports = { protect, requireRole, verifyAdminKey };

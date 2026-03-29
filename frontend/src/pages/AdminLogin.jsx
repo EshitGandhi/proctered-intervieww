@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import api from '../services/api';
 
 const AdminLogin = () => {
   const [mode, setMode] = useState('login'); // 'login' | 'register'
@@ -28,6 +29,20 @@ const AdminLogin = () => {
       }
     }
   }, [user, navigate]);
+
+  const handleVerifyKey = async () => {
+    if (!form.adminKey) return setError('Please enter a key');
+    setLoading(true);
+    setError('');
+    try {
+      await api.post('/auth/verify-key', { adminKey: form.adminKey });
+      setShowRegFields(true);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Invalid secret key');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -117,9 +132,10 @@ const AdminLogin = () => {
                      <button 
                        type="button" 
                        className="btn btn-secondary btn-sm"
-                       onClick={() => form.adminKey ? setShowRegFields(true) : setError('Please enter a key')}
+                       onClick={handleVerifyKey}
+                       disabled={loading}
                      >
-                       Verify
+                       {loading ? '...' : 'Verify'}
                      </button>
                   )}
                 </div>

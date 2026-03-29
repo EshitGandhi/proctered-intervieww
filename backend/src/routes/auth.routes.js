@@ -1,7 +1,7 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const { protect } = require('../middleware/auth.middleware');
+const { protect, verifyAdminKey } = require('../middleware/auth.middleware');
 
 const router = express.Router();
 
@@ -9,6 +9,11 @@ const signToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN || '7d',
   });
+
+// POST /api/auth/verify-key
+router.post('/verify-key', verifyAdminKey, (req, res) => {
+  res.json({ success: true, message: 'Key verified' });
+});
 
 // POST /api/auth/register
 router.post('/register', async (req, res, next) => {
