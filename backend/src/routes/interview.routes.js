@@ -49,84 +49,6 @@ router.get('/room/:roomId', protect, async (req, res, next) => {
   }
 });
 
-// GET /api/interviews/:id
-router.get('/:id', protect, async (req, res) => {
-  const interview = await Interview.findById(req.params.id)
-    .populate('interviewer', 'name email')
-    .populate('candidate', 'name email');
-  if (!interview) return res.status(404).json({ success: false, message: 'Interview not found' });
-  res.json({ success: true, data: interview });
-});
-
-// PATCH /api/interviews/:id/start
-router.patch('/:id/start', protect, requireRole('admin'), async (req, res) => {
-  const interview = await Interview.findByIdAndUpdate(
-    req.params.id, { status: 'active', startedAt: new Date() }, { new: true }
-  );
-  if (!interview) return res.status(404).json({ success: false, message: 'Interview not found' });
-  res.json({ success: true, data: interview });
-});
-
-// PATCH /api/interviews/:id/end
-router.patch('/:id/end', protect, requireRole('admin'), async (req, res) => {
-  try {
-    const interview = await Interview.findByIdAndUpdate(
-      req.params.id, { status: 'completed', endedAt: new Date() }, { new: true }
-    );
-    if (!interview) return res.status(404).json({ success: false, message: 'Interview not found' });
-
-    // Also update the linked Application status to 'interview_completed'
-    await Application.findOneAndUpdate(
-      { 'scores.interview.interviewId': req.params.id, status: 'interview_scheduled' },
-      { status: 'interview_completed' }
-    );
-
-    res.json({ success: true, data: interview });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// PATCH /api/interviews/:id/reschedule
-router.patch('/:id/reschedule', protect, requireRole('admin'), async (req, res) => {
-  try {
-    const interview = await Interview.findByIdAndUpdate(
-      req.params.id,
-      {
-        status: 'scheduled',
-        scheduledAt: req.body.scheduledAt || new Date(),
-        startedAt: null,
-        endedAt: null
-      },
-      { new: true }
-    );
-    if (!interview) return res.status(404).json({ success: false, message: 'Interview not found' });
-
-    // Ensure the linked Application status returns to 'interview_scheduled'
-    await Application.findOneAndUpdate(
-      { 'scores.interview.interviewId': req.params.id },
-      { status: 'interview_scheduled' }
-    );
-
-    res.json({ success: true, data: interview });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// PATCH /api/interviews/:id
-router.patch('/:id', protect, requireRole('admin'), async (req, res) => {
-  const interview = await Interview.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
-  if (!interview) return res.status(404).json({ success: false, message: 'Interview not found' });
-  res.json({ success: true, data: interview });
-});
-
-// DELETE /api/interviews/:id
-router.delete('/:id', protect, requireRole('admin'), async (req, res) => {
-  await Interview.findByIdAndDelete(req.params.id);
-  res.json({ success: true, message: 'Interview deleted' });
-});
-
 // GET /api/interviews/:id/feedback-context
 router.get('/:id/feedback-context', protect, requireRole('admin'), async (req, res) => {
   try {
@@ -218,6 +140,84 @@ router.post('/:id/feedback', protect, requireRole('admin'), async (req, res) => 
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
+});
+
+// GET /api/interviews/:id
+router.get('/:id', protect, async (req, res) => {
+  const interview = await Interview.findById(req.params.id)
+    .populate('interviewer', 'name email')
+    .populate('candidate', 'name email');
+  if (!interview) return res.status(404).json({ success: false, message: 'Interview not found' });
+  res.json({ success: true, data: interview });
+});
+
+// PATCH /api/interviews/:id/start
+router.patch('/:id/start', protect, requireRole('admin'), async (req, res) => {
+  const interview = await Interview.findByIdAndUpdate(
+    req.params.id, { status: 'active', startedAt: new Date() }, { new: true }
+  );
+  if (!interview) return res.status(404).json({ success: false, message: 'Interview not found' });
+  res.json({ success: true, data: interview });
+});
+
+// PATCH /api/interviews/:id/end
+router.patch('/:id/end', protect, requireRole('admin'), async (req, res) => {
+  try {
+    const interview = await Interview.findByIdAndUpdate(
+      req.params.id, { status: 'completed', endedAt: new Date() }, { new: true }
+    );
+    if (!interview) return res.status(404).json({ success: false, message: 'Interview not found' });
+
+    // Also update the linked Application status to 'interview_completed'
+    await Application.findOneAndUpdate(
+      { 'scores.interview.interviewId': req.params.id, status: 'interview_scheduled' },
+      { status: 'interview_completed' }
+    );
+
+    res.json({ success: true, data: interview });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// PATCH /api/interviews/:id/reschedule
+router.patch('/:id/reschedule', protect, requireRole('admin'), async (req, res) => {
+  try {
+    const interview = await Interview.findByIdAndUpdate(
+      req.params.id,
+      {
+        status: 'scheduled',
+        scheduledAt: req.body.scheduledAt || new Date(),
+        startedAt: null,
+        endedAt: null
+      },
+      { new: true }
+    );
+    if (!interview) return res.status(404).json({ success: false, message: 'Interview not found' });
+
+    // Ensure the linked Application status returns to 'interview_scheduled'
+    await Application.findOneAndUpdate(
+      { 'scores.interview.interviewId': req.params.id },
+      { status: 'interview_scheduled' }
+    );
+
+    res.json({ success: true, data: interview });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// PATCH /api/interviews/:id
+router.patch('/:id', protect, requireRole('admin'), async (req, res) => {
+  const interview = await Interview.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+  if (!interview) return res.status(404).json({ success: false, message: 'Interview not found' });
+  res.json({ success: true, data: interview });
+});
+
+// DELETE /api/interviews/:id
+router.delete('/:id', protect, requireRole('admin'), async (req, res) => {
+  await Interview.findByIdAndDelete(req.params.id);
+  res.json({ success: true, message: 'Interview deleted' });
 });
 
 module.exports = router;
