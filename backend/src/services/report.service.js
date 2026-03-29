@@ -211,26 +211,6 @@ const buildPDFWithKit = (doc, { candidateName, candidateEmail, title, date, eval
 
   let y = 165;
 
-  // ─── DECISION BOX (Hiden if no decision) ──────────────────────────────────
-  if (recommendation.decision && recommendation.decision !== 'string') {
-    const decision   = recommendation.decision;
-    const riskLevel  = recommendation.risk_level || 'Normal';
-
-    doc.rect(margin, y, inner - 100, 68).fill(LIGHT);
-    doc.rect(margin, y, 5, 68).fill(BLUE);
-
-    doc.fontSize(8).font('Helvetica').fillColor(MUTED)
-       .text('INTERVIEWER DECISION', margin + 14, y + 10);
-    doc.fontSize(17).font('Helvetica-Bold').fillColor(BLUE)
-       .text(decision, margin + 14, y + 23);
-    doc.fontSize(8).font('Helvetica').fillColor(MUTED)
-       .text(`Risk: ${riskLevel}`, margin + 14, y + 50);
-
-    y += 88;
-  } else {
-    y += 20; // Small pad if hidden
-  }
-
   // ─── SECTION: PERFORMANCE METRICS ─────────────────────────────────────────
   doc.fontSize(13).font('Helvetica-Bold').fillColor(DARK).text('Performance Metrics', margin, y);
   doc.moveTo(margin, y + 18).lineTo(margin + inner, y + 18).stroke(BORDER);
