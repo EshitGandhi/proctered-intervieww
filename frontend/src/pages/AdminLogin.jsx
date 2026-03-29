@@ -3,10 +3,19 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const AdminLogin = () => {
-  const [form, setForm] = useState({ email: '', password: '' });
+  const [mode, setMode] = useState('login'); // 'login' | 'register'
+  const [form, setForm] = useState({ 
+    name: '', 
+    email: '', 
+    password: '', 
+    role: 'interviewer',
+    adminKey: '' 
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const { login, user } = useAuth();
+  const [showRegFields, setShowRegFields] = useState(false);
+  
+  const { login, register, user } = useAuth();
   const navigate = useNavigate();
 
   // Redirect if already logged in
@@ -25,18 +34,41 @@ const AdminLogin = () => {
     setError('');
     setLoading(true);
     try {
-      const u = await login(form.email, form.password);
-      // Valid roles for this portal
-      if (['admin', 'interviewer'].includes(u.role)) {
-          navigate('/admin');
+      if (mode === 'login') {
+        const u = await login(form.email, form.password);
+        if (['admin', 'interviewer'].includes(u.role)) {
+            navigate('/admin');
+        } else {
+            navigate('/dashboard');
+        }
       } else {
-          navigate('/dashboard');
+        // Register mode
+        const u = await register(form.name, form.email, form.password, form.role, form.adminKey);
+        navigate('/admin');
       }
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'An error occurred');
     } finally {
       setLoading(false);
     }
+  };
+
+  const toggleMode = () => {
+    setMode(mode === 'login' ? 'register' : 'login');
+    setError('');
+    setShowRegFields(false);
+  };
+
+  const inputStyle = {
+    width: '100%', padding: '11px 14px', borderRadius: 9,
+    border: '1px solid var(--border)', background: 'var(--bg-secondary)',
+    color: 'var(--text-primary)', fontSize: '0.9rem',
+    outline: 'none', boxSizing: 'border-box',
+  };
+
+  const labelStyle = {
+    fontWeight: 600, fontSize: '0.8rem', display: 'block',
+    marginBottom: 6, color: 'var(--text-secondary)',
   };
 
   return (
@@ -46,14 +78,16 @@ const AdminLogin = () => {
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <div style={{
             width: 60, height: 60, borderRadius: 16,
-            background: 'linear-gradient(135deg, #10b981, #059669)',
+            background: mode === 'login' ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #3b82f6, #2563eb)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: 28, margin: '0 auto 16px',
             color: 'white',
-          }}>🛡️</div>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: 4 }}>Employee Portal</h1>
+          }}>{mode === 'login' ? '🛡️' : '📝'}</div>
+          <h1 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: 4 }}>
+            {mode === 'login' ? 'Employee Portal' : 'Employee Registration'}
+          </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-            Sign in to access your administrative tools.
+            {mode === 'login' ? 'Sign in to access your administrative tools.' : 'Create your administrative account.'}
           </p>
         </div>
 
@@ -64,40 +98,134 @@ const AdminLogin = () => {
         )}
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div className="form-group">
-            <label className="label">Work Email</label>
-            <input
-              className="input"
-              type="email"
-              placeholder="you@company.com"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              required
-              autoComplete="email"
-            />
-          </div>
+          
+          {mode === 'register' && (
+            <>
+              <div className="form-group">
+                <label className="label" style={labelStyle}>Secret Admin Key</label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input
+                    className="input"
+                    type="password"
+                    style={{...inputStyle, flex: 1}}
+                    placeholder="Enter security key to unlock"
+                    value={form.adminKey}
+                    onChange={(e) => setForm({ ...form, adminKey: e.target.value })}
+                    required
+                  />
+                  {!showRegFields && (
+                     <button 
+                       type="button" 
+                       className="btn btn-secondary btn-sm"
+                       onClick={() => form.adminKey ? setShowRegFields(true) : setError('Please enter a key')}
+                     >
+                       Verify
+                     </button>
+                  )}
+                </div>
+                <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 4 }}>
+                  Registration requires a pre-shared security key.
+                </p>
+              </div>
 
-          <div className="form-group">
-            <label className="label">Password</label>
-            <input
-              className="input"
-              type="password"
-              placeholder="••••••••"
-              value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
-              required
-              minLength={6}
-              autoComplete="current-password"
-            />
-          </div>
+              {showRegFields && (
+                <>
+                  <div className="form-group">
+                    <label className="label" style={labelStyle}>Full Name</label>
+                    <input
+                      className="input"
+                      style={inputStyle}
+                      type="text"
+                      placeholder="Your name"
+                      value={form.name}
+                      onChange={(e) => setForm({ ...form, name: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="label" style={labelStyle}>Desired Role</label>
+                    <select
+                      className="input"
+                      style={inputStyle}
+                      value={form.role}
+                      onChange={(e) => setForm({ ...form, role: e.target.value })}
+                      required
+                    >
+                      <option value="interviewer">Interviewer</option>
+                      <option value="admin">Administrator</option>
+                    </select>
+                  </div>
+                </>
+              )}
+            </>
+          )}
 
-          <button className="btn btn-primary btn-lg w-full" type="submit" disabled={loading} style={{ marginTop: 8, background: '#059669' }}>
-            {loading ? '⟳ Please wait…' : 'Sign In as Admin'}
+          {(mode === 'login' || showRegFields) && (
+            <>
+              <div className="form-group">
+                <label className="label" style={labelStyle}>{mode === 'login' ? 'Work Email' : 'Email Address'}</label>
+                <input
+                  className="input"
+                  style={inputStyle}
+                  type="email"
+                  placeholder="you@company.com"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  required
+                  autoComplete="email"
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="label" style={labelStyle}>Password</label>
+                <input
+                  className="input"
+                  style={inputStyle}
+                  type="password"
+                  placeholder="••••••••"
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  required
+                  minLength={6}
+                  autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                />
+              </div>
+            </>
+          )}
+
+          <button 
+            className="btn btn-primary btn-lg w-full" 
+            type="submit" 
+            disabled={loading || (mode === 'register' && !showRegFields)} 
+            style={{ 
+              marginTop: 8, 
+              background: mode === 'login' ? '#059669' : '#2563eb',
+              border: 'none'
+            }}
+          >
+            {loading ? '⟳ Please wait…' : mode === 'login' ? 'Sign In as Admin' : 'Complete Registration'}
           </button>
         </form>
 
-        <p style={{ textAlign: 'center', marginTop: 24, fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-          To request interviewer access or reset password, please contact IT Support.
+        <p style={{ textAlign: 'center', marginTop: 24, fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+          {mode === 'login' ? (
+            <>
+              New employee?{' '}
+              <button 
+                onClick={toggleMode}
+                style={{ background: 'none', border: 'none', color: '#059669', cursor: 'pointer', fontWeight: 600 }}
+              >
+                Register here
+              </button>
+            </>
+          ) : (
+            <button 
+              onClick={toggleMode}
+              style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', fontWeight: 600 }}
+            >
+              ← Back to Login
+            </button>
+          )}
         </p>
 
         <div style={{ textAlign: 'center', marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
