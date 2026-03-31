@@ -31,17 +31,30 @@ const CandidateRoom = () => {
 
   // Fetch interview details
   useEffect(() => {
+    let timeoutId;
+    
     const fetchInterview = async () => {
       try {
         const { data } = await api.get(`/interviews/room/${roomId}`);
         setInterview(data.data);
-      } catch (err) {
-        setError(err.response?.data?.message || 'Interview room not found or access denied.');
-      } finally {
+        setError(''); // Clear error if we succeed
         setJoining(false);
+      } catch (err) {
+        const errMsg = err.response?.data?.message || 'Interview room not found.';
+        setError(errMsg);
+        
+        // If it's a 403 (not active yet), poll every 5 seconds
+        if (err.response?.status === 403) {
+          timeoutId = setTimeout(fetchInterview, 5000);
+        } else {
+          setJoining(false);
+        }
       }
     };
+
     if (roomId) fetchInterview();
+    
+    return () => clearTimeout(timeoutId);
   }, [roomId]);
 
   // WebRTC
@@ -125,6 +138,21 @@ const CandidateRoom = () => {
         <p style={{ color: 'var(--text-secondary)' }}>
           {isEnding ? 'Saving session recordings...' : 'Joining interview room…'}
         </p>
+      </div>
+    );
+  }
+
+  if (!interview && error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center flex-col gap-4" style={{ background: 'var(--bg-primary)', textAlign: 'center', padding: 20 }}>
+        <div style={{ fontSize: 48, marginBottom: 16 }}>⏳</div>
+        <h2 style={{ color: 'var(--text-primary)', marginBottom: 8 }}>Waiting for Interviewer</h2>
+        <p style={{ color: 'var(--text-secondary)', maxWidth: 400 }}>
+          {error}
+        </p>
+        <div style={{ marginTop: 24, padding: '12px 24px', background: 'rgba(37,99,235,0.1)', color: 'var(--accent-primary)', borderRadius: 8, fontSize: '0.9rem', fontWeight: 600 }}>
+          This page will automatically connect once the session starts.
+        </div>
       </div>
     );
   }
