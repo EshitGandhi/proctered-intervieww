@@ -170,7 +170,7 @@ exports.getAdminAllApplications = async (req, res) => {
 
     let apps = await Application.find(filter)
       .populate('candidateId', 'name email avatar')
-      .populate('jobId', 'title domain')
+      .populate('jobId', 'title domain mcqDuration codingDuration')
       .populate('scores.interview.interviewId', 'roomId status')
       .sort('-createdAt');
 

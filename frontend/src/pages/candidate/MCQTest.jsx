@@ -40,11 +40,21 @@ const MCQTest = () => {
 
   // Timer
   useEffect(() => {
-    if (loading || result || error || questions.length === 0) return;
-    if (timeLeft <= 0) { handleSubmit(); return; }
-    const t = setInterval(() => setTimeLeft(s => s - 1), 1000);
-    return () => clearInterval(t);
-  }, [timeLeft, loading, result, error, questions.length]);
+    if (loading || result || error || questions.length === 0 || timeLeft === null) return;
+    
+    const interval = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          handleSubmit();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, [loading, result, error, questions.length, timeLeft === null]);
 
   const handleSelect = (qId, option) => setAnswers(prev => ({ ...prev, [qId]: option }));
 

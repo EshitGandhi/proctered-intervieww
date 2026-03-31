@@ -29,16 +29,13 @@ const Sidebar = () => {
   return (
     <aside style={{
       width: 260,
-      height: '100vh',
-      position: 'sticky',
-      top: 0,
+      minHeight: '100vh',
       background: 'var(--bg-secondary)',
       borderRight: '1px solid var(--border)',
       display: 'flex',
       flexDirection: 'column',
       padding: '0',
       flexShrink: 0,
-      zIndex: 100,
     }}>
       {/* Unified Brand + User Info block */}
       <div style={{
@@ -64,7 +61,7 @@ const Sidebar = () => {
       </div>
 
       {/* Nav links */}
-      <nav style={{ padding: '24px 0', flex: 1, overflowY: 'auto' }}>
+      <nav style={{ padding: '24px 0', flex: 1 }}>
         {navLinks.map(link => {
           const isActive = location.pathname === link.path;
           return (

@@ -81,16 +81,21 @@ const CodeEvalRound = () => {
 
   // Timer Effect
   useEffect(() => {
-    if (timeLeft === null || result) return;
-    if (timeLeft <= 0) {
-      handleFinishTest(true); // Auto-submit on timeout
-      return;
-    }
-    timerRef.current = setInterval(() => {
-      setTimeLeft(prev => prev - 1);
+    if (loading || result || timeLeft === null) return;
+    
+    const interval = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          handleFinishTest(true);
+          return 0;
+        }
+        return prev - 1;
+      });
     }, 1000);
-    return () => clearInterval(timerRef.current);
-  }, [timeLeft, result]);
+    
+    return () => clearInterval(interval);
+  }, [loading, result, timeLeft === null]);
 
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -102,33 +107,37 @@ const CodeEvalRound = () => {
 
   const handleRunCode = async (idx) => {
     const q = qState[idx];
-    if (q.submitted) return; // shouldn't happen but defensive
+    if (q.submitted) return;
     const question = questions[idx];
     updateQ(idx, { running: true, runResult: null });
     try {
-      // Run against all visible (non-hidden) test cases
-      const visibleTCs = question.testCases.filter(tc => !tc.isHidden);
-      if (visibleTCs.length === 0) {
-        // Just run with empty stdin
-        const { data } = await api.post('/code/run', { questionId: question._id, language: q.language, sourceCode: q.code, stdin: '' });
-        updateQ(idx, { running: false, runResult: { type: 'single', result: data.data } });
-        return;
+      const { data } = await api.post('/code/run-with-tests', {
+        questionId: question._id,
+        language: q.language,
+        sourceCode: q.code,
+      });
+
+      const { results, firstError } = data.data;
+
+      if (firstError && !results.some(r => r.passed)) {
+        updateQ(idx, {
+          running: false,
+          runResult: {
+            type: 'error_with_results',
+            results,
+            errorType: firstError.errorType,
+            errorMsg: firstError.errorMsg,
+          }
+        });
+      } else {
+        updateQ(idx, { running: false, runResult: { type: 'testcases', results } });
       }
-      // Run against each visible test case
-      const results = await Promise.all(visibleTCs.map(tc =>
-        api.post('/code/run', { questionId: question._id, language: q.language, sourceCode: q.code, stdin: tc.input }).then(r => ({
-          input: tc.input,
-          expected: tc.expectedOutput,
-          actual: (r.data.data.stdout || '').trim(),
-          passed: (r.data.data.stdout || '').trim() === (tc.expectedOutput || '').trim(),
-          stderr: r.data.data.stderr,
-        }))
-      ));
-      updateQ(idx, { running: false, runResult: { type: 'testcases', results } });
     } catch (e) {
-      updateQ(idx, { running: false, runResult: { type: 'error', message: e.response?.data?.message || e.response?.data?.error || e.message } });
+      const errMsg = e.response?.data?.message || e.message || 'Execution failed';
+      updateQ(idx, { running: false, runResult: { type: 'error', message: errMsg } });
     }
   };
+
 
   const handleSubmitQuestion = async (idx) => {
     const q = qState[idx];
@@ -313,10 +322,10 @@ const CodeEvalRound = () => {
             </div>
           )}
 
-          {currentQ.testCases?.length > 0 && (
+          {currentQ.testCases?.filter(tc => !tc.isHidden).length > 0 && (
             <div>
               <div style={{ fontWeight: 700, fontSize: '0.8rem', marginBottom: 10, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Examples</div>
-              {currentQ.testCases.map((tc, i) => (
+              {currentQ.testCases.filter(tc => !tc.isHidden).map((tc, i) => (
                 <div key={i} style={{ background: 'var(--bg-secondary)', borderRadius: 8, padding: '10px 14px', marginBottom: 10, fontSize: '0.85rem' }}>
                   <div style={{ marginBottom: 6 }}><span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Input:</span>
                     <pre style={{ margin: '4px 0 0', fontFamily: 'monospace', whiteSpace: 'pre-wrap', color: 'var(--text-primary)' }}>{tc.input}</pre>
@@ -370,9 +379,10 @@ const CodeEvalRound = () => {
             )}
           </div>
 
-          {/* Monaco Editor */}
+          {/* Monaco Editor — key=activeQ forces full re-mount on question switch */}
           <div style={{ flex: 1, overflow: 'hidden' }}>
             <Editor
+              key={`editor-${activeQ}-${currentQState.language}`}
               height="100%"
               theme="light"
               language={LANGUAGES.find(l => l.id === currentQState.language)?.monacoLang || 'python'}
@@ -389,26 +399,61 @@ const CodeEvalRound = () => {
 
           {/* Run Results */}
           {currentQState.runResult && (
-            <div style={{ maxHeight: 200, overflow: 'auto', borderTop: '1px solid var(--border)', flexShrink: 0 }}>
-              {currentQState.runResult.type === 'testcases' ? (
-                <div style={{ padding: 12 }}>
+            <div style={{ maxHeight: 240, overflow: 'auto', borderTop: '1px solid var(--border)', flexShrink: 0, background: 'var(--bg-primary)' }}>
+
+              {/* ── Compiler / Runtime Error Banner ─────────────────────────── */}
+              {(currentQState.runResult.type === 'error' || currentQState.runResult.type === 'error_with_results') && (
+                <div style={{ margin: 10, padding: '10px 14px', borderRadius: 8, background: '#1c0202', border: '1px solid #ef4444' }}>
+                  <div style={{ fontWeight: 700, color: '#ef4444', fontSize: '0.78rem', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.05em' }}>
+                    ⚠ {currentQState.runResult.errorType || 'Execution Error'}
+                  </div>
+                  <pre style={{ margin: 0, fontFamily: 'monospace', fontSize: '0.78rem', whiteSpace: 'pre-wrap', color: '#fca5a5', lineHeight: 1.6 }}>
+                    {currentQState.runResult.message || currentQState.runResult.errorMsg || 'Unknown error occurred.'}
+                  </pre>
+                </div>
+              )}
+
+              {/* ── Test Case Results ───────────────────────────────────────── */}
+              {(currentQState.runResult.type === 'testcases' || currentQState.runResult.type === 'error_with_results') && (
+                <div style={{ padding: '8px 12px' }}>
                   {currentQState.runResult.results.map((r, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 8, fontSize: '0.8rem', padding: '6px 10px', background: r.passed ? '#10b98110' : '#ef444410', borderRadius: 6, border: `1px solid ${r.passed ? '#10b98130' : '#ef444430'}` }}>
-                      <span style={{ fontWeight: 700, color: r.passed ? '#10b981' : '#ef4444', flexShrink: 0 }}>{r.passed ? '✅' : '❌'} TC {i + 1}</span>
-                      <div>
-                        <div><span style={{ color: 'var(--text-muted)' }}>Input:</span> <code>{r.input.length > 40 ? r.input.slice(0, 40) + '…' : r.input}</code></div>
-                        <div><span style={{ color: 'var(--text-muted)' }}>Expected:</span> <code style={{ color: '#10b981' }}>{r.expected}</code> | <span style={{ color: 'var(--text-muted)' }}>Got:</span> <code style={{ color: r.passed ? '#10b981' : '#ef4444' }}>{r.actual || '(empty)'}</code></div>
-                        {r.stderr && <div style={{ color: '#ef4444', marginTop: 2 }}>{r.stderr.slice(0, 80)}</div>}
+                    r.hidden ? (
+                      // Hidden TC — show ONLY pass/fail, no input/output
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, fontSize: '0.8rem', padding: '6px 10px', background: r.passed ? '#10b98110' : '#ef444410', borderRadius: 6, border: `1px solid ${r.passed ? '#10b98130' : '#ef444430'}` }}>
+                        <span style={{ fontWeight: 700, color: r.passed ? '#10b981' : '#ef4444' }}>{r.passed ? '✅' : '❌'}</span>
+                        <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>Hidden Test Case {i + 1}</span>
+                        {r.errorType && !r.passed && <span style={{ fontSize: '0.72rem', color: '#f59e0b', marginLeft: 'auto' }}>{r.errorType}</span>}
                       </div>
-                    </div>
+                    ) : (
+                      // Visible TC — show full detail
+                      <div key={i} style={{ marginBottom: 8, fontSize: '0.8rem', padding: '8px 12px', background: r.passed ? '#10b98110' : '#ef444410', borderRadius: 6, border: `1px solid ${r.passed ? '#10b98130' : '#ef444430'}` }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                          <span style={{ fontWeight: 700, color: r.passed ? '#10b981' : '#ef4444' }}>{r.passed ? '✅' : '❌'} Test Case {i + 1}</span>
+                          {r.errorType && <span style={{ fontSize: '0.72rem', background: '#fef3c7', color: '#92400e', padding: '1px 6px', borderRadius: 4 }}>{r.errorType}</span>}
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                          <div><span style={{ color: 'var(--text-muted)', fontSize: '0.72rem', fontWeight: 600 }}>INPUT</span><pre style={{ margin: '2px 0 0', fontFamily: 'monospace', whiteSpace: 'pre-wrap', color: 'var(--text-primary)', fontSize: '0.78rem' }}>{r.input || '(none)'}</pre></div>
+                          <div><span style={{ color: 'var(--text-muted)', fontSize: '0.72rem', fontWeight: 600 }}>EXPECTED</span><pre style={{ margin: '2px 0 0', fontFamily: 'monospace', whiteSpace: 'pre-wrap', color: '#10b981', fontSize: '0.78rem' }}>{r.expected}</pre></div>
+                        </div>
+                        {!r.passed && r.actual !== undefined && (
+                          <div style={{ marginTop: 6 }}><span style={{ color: 'var(--text-muted)', fontSize: '0.72rem', fontWeight: 600 }}>YOUR OUTPUT</span><pre style={{ margin: '2px 0 0', fontFamily: 'monospace', whiteSpace: 'pre-wrap', color: '#ef4444', fontSize: '0.78rem' }}>{r.actual || '(no output)'}</pre></div>
+                        )}
+                        {r.stderr && !r.errorType && (
+                          <div style={{ marginTop: 6, color: '#f59e0b', fontSize: '0.72rem' }}>stderr: {r.stderr.slice(0, 120)}</div>
+                        )}
+                      </div>
+                    )
                   ))}
                 </div>
-              ) : currentQState.runResult.type === 'single' ? (
+              )}
+
+              {/* ── Single run (no test cases) ──────────────────────────────── */}
+              {currentQState.runResult.type === 'single' && (
                 <div style={{ padding: 12 }}>
-                  <pre style={{ margin: 0, fontFamily: 'monospace', fontSize: '0.8rem', whiteSpace: 'pre-wrap' }}>{currentQState.runResult.result.stdout || currentQState.runResult.result.stderr || '(no output)'}</pre>
+                  <pre style={{ margin: 0, fontFamily: 'monospace', fontSize: '0.8rem', whiteSpace: 'pre-wrap', color: 'var(--text-primary)' }}>
+                    {currentQState.runResult.result.stdout || currentQState.runResult.result.stderr || currentQState.runResult.result.compile_output || '(no output)'}
+                  </pre>
                 </div>
-              ) : (
-                <div style={{ padding: 12, color: '#ef4444', fontSize: '0.8rem' }}>{currentQState.runResult.message}</div>
               )}
             </div>
           )}

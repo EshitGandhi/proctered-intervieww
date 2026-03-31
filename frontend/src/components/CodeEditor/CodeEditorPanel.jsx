@@ -1,6 +1,6 @@
 import React from 'react';
 import Editor from '@monaco-editor/react';
-import useCodeExecution from '../../hooks/useCodeExecution';
+import useCodeExecution, { DEFAULT_CODE } from '../../hooks/useCodeExecution';
 
 const LANGUAGES = [
   { id: 'python', label: 'Python', monacoLang: 'python' },
@@ -29,6 +29,12 @@ const CodeEditorPanel = ({ interviewId, readOnly = false, onSubmit, socket, room
     activeTab, setActiveTab,
     runCode, submitCode,
   } = useCodeExecution({ interviewId, socket, roomId, readOnly });
+
+  const handleResetCode = () => {
+    if (readOnly) return;
+    const template = DEFAULT_CODE[language] || '// Start coding here\n';
+    setSourceCode(template);
+  };
 
   const currentLang = LANGUAGES.find((l) => l.id === language);
 
@@ -81,13 +87,22 @@ const CodeEditorPanel = ({ interviewId, readOnly = false, onSubmit, socket, room
             </select>
           )}
 
+          {!readOnly && (
+            <button
+              style={{ height: '24px', padding: '0 10px', fontSize: '11px', background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)', borderRadius: '4px', cursor: 'pointer' }}
+              onClick={handleResetCode}
+              title="Reset to default template"
+            >
+              ↺ Reset
+            </button>
+          )}
           <button 
             className="btn btn-primary" 
             style={{ height: '24px', padding: '0 12px', fontSize: '12px' }}
             onClick={runCode}
             disabled={running || submitting}
           >
-            {running ? '⟳' : '▶ Run'}
+            {running ? '⟳ Running…' : '▶ Run'}
           </button>
           {!readOnly && (
             <button 
@@ -171,14 +186,49 @@ const CodeEditorPanel = ({ interviewId, readOnly = false, onSubmit, socket, room
                 )}
                 {activeTab === 'output' && (
                   <div style={{ fontFamily: 'Fira Code, monospace', fontSize: '13px' }}>
+
+                    {/* ── Status badge ───────────────────────────────────── */}
                     {status && (
-                      <div style={{ marginBottom: 12, color: getStatusColor(), fontWeight: 700 }}>
-                        {status} {executionTime && `| Time: ${executionTime}s`}
+                      <div style={{ marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontWeight: 700, color: getStatusColor() }}>{status}</span>
+                        {executionTime && <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>⏱ {executionTime}s</span>}
                       </div>
                     )}
-                    {stdout && <pre style={{ color: '#15803d' }}>{stdout}</pre>}
-                    {stderr && <pre style={{ color: '#dc2626' }}>{stderr}</pre>}
-                    {!stdout && !stderr && <span style={{ color: 'var(--text-muted)' }}>Run your code to see results...</span>}
+
+                    {/* ── Compiler Error ─────────────────────────────────── */}
+                    {compileOutput && (
+                      <div style={{ marginBottom: 10, background: '#1c0202', border: '1px solid #ef4444', borderRadius: 6, padding: '8px 12px' }}>
+                        <div style={{ fontSize: '10px', fontWeight: 700, color: '#ef4444', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 4 }}>
+                          ⚠ Compiler Error
+                        </div>
+                        <pre style={{ margin: 0, whiteSpace: 'pre-wrap', color: '#fca5a5', fontSize: '12px', lineHeight: 1.6 }}>{compileOutput}</pre>
+                      </div>
+                    )}
+
+                    {/* ── Runtime Error ──────────────────────────────────── */}
+                    {!compileOutput && stderr && (
+                      <div style={{ marginBottom: 10, background: '#1c0a02', border: '1px solid #f59e0b', borderRadius: 6, padding: '8px 12px' }}>
+                        <div style={{ fontSize: '10px', fontWeight: 700, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 4 }}>
+                          ⚡ Runtime Error
+                        </div>
+                        <pre style={{ margin: 0, whiteSpace: 'pre-wrap', color: '#fde68a', fontSize: '12px', lineHeight: 1.6 }}>{stderr}</pre>
+                      </div>
+                    )}
+
+                    {/* ── stdout ─────────────────────────────────────────── */}
+                    {stdout && (
+                      <div style={{ background: '#011a0a', border: '1px solid #10b981', borderRadius: 6, padding: '8px 12px' }}>
+                        <div style={{ fontSize: '10px', fontWeight: 700, color: '#10b981', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 4 }}>
+                          ✓ Output
+                        </div>
+                        <pre style={{ margin: 0, whiteSpace: 'pre-wrap', color: '#6ee7b7', fontSize: '12px', lineHeight: 1.6 }}>{stdout}</pre>
+                      </div>
+                    )}
+
+                    {/* ── Empty state ────────────────────────────────────── */}
+                    {!stdout && !stderr && !compileOutput && !status && (
+                      <span style={{ color: 'var(--text-muted)' }}>Run your code to see results…</span>
+                    )}
                   </div>
                 )}
              </div>
