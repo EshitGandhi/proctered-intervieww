@@ -116,7 +116,7 @@ const MCQTest = () => {
       {/* Header Bar */}
       <div style={{
         maxWidth: 860, margin: '0 auto 24px',
-        background: 'var(--bg-surface)', border: '1px solid var(--border)',
+        background: 'var(--bg-card)', border: '1px solid var(--border)',
         borderRadius: 12, padding: '14px 24px',
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
       }}>
@@ -128,7 +128,7 @@ const MCQTest = () => {
         </div>
         <div style={{
           fontWeight: 800, fontSize: '1.4rem',
-          color: timeLeft < 60 ? '#ef4444' : timeLeft < 180 ? '#f59e0b' : 'var(--primary)',
+          color: timeLeft < 60 ? '#ef4444' : timeLeft < 180 ? '#f59e0b' : 'var(--accent-primary)',
           fontVariantNumeric: 'tabular-nums',
         }}>
           ⏱ {fmt(timeLeft)}
@@ -148,14 +148,14 @@ const MCQTest = () => {
               <label key={i} style={{
                 display: 'flex', alignItems: 'center', gap: 14,
                 padding: '14px 18px', borderRadius: 8, cursor: 'pointer',
-                border: `2px solid ${selected ? 'var(--primary)' : 'var(--border)'}`,
-                background: selected ? 'var(--primary-light)' : 'var(--bg-secondary)',
+                border: `2px solid ${selected ? 'var(--accent-primary)' : 'var(--border)'}`,
+                background: selected ? 'rgba(37, 99, 235, 0.08)' : 'var(--bg-secondary)',
                 transition: 'all 0.15s',
               }}>
                 <div style={{
                   width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
-                  border: `2px solid ${selected ? 'var(--primary)' : 'var(--border)'}`,
-                  background: selected ? 'var(--primary)' : 'transparent',
+                  border: `2px solid ${selected ? 'var(--accent-primary)' : 'var(--border)'}`,
+                  background: selected ? 'var(--accent-primary)' : 'transparent',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
                   {selected && <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'white' }} />}
@@ -179,9 +179,9 @@ const MCQTest = () => {
               width: 28, height: 28, borderRadius: '50%', cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: '0.7rem', fontWeight: 600,
-              background: answers[questions[i]._id] ? 'var(--primary)' : i === currentQ ? 'var(--bg-surface)' : 'var(--bg-secondary)',
+              background: answers[questions[i]._id] ? 'var(--accent-primary)' : i === currentQ ? 'var(--bg-card)' : 'var(--bg-secondary)',
               color: answers[questions[i]._id] ? 'white' : 'var(--text-primary)',
-              border: i === currentQ ? '2px solid var(--primary)' : '2px solid var(--border)',
+              border: i === currentQ ? '2px solid var(--accent-primary)' : '2px solid var(--border)',
             }}>{i + 1}</div>
           ))}
         </div>

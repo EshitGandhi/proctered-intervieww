@@ -129,7 +129,7 @@ exports.applyForJob = async (req, res) => {
       }
     });
 
-    const populated = await Application.findById(application._id).populate('jobId', 'title domain mcqThreshold codingThreshold resumeThreshold');
+    const populated = await Application.findById(application._id).populate('jobId', 'title domain mcqThreshold codingThreshold resumeThreshold mcqDuration codingDuration');
 
     res.status(201).json({
       success: true,
@@ -149,7 +149,7 @@ exports.applyForJob = async (req, res) => {
 exports.getMyApplications = async (req, res) => {
   try {
     const apps = await Application.find({ candidateId: req.user.id })
-      .populate('jobId', 'title domain resumeThreshold mcqThreshold codingThreshold resumeWeight mcqWeight codingWeight interviewWeight')
+      .populate('jobId', 'title domain resumeThreshold mcqThreshold codingThreshold resumeWeight mcqWeight codingWeight interviewWeight mcqDuration codingDuration')
       .populate('scores.interview.interviewId', 'roomId status scheduledAt')
       .sort('-createdAt');
     res.status(200).json({ success: true, count: apps.length, data: apps });
