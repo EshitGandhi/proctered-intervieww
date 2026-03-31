@@ -399,9 +399,9 @@ const generateFeedbackReport = async (feedback, interviewScoreStr, application) 
         interview_score: parseFloat(interviewScoreStr) || 0
       },
       recommendation: {
-        decision: feedback.recommendation,
+        decision: feedback.recommendation || 'Pending',
         risk_level: feedback.recommendation === 'Hire' ? 'Low' : 'High',
-        reason: `Based on the evaluation of technical skills and communication, the candidate is ${feedback.recommendation === 'Hire' ? 'recommended' : 'not recommended'} for the position at this stage.`
+        reason: feedback.improvementFeedback
       },
       analysis: {
         strengths: strengths.length ? strengths : ['Solid baseline skills'],
@@ -409,9 +409,7 @@ const generateFeedbackReport = async (feedback, interviewScoreStr, application) 
       },
       insights: {
         candidate_summary: 'Evaluation based on structured interviewer feedback covering technical and communication metrics.',
-        improvement_suggestions: [
-          feedback.improvementFeedback
-        ]
+        improvement_suggestions: []
       }
     };
 

@@ -182,16 +182,16 @@ const FeedbackForm = () => {
               )}
             </section>
 
-            {/* C. Candidate Improvement Feedback */}
+            {/* C. Interviewer Recommendation */}
             <section>
-               <h3 style={{ fontSize: '1.05rem', marginBottom: 16, color: 'var(--text-secondary)' }}>C. Summary Feedback</h3>
+               <h3 style={{ fontSize: '1.05rem', marginBottom: 16, color: 'var(--text-secondary)' }}>C. Interviewer Recommendation</h3>
                
                <div style={{ marginBottom: 16 }}>
-                 <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: 8 }}>Candidate Improvement Feedback</label>
+                 <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: 8 }}>Final Recommendation & Remarks</label>
                  <textarea
                     className="input"
                     style={{ width: '100%', minHeight: 120, resize: 'vertical' }}
-                    placeholder="Provide detailed feedback for candidate improvement..."
+                    placeholder="Provide your overall evaluation and recommendation for the candidate..."
                     value={improvementFeedback}
                     onChange={(e) => setImprovementFeedback(e.target.value)}
                     required
