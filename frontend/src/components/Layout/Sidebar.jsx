@@ -52,11 +52,15 @@ const Sidebar = () => {
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           color: 'var(--text-primary)', fontWeight: 700, fontSize: '1.2rem', flexShrink: 0,
         }}>
-          KL
+          {user?.name ? user.name.charAt(0).toUpperCase() : 'KL'}
         </div>
-        <div style={{ overflow: 'hidden' }}>
-          <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>KL Prarambh</div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Admin | Interviewer</div>
+        <div style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <div style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', title: user?.name }}>
+            {user?.name || 'KL Prarambh'}
+          </div>
+          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', title: user?.email }}>
+            {user?.email || (isAdmin ? 'Admin | Interviewer' : 'Candidate')}
+          </div>
         </div>
       </div>
 
