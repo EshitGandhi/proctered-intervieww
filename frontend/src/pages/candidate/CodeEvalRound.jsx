@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
 import api from '../../services/api';
-
+import useTabProctor from '../../hooks/useTabProctor';
 import { DEFAULT_CODE } from '../../hooks/useCodeExecution';
 
 const LANGUAGES = [
@@ -97,6 +97,33 @@ const CodeEvalRound = () => {
     return () => clearInterval(interval);
   }, [loading, result, timeLeft === null]);
 
+  // ─── Tab Proctoring ────────────────────────────────────────────────────────
+  const [proctorMsg,   setProctorMsg]   = useState(null);
+  const [proctorFinal, setProctorFinal] = useState(false);
+  const proctorMsgTimer = useRef(null);
+  const autoFinishRef   = useRef(null);
+
+  // Keep a stable ref to handleFinishTest so the proctor hook never goes stale
+  const handleFinishRef = useRef(null);
+
+  const { violationCount } = useTabProctor({
+    enabled: !loading && !result && !error && questions.length > 0,
+    maxViolations: 3,
+    onViolation: (count, max) => {
+      const isFinal = count >= max;
+      setProctorFinal(isFinal);
+      const msg = isFinal
+        ? `🚨 Violation ${count}/${max}: Auto-submitting coding round now…`
+        : `⚠️ Warning ${count}/${max}: Tab switching detected! ${max - count} more violation${max - count > 1 ? 's' : ''} will auto-submit.`;
+      setProctorMsg(msg);
+      if (!isFinal) {
+        if (proctorMsgTimer.current) clearTimeout(proctorMsgTimer.current);
+        proctorMsgTimer.current = setTimeout(() => setProctorMsg(null), 4000);
+      }
+    },
+    onAutoSubmit: () => handleFinishRef.current?.(true),
+  });
+
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -165,9 +192,9 @@ const CodeEvalRound = () => {
     const submittedCount = Object.values(qState).filter(q => q.submitted).length;
     if (!auto) {
       if (submittedCount < questions.length) {
-        if (!window.confirm(`You have only submitted ${submittedCount}/${questions.length} questions. Are you sure you want to finish the test? Unsubmitted questions will count as 0%.`)) return;
+        if (!window.confirm(`You have only submitted ${submittedCount}/${questions.length} questions. Unsubmitted questions will count as 0%. Continue?`)) return;
       } else {
-        if (!window.confirm('Are you sure you want to finalize your test and submit all results?')) return;
+        if (!window.confirm('Finalize your test and submit all results?')) return;
       }
     }
 
@@ -186,6 +213,9 @@ const CodeEvalRound = () => {
       setSubmitting(false);
     }
   };
+
+  // Keep stable ref in sync
+  useEffect(() => { handleFinishRef.current = handleFinishTest; });
 
   // ─── Loading ───────────────────────────────────────────────────────────────
   if (loading) return (
@@ -255,6 +285,21 @@ const CodeEvalRound = () => {
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)', overflow: 'hidden' }}>
 
+      {/* ── Proctoring Toast ─────────────────────────────────────────────── */}
+      {proctorMsg && (
+        <div style={{
+          position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)',
+          background: proctorFinal ? '#1c0a0a' : '#1e1b4b',
+          color: '#fff', borderRadius: 12, padding: '14px 28px',
+          border: `2px solid ${proctorFinal ? '#ef4444' : '#7c3aed'}`,
+          zIndex: 9999, fontSize: '0.9rem', fontWeight: 600,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+          maxWidth: 520, textAlign: 'center', pointerEvents: 'none',
+        }}>
+          {proctorMsg}
+        </div>
+      )}
+
       {/* Top bar */}
       <div style={{ flexShrink: 0, padding: '10px 20px', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -263,6 +308,11 @@ const CodeEvalRound = () => {
             <span style={{ fontSize: 16 }}>⏱</span> {formatTime(timeLeft)}
           </div>
           <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{questions.length} Question{questions.length !== 1 ? 's' : ''}</span>
+          {violationCount > 0 && (
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: violationCount >= 3 ? '#ef4444' : '#f59e0b', background: violationCount >= 3 ? '#fee2e2' : '#fef3c7', padding: '2px 8px', borderRadius: 20 }}>
+              ⚠ {violationCount}/3 violations
+            </span>
+          )}
         </div>
 
         {/* Question tabs */}
