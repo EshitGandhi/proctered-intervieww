@@ -15,6 +15,8 @@ const INITIAL_JOB_FORM = {
   mcqWeight: 20,
   codingWeight: 30,
   interviewWeight: 30,
+  mcqDuration: 30,     // Minutes for MCQ round
+  codingDuration: 60,  // Minutes for Coding round
   isActive: true,
 };
 
@@ -240,6 +242,18 @@ const JobManagement = () => {
                 <div className="form-group">
                   <label>Interview Wt</label>
                   <input className="input" type="number" min="0" max="100" value={form.interviewWeight} onChange={e => setForm({...form, interviewWeight: e.target.value})} />
+                </div>
+              </div>
+
+              <h3 style={{ fontSize: '1rem', marginTop: 10, borderBottom: '1px solid var(--border)', paddingBottom: 8 }}>Test Duration Settings</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                <div className="form-group">
+                  <label>MCQ Duration (minutes)</label>
+                  <input className="input" type="number" min="1" max="180" value={form.mcqDuration} onChange={e => setForm({...form, mcqDuration: e.target.value})} placeholder="e.g. 30" />
+                </div>
+                <div className="form-group">
+                  <label>Coding Duration (minutes)</label>
+                  <input className="input" type="number" min="1" max="300" value={form.codingDuration} onChange={e => setForm({...form, codingDuration: e.target.value})} placeholder="e.g. 60" />
                 </div>
               </div>
 

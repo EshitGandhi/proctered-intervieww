@@ -11,7 +11,8 @@ const MCQTest = () => {
   const [error, setError] = useState('');
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState({});
-  const [timeLeft, setTimeLeft] = useState(30 * 60); // 30 minutes default
+  const [timeLeft, setTimeLeft] = useState(null); // null until loaded from API
+  const [timerReady, setTimerReady] = useState(false); // fires only after real duration is set
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null);
 
@@ -23,9 +24,11 @@ const MCQTest = () => {
         if (!app) return setError('Application not found.');
         if (app.status !== 'mcq_pending') return setError(`This stage is not active. Status: ${app.status}`);
         setApplication(app);
-        if (app.jobId?.mcqDuration) {
-          setTimeLeft(app.jobId.mcqDuration * 60);
-        }
+
+        // Set timer from job config; fall back to 30 mins if field missing
+        const durationMins = app.jobId?.mcqDuration || 30;
+        setTimeLeft(durationMins * 60);
+
         const { data: mcqData } = await api.get(`/mcq/test/${app.jobId._id}?limit=20`);
         if (mcqData.data.length === 0) return setError('No MCQ questions uploaded for this job yet. Contact Admin.');
         setQuestions(mcqData.data);
@@ -33,14 +36,15 @@ const MCQTest = () => {
         setError('Failed to load test. Try again.');
       } finally {
         setLoading(false);
+        setTimerReady(true); // signal that init is complete and timer can start
       }
     };
     init();
   }, [appId]);
 
-  // Timer
+  // Timer — only starts after init is complete (timerReady) and we have a real timeLeft
   useEffect(() => {
-    if (loading || result || error || questions.length === 0 || timeLeft === null) return;
+    if (!timerReady || result || error || questions.length === 0 || timeLeft === null) return;
     
     const interval = setInterval(() => {
       setTimeLeft(prev => {
@@ -54,7 +58,7 @@ const MCQTest = () => {
     }, 1000);
     
     return () => clearInterval(interval);
-  }, [loading, result, error, questions.length, timeLeft === null]);
+  }, [timerReady]); // ← only depends on timerReady: starts once, doesn't restart on every tick
 
   const handleSelect = (qId, option) => setAnswers(prev => ({ ...prev, [qId]: option }));
 
@@ -72,7 +76,7 @@ const MCQTest = () => {
     }
   };
 
-  const fmt = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+  const fmt = (s) => s === null ? '--:--' : `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
   const answered = Object.keys(answers).length;
 
   if (loading) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><div className="spinner" /></div>;
