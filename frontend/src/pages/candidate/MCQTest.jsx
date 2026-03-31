@@ -11,7 +11,7 @@ const MCQTest = () => {
   const [error, setError] = useState('');
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState({});
-  const [timeLeft, setTimeLeft] = useState(10 * 60); // 10 minutes
+  const [timeLeft, setTimeLeft] = useState(30 * 60); // 30 minutes default
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null);
 
@@ -23,6 +23,9 @@ const MCQTest = () => {
         if (!app) return setError('Application not found.');
         if (app.status !== 'mcq_pending') return setError(`This stage is not active. Status: ${app.status}`);
         setApplication(app);
+        if (app.jobId?.mcqDuration) {
+          setTimeLeft(app.jobId.mcqDuration * 60);
+        }
         const { data: mcqData } = await api.get(`/mcq/test/${app.jobId._id}?limit=20`);
         if (mcqData.data.length === 0) return setError('No MCQ questions uploaded for this job yet. Contact Admin.');
         setQuestions(mcqData.data);

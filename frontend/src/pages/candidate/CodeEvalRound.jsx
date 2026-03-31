@@ -29,6 +29,8 @@ const CodeEvalRound = () => {
 
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null);
+  const [timeLeft, setTimeLeft] = useState(null); // in seconds
+  const timerRef = useRef(null);
 
   // Load questions on mount
   useEffect(() => {
@@ -52,6 +54,13 @@ const CodeEvalRound = () => {
           return;
         }
         setQuestions(qs);
+        // Set timer based on job.codingDuration
+        if (app.jobId?.codingDuration) {
+          setTimeLeft(app.jobId.codingDuration * 60);
+        } else {
+          setTimeLeft(60 * 60); // Default 60 mins if not set
+        }
+
         // Initialize per-question state: { language, code, running, submitted, submitResult }
         const init = {};
         qs.forEach((q, i) => { 
@@ -69,6 +78,25 @@ const CodeEvalRound = () => {
     };
     init();
   }, [appId]);
+
+  // Timer Effect
+  useEffect(() => {
+    if (timeLeft === null || result) return;
+    if (timeLeft <= 0) {
+      handleFinishTest(true); // Auto-submit on timeout
+      return;
+    }
+    timerRef.current = setInterval(() => {
+      setTimeLeft(prev => prev - 1);
+    }, 1000);
+    return () => clearInterval(timerRef.current);
+  }, [timeLeft, result]);
+
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const updateQ = (idx, patch) => setQState(s => ({ ...s, [idx]: { ...s[idx], ...patch } }));
 
@@ -124,12 +152,14 @@ const CodeEvalRound = () => {
     }
   };
 
-  const handleFinishTest = async () => {
+  const handleFinishTest = async (auto = false) => {
     const submittedCount = Object.values(qState).filter(q => q.submitted).length;
-    if (submittedCount < questions.length) {
-      if (!window.confirm(`You have only submitted ${submittedCount}/${questions.length} questions. Are you sure you want to finish the test? Unsubmitted questions will count as 0%.`)) return;
-    } else {
-      if (!window.confirm('Are you sure you want to finalize your test and submit all results?')) return;
+    if (!auto) {
+      if (submittedCount < questions.length) {
+        if (!window.confirm(`You have only submitted ${submittedCount}/${questions.length} questions. Are you sure you want to finish the test? Unsubmitted questions will count as 0%.`)) return;
+      } else {
+        if (!window.confirm('Are you sure you want to finalize your test and submit all results?')) return;
+      }
     }
 
     setSubmitting(true);
@@ -220,6 +250,9 @@ const CodeEvalRound = () => {
       <div style={{ flexShrink: 0, padding: '10px 20px', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <span style={{ fontWeight: 700, fontSize: '1rem' }}>💻 Coding Round</span>
+          <div style={{ background: timeLeft < 300 ? '#fee2e2' : 'var(--bg-secondary)', color: timeLeft < 300 ? '#ef4444' : 'var(--text-primary)', padding: '4px 12px', borderRadius: 6, fontWeight: 700, fontSize: '0.9rem', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 16 }}>⏱</span> {formatTime(timeLeft)}
+          </div>
           <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{questions.length} Question{questions.length !== 1 ? 's' : ''}</span>
         </div>
 

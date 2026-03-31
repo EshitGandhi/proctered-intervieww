@@ -15,7 +15,7 @@ const JobsTab = () => {
     title: '', domain: '', description: '', skills: '',
     resumeThreshold: 60, mcqThreshold: 70, codingThreshold: 50,
     resumeWeight: 20, mcqWeight: 20, codingWeight: 30, interviewWeight: 30,
-    mcqCount: 20,
+    mcqCount: 20, mcqDuration: 30, codingDuration: 60
   });
   const [showInactive, setShowInactive] = useState(false);
 
@@ -40,7 +40,7 @@ const JobsTab = () => {
         requiredSkills: form.skills.split(',').map(s => s.trim()).filter(Boolean),
       });
       setShowForm(false);
-      setForm({ title: '', domain: '', description: '', skills: '', resumeThreshold: 60, mcqThreshold: 70, codingThreshold: 50, resumeWeight: 20, mcqWeight: 20, codingWeight: 30, interviewWeight: 30, mcqCount: 20 });
+      setForm({ title: '', domain: '', description: '', skills: '', resumeThreshold: 60, mcqThreshold: 70, codingThreshold: 50, resumeWeight: 20, mcqWeight: 20, codingWeight: 30, interviewWeight: 30, mcqCount: 20, mcqDuration: 30, codingDuration: 60 });
       fetchJobs();
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to create job');
@@ -130,10 +130,19 @@ const JobsTab = () => {
               ))}
             </div>
 
-            <div style={{ marginBottom: 20 }}>
-              <label style={labelStyle}>Number of MCQ Questions per Test</label>
-              <input type="number" min="1" max="100" style={{ ...inputStyle, width: '200px' }} value={form.mcqCount} onChange={e => setForm(f => ({ ...f, mcqCount: Number(e.target.value) }))} />
-              <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 4 }}>This determines how many random questions are shown to the candidate.</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 20 }}>
+              <div>
+                <label style={labelStyle}>MCQ Questions Count</label>
+                <input type="number" min="1" max="100" style={inputStyle} value={form.mcqCount} onChange={e => setForm(f => ({ ...f, mcqCount: Number(e.target.value) }))} />
+              </div>
+              <div>
+                <label style={labelStyle}>MCQ Duration (mins)</label>
+                <input type="number" min="1" style={inputStyle} value={form.mcqDuration} onChange={e => setForm(f => ({ ...f, mcqDuration: Number(e.target.value) }))} />
+              </div>
+              <div>
+                <label style={labelStyle}>Coding Duration (mins)</label>
+                <input type="number" min="1" style={inputStyle} value={form.codingDuration} onChange={e => setForm(f => ({ ...f, codingDuration: Number(e.target.value) }))} />
+              </div>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>

@@ -44,6 +44,8 @@ const jobSchema = new mongoose.Schema(
     interviewWeight: { type: Number, default: 30 },
     // Test Configurations
     mcqCount: { type: Number, default: 20 },
+    mcqDuration: { type: Number, default: 30 }, // Minutes for MCQ Round
+    codingDuration: { type: Number, default: 60 }, // Minutes for Coding Round
   },
   { timestamps: true }
 );
