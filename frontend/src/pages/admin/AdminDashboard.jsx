@@ -19,9 +19,15 @@ const JobsTab = () => {
   });
   const [showInactive, setShowInactive] = useState(false);
 
+  const [viewMetricsJob, setViewMetricsJob] = useState(null);
+
   const fetchJobs = () => {
     setLoading(true);
     api.get('/jobs').then(r => setJobs(r.data.data)).finally(() => setLoading(false));
+  };
+
+  const handleViewMetrics = (job) => {
+    setViewMetricsJob(job);
   };
   useEffect(() => { fetchJobs(); }, []);
 
@@ -201,7 +207,11 @@ const JobsTab = () => {
 
                 {/* Action Block */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center', width: 140 }}>
-                  <button className="btn btn-secondary" style={{ width: '100%', fontSize: '0.8rem', padding: '6px 0', border: '1px solid var(--border)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
+                  <button 
+                    className="btn btn-secondary" 
+                    onClick={() => handleViewMetrics(job)}
+                    style={{ width: '100%', fontSize: '0.8rem', padding: '6px 0', border: '1px solid var(--border)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
+                  >
                     👁 View Applicants
                   </button>
                   <button onClick={() => toggle(job)} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 500 }}>
@@ -213,11 +223,170 @@ const JobsTab = () => {
           })}
         </div>
       )}
+      {viewMetricsJob && (
+        <MetricsModal 
+          job={viewMetricsJob} 
+          onClose={() => setViewMetricsJob(null)} 
+        />
+      )}
     </div>
   );
 };
 
-// ─── Tab: MCQ Management ──────────────────────────────────────────────────────
+// ─── Metrics Modal Component ──────────────────────────────────────────────────
+const MetricsModal = ({ job, onClose }) => {
+  const [loading, setLoading] = useState(true);
+  const [metrics, setMetrics] = useState(null);
+
+  useEffect(() => {
+    const fetchMetrics = async () => {
+      try {
+        const res = await api.get(`/applications/job/${job._id}`);
+        const apps = res.data.data;
+        
+        const data = {
+          total: apps.length,
+          resume: {
+            passed: apps.filter(a => a.status !== 'resume_rejected').length,
+            rejected: apps.filter(a => a.status === 'resume_rejected').length,
+          },
+          mcq: {
+            passed: apps.filter(a => !['resume_rejected', 'mcq_pending', 'mcq_failed'].includes(a.status)).length,
+            rejected: apps.filter(a => a.status === 'mcq_failed').length,
+            pending: apps.filter(a => a.status === 'mcq_pending').length,
+          },
+          coding: {
+            passed: apps.filter(a => ['interview_pending', 'interview_scheduled', 'interview_completed', 'hired', 'rejected'].includes(a.status)).length,
+            rejected: apps.filter(a => a.status === 'coding_failed').length,
+            pending: apps.filter(a => a.status === 'coding_pending').length,
+          },
+          interview: {
+            passed: apps.filter(a => ['hired'].includes(a.status)).length,
+            rejected: apps.filter(a => ['rejected'].includes(a.status)).length,
+            completed: apps.filter(a => ['interview_completed'].includes(a.status)).length,
+            scheduled: apps.filter(a => ['interview_scheduled'].includes(a.status)).length,
+          }
+        };
+        setMetrics(data);
+      } catch (err) {
+        console.error('Failed to fetch metrics', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchMetrics();
+  }, [job._id]);
+
+  if (!job) return null;
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal" style={{ maxWidth: 600 }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+          <div>
+            <h2 style={{ margin: 0, fontSize: '1.25rem' }}>Pipeline Metrics</h2>
+            <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>{job.title} • {job.domain}</p>
+          </div>
+          <button className="btn btn-ghost btn-icon" onClick={onClose}>✕</button>
+        </div>
+
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: 40 }}><div className="spinner" style={{ margin: '0 auto' }} /></div>
+        ) : metrics ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            {/* Overall Stat */}
+            <div style={{ background: 'var(--accent-gradient)', padding: '24px', borderRadius: 16, color: 'white', textAlign: 'center', boxShadow: '0 10px 25px -5px var(--accent-glow)' }}>
+              <div style={{ fontSize: '0.85rem', fontWeight: 600, opacity: 0.9, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Applicants</div>
+              <div style={{ fontSize: '3rem', fontWeight: 800, margin: '8px 0' }}>{metrics.total}</div>
+              <div style={{ fontSize: '0.85rem', opacity: 0.8 }}>Candidates applied for this position</div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div className="card" style={{ padding: 16, border: '1px solid var(--border)' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: 12, textTransform: 'uppercase' }}>📄 Resume Round</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Passed ATS</span>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--success)' }}>{metrics.resume.passed}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Rejected</span>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--danger)' }}>{metrics.resume.rejected}</span>
+                </div>
+              </div>
+
+              <div className="card" style={{ padding: 16, border: '1px solid var(--border)' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: 12, textTransform: 'uppercase' }}>📝 MCQ Round</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Passed</span>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--success)' }}>{metrics.mcq.passed}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Failed</span>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--danger)' }}>{metrics.mcq.rejected}</span>
+                </div>
+                {metrics.mcq.pending > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>Pending</span>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--warning)' }}>{metrics.mcq.pending}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="card" style={{ padding: 16, border: '1px solid var(--border)' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: 12, textTransform: 'uppercase' }}>&lt;/&gt; Coding Round</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Passed</span>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--success)' }}>{metrics.coding.passed}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Failed</span>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--danger)' }}>{metrics.coding.rejected}</span>
+                </div>
+                {metrics.coding.pending > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>In Progress</span>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--warning)' }}>{metrics.coding.pending}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="card" style={{ padding: 16, border: '1px solid var(--border)' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: 12, textTransform: 'uppercase' }}>🎥 Final Stage</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Hired 🎉</span>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--success)' }}>{metrics.interview.passed}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Rejected</span>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--danger)' }}>{metrics.interview.rejected}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Scheduled</span>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--accent-primary)' }}>{metrics.interview.scheduled + metrics.interview.completed}</span>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ marginTop: 8 }}>
+              <button 
+                className="btn btn-primary" 
+                style={{ width: '100%', padding: '12px' }}
+                onClick={() => {
+                  window.location.href = `/admin/candidates?jobId=${job._id}`;
+                }}
+              >
+                View Detailed Applicant List →
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div style={{ textAlign: 'center', padding: 20 }}>No metrics available</div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const MCQTab = () => {
   const [jobs, setJobs] = useState([]);
   const [selectedJob, setSelectedJob] = useState('');
