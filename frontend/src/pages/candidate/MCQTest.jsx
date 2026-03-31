@@ -23,6 +23,12 @@ const MCQTest = () => {
         const app = appData.data.find(a => a._id === appId);
         if (!app) return setError('Application not found.');
         if (app.status !== 'mcq_pending') return setError(`This stage is not active. Status: ${app.status}`);
+
+        // Block access if the job has been deactivated
+        if (app.jobId?.isActive === false) {
+          return setError('This job posting has been deactivated by the admin. You cannot take this test.');
+        }
+
         setApplication(app);
 
         // Set timer from job config; fall back to 30 mins if field missing
@@ -32,19 +38,21 @@ const MCQTest = () => {
         const { data: mcqData } = await api.get(`/mcq/test/${app.jobId._id}?limit=20`);
         if (mcqData.data.length === 0) return setError('No MCQ questions uploaded for this job yet. Contact Admin.');
         setQuestions(mcqData.data);
+
+        // Only start timer AFTER questions are confirmed loaded
+        setTimerReady(true);
       } catch (err) {
         setError('Failed to load test. Try again.');
       } finally {
         setLoading(false);
-        setTimerReady(true); // signal that init is complete and timer can start
       }
     };
     init();
   }, [appId]);
 
-  // Timer — only starts after init is complete (timerReady) and we have a real timeLeft
+  // Timer — starts only after timerReady (set after questions load)
   useEffect(() => {
-    if (!timerReady || result || error || questions.length === 0 || timeLeft === null) return;
+    if (!timerReady) return;
     
     const interval = setInterval(() => {
       setTimeLeft(prev => {
@@ -58,7 +66,7 @@ const MCQTest = () => {
     }, 1000);
     
     return () => clearInterval(interval);
-  }, [timerReady]); // ← only depends on timerReady: starts once, doesn't restart on every tick
+  }, [timerReady]); // fires exactly once when questions + duration are both ready
 
   const handleSelect = (qId, option) => setAnswers(prev => ({ ...prev, [qId]: option }));
 

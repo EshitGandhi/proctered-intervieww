@@ -26,6 +26,7 @@ const StatusBadge = ({ status }) => {
 // ─── Pipeline Tracker ─────────────────────────────────────────────────────────
 const getStepInfo = (app) => {
   const s = app.status;
+  const jobActive = app.jobId?.isActive !== false; // treat missing as active
   const steps = [
     {
       label: 'Resume Screening',
@@ -48,8 +49,10 @@ const getStepInfo = (app) => {
         : 'passed',
       score: app.scores?.mcq?.score,
       threshold: app.jobId?.mcqThreshold,
-      actionLabel: s === 'mcq_pending' ? 'Start MCQ Test' : null,
-      actionPath: s === 'mcq_pending' ? `/mcq/${app._id}` : null,
+      // Hide button if job is deactivated
+      actionLabel: s === 'mcq_pending' && jobActive ? 'Start MCQ Test' : null,
+      actionPath: s === 'mcq_pending' && jobActive ? `/mcq/${app._id}` : null,
+      jobDeactivated: s === 'mcq_pending' && !jobActive,
     },
     {
       label: 'Coding Round',
@@ -60,8 +63,10 @@ const getStepInfo = (app) => {
         : 'passed',
       score: app.scores?.coding?.score,
       threshold: app.jobId?.codingThreshold,
-      actionLabel: s === 'coding_pending' ? 'Open Code Editor' : null,
-      actionPath: s === 'coding_pending' ? `/coding/${app._id}` : null,
+      // Hide button if job is deactivated
+      actionLabel: s === 'coding_pending' && jobActive ? 'Open Code Editor' : null,
+      actionPath: s === 'coding_pending' && jobActive ? `/coding/${app._id}` : null,
+      jobDeactivated: s === 'coding_pending' && !jobActive,
     },
     {
       label: 'Interview',
@@ -85,7 +90,7 @@ const PipelineCard = ({ app, navigate }) => {
   const steps = getStepInfo(app);
   return (
     <div style={{
-      background: 'var(--bg-surface)',
+      background: 'var(--bg-card)',
       border: '1px solid var(--border)',
       borderRadius: 12,
       padding: 24,
@@ -93,7 +98,12 @@ const PipelineCard = ({ app, navigate }) => {
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
         <div>
-          <h3 style={{ margin: 0, fontSize: '1.1rem' }}>{app.jobId?.title}</h3>
+          <h3 style={{ margin: 0, fontSize: '1.1rem' }}>
+            {app.jobId?.title}
+            {app.jobId?.isActive === false && (
+              <span style={{ marginLeft: 8, fontSize: '0.65rem', background: '#fee2e2', color: '#ef4444', padding: '2px 8px', borderRadius: 20, fontWeight: 700, verticalAlign: 'middle' }}>CLOSED</span>
+            )}
+          </h3>
           <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{app.jobId?.domain}</span>
         </div>
         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
@@ -106,7 +116,7 @@ const PipelineCard = ({ app, navigate }) => {
         {steps.map((step, i) => (
           <div key={i} style={{
             background: step.status === 'locked' ? 'var(--bg-secondary)' : 'var(--bg-primary)',
-            border: `1px solid ${step.status === 'active' || step.status === 'scheduled' ? 'var(--primary)' : step.status === 'failed' ? '#fca5a5' : step.status === 'passed' ? '#6ee7b7' : 'var(--border)'}`,
+            border: `1px solid ${step.status === 'active' || step.status === 'scheduled' ? 'var(--accent-primary)' : step.status === 'failed' ? '#fca5a5' : step.status === 'passed' ? '#6ee7b7' : 'var(--border)'}`,
             borderRadius: 10,
             padding: '16px 14px',
             position: 'relative',
@@ -144,6 +154,13 @@ const PipelineCard = ({ app, navigate }) => {
               >
                 {step.actionLabel}
               </button>
+            )}
+
+            {/* Show closed notice instead of action button */}
+            {step.jobDeactivated && (
+              <div style={{ marginTop: 10, fontSize: '0.72rem', color: '#ef4444', fontWeight: 600, lineHeight: 1.4 }}>
+                🔒 This job is closed. Test unavailable.
+              </div>
             )}
 
             {step.status === 'pending' && step.label === 'Interview' && (
