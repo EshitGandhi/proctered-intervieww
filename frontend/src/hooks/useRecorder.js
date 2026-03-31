@@ -23,8 +23,8 @@ const useRecorder = ({ interviewId, stream, remoteStream }) => {
   const mixedStreamRef = useRef(null);
 
   // Hidden video elements for canvas composition
-  const localVideoRef = useRef(document.createElement('video'));
-  const remoteVideoRef = useRef(document.createElement('video'));
+  const localVideoRef = useRef(null);
+  const remoteVideoRef = useRef(null);
 
   // --- Transcription state ---
   const [transcript, setTranscript] = useState('');
@@ -71,7 +71,29 @@ const useRecorder = ({ interviewId, stream, remoteStream }) => {
     try {
       console.log('--- Initializing Multi-Stream Recording ---');
       
-      // 1. Setup Audio Mixing
+      // 2. Setup Video Composition via Canvas
+      const canvas = document.createElement('canvas');
+      canvas.width = 1280;
+      canvas.height = 720;
+      canvasRef.current = canvas;
+      const ctx = canvas.getContext('2d');
+
+      // Create fresh hidden video elements for this recording session
+      const localVid = document.createElement('video');
+      localVid.srcObject = stream;
+      localVid.muted = true; // Local video muted (we get mic from stream source anyway)
+      localVid.play().catch(e => console.warn('Local play delay:', e));
+      localVideoRef.current = localVid;
+
+      const remoteVid = document.createElement('video');
+      remoteVid.srcObject = remoteStream;
+      // IMPORTANT: Chrome bug workaround for WebRTC remote audio
+      // We must NOT mute the remote video if we want to capture its audio via WebAudio
+      remoteVid.muted = false; 
+      remoteVid.play().catch(e => console.warn('Remote play delay:', e));
+      remoteVideoRef.current = remoteVid;
+
+      // Now set up Audio Mixing with the workaround
       const audioContext = new (window.AudioContext || window.webkitAudioContext)();
       audioContextRef.current = audioContext;
       const dest = audioContext.createMediaStreamDestination();
@@ -80,26 +102,14 @@ const useRecorder = ({ interviewId, stream, remoteStream }) => {
         const localSource = audioContext.createMediaStreamSource(stream);
         localSource.connect(dest);
       }
+      
       if (remoteStream.getAudioTracks().length > 0) {
-        const remoteSource = audioContext.createMediaStreamSource(remoteStream);
+        // Use MediaElementSource from the unmuted remote video instead of MediaStreamSource
+        const remoteSource = audioContext.createMediaElementSource(remoteVid);
         remoteSource.connect(dest);
+        // By NOT connecting remoteSource to audioContext.destination, 
+        // the audio is routed to the recorder but NOT the speakers (prevents echo duplicate)
       }
-
-      // 2. Setup Video Composition via Canvas
-      const canvas = document.createElement('canvas');
-      canvas.width = 1280;
-      canvas.height = 720;
-      canvasRef.current = canvas;
-      const ctx = canvas.getContext('2d');
-
-      // Setup hidden video elements to provide frames
-      localVideoRef.current.srcObject = stream;
-      localVideoRef.current.muted = true;
-      localVideoRef.current.play().catch(e => console.warn('Local video play delay:', e));
-
-      remoteVideoRef.current.srcObject = remoteStream;
-      remoteVideoRef.current.muted = true;
-      remoteVideoRef.current.play().catch(e => console.warn('Remote video play delay:', e));
 
       const drawFrame = () => {
         // Clear background
@@ -162,8 +172,14 @@ const useRecorder = ({ interviewId, stream, remoteStream }) => {
         // Cleanup
         if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
         if (audioContextRef.current) audioContextRef.current.close();
-        localVideoRef.current.srcObject = null;
-        remoteVideoRef.current.srcObject = null;
+        if (localVideoRef.current) {
+          localVideoRef.current.pause();
+          localVideoRef.current.srcObject = null;
+        }
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.pause();
+          remoteVideoRef.current.srcObject = null;
+        }
       };
 
       mr.start(1000);
