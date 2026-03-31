@@ -199,7 +199,7 @@ const buildPDFWithKit = (doc, { candidateName, candidateEmail, title, date, eval
 
   // ─── OVERALL SCORE CIRCLE ─────────────────────────────────────────────────
   const circleX = pageWidth - margin - 42;
-  const circleY = 205;
+  const circleY = 185;
   const circleR = 36;
   const scoreColor = parseFloat(overallAvg) >= 75 ? GREEN : parseFloat(overallAvg) >= 50 ? BLUE : RED;
 
@@ -209,7 +209,7 @@ const buildPDFWithKit = (doc, { candidateName, candidateEmail, title, date, eval
   doc.fontSize(7).font('Helvetica').fillColor(MUTED)
      .text('SCORE / 100', circleX - 38, circleY + circleR + 5, { width: 76, align: 'center' });
 
-  let y = 165;
+  let y = 240;
 
   // ─── SECTION: PERFORMANCE METRICS ─────────────────────────────────────────
   doc.fontSize(13).font('Helvetica-Bold').fillColor(DARK).text('Performance Metrics', margin, y);
@@ -401,7 +401,7 @@ const generateFeedbackReport = async (feedback, interviewScoreStr, application) 
       recommendation: {
         decision: feedback.recommendation,
         risk_level: feedback.recommendation === 'Hire' ? 'Low' : 'High',
-        reason: feedback.improvementFeedback.slice(0, 500)
+        reason: `Based on the evaluation of technical skills and communication, the candidate is ${feedback.recommendation === 'Hire' ? 'recommended' : 'not recommended'} for the position at this stage.`
       },
       analysis: {
         strengths: strengths.length ? strengths : ['Solid baseline skills'],
