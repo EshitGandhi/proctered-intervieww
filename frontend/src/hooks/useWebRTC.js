@@ -40,6 +40,20 @@ const useWebRTC = ({ roomId, userId, userName, role }) => {
   const localStreamRef = useRef(null);
   const socketRef = useRef(null);
   const isInitiator = useRef(false);
+  // ICE candidates may arrive before remoteDescription is set — buffer them
+  const iceCandidateQueue = useRef([]);
+  const remoteDescSet = useRef(false);
+
+  // ── Helper: set remote description and flush ICE queue ──────────────
+  const setRemoteDescriptionAndFlushQueue = useCallback(async (pc, descInit) => {
+    await pc.setRemoteDescription(new RTCSessionDescription(descInit));
+    remoteDescSet.current = true;
+    // Flush buffered ICE candidates
+    for (const candidate of iceCandidateQueue.current) {
+      try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch (_) {}
+    }
+    iceCandidateQueue.current = [];
+  }, []);
 
   // ── Get user media ──────────────────────────────────────────────────
   const startMedia = useCallback(async () => {
@@ -134,35 +148,61 @@ const useWebRTC = ({ roomId, userId, userName, role }) => {
 
     const pc = createPeerConnection(stream);
 
-    // ─ Socket events ─
-    socket.on('peer-joined', async ({ role: peerRole }) => {
-      // The side that gets 'peer-joined' becomes the initiator
-      if (!isInitiator.current) {
-        isInitiator.current = true;
+    // ─ Helper: become initiator and send offer ─────────────────────────
+    const sendOffer = async () => {
+      if (isInitiator.current) return; // guard against double-call
+      isInitiator.current = true;
+      try {
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
         socket.emit('offer', { roomId, offer });
+      } catch (err) {
+        console.error('[WebRTC] Offer failed:', err);
+      }
+    };
+
+    // ─ Register ALL socket listeners BEFORE emitting join-room ─────────
+    // This prevents a race where the server responds before listeners exist.
+
+    // Someone new joined our room → we become the offerer
+    socket.on('peer-joined', () => sendOffer());
+
+    // We just joined and someone is ALREADY in the room → we offer immediately
+    socket.on('room-state', ({ participants }) => {
+      const otherRoles = Object.keys(participants).filter(r => r !== role);
+      if (otherRoles.length > 0) {
+        sendOffer();
       }
     });
 
     socket.on('offer', async ({ offer }) => {
       if (pc.signalingState !== 'stable') return;
-      await pc.setRemoteDescription(new RTCSessionDescription(offer));
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
-      socket.emit('answer', { roomId, answer });
+      try {
+        await setRemoteDescriptionAndFlushQueue(pc, offer);
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        socket.emit('answer', { roomId, answer });
+      } catch (err) {
+        console.error('[WebRTC] Answer failed:', err);
+      }
     });
 
     socket.on('answer', async ({ answer }) => {
       if (pc.signalingState !== 'have-local-offer') return;
-      await pc.setRemoteDescription(new RTCSessionDescription(answer));
+      try {
+        await setRemoteDescriptionAndFlushQueue(pc, answer);
+      } catch (err) {
+        console.error('[WebRTC] setRemoteDescription (answer) failed:', err);
+      }
     });
 
     socket.on('ice-candidate', async ({ candidate }) => {
-      try {
-        await pc.addIceCandidate(new RTCIceCandidate(candidate));
-      } catch (e) {
-        // ignore stale candidates
+      if (!candidate) return;
+      if (!remoteDescSet.current) {
+        // Buffer it — will be flushed once remote description is set
+        iceCandidateQueue.current.push(candidate);
+      } else {
+        try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch (_) {}
       }
     });
 
@@ -170,10 +210,15 @@ const useWebRTC = ({ roomId, userId, userName, role }) => {
       setRemoteStream(null);
       setConnected(false);
       setConnectionState('disconnected');
+      // Reset so the next peer can reconnect cleanly
+      isInitiator.current = false;
+      remoteDescSet.current = false;
+      iceCandidateQueue.current = [];
     });
 
+    // ─ Now safe to announce ourselves ──────────────────────────────────
     socket.emit('join-room', { roomId, userId, userName, role });
-  }, [roomId, userId, userName, role, startMedia, createPeerConnection]);
+  }, [roomId, userId, userName, role, startMedia, createPeerConnection, setRemoteDescriptionAndFlushQueue]);
 
   // ── Toggle mic ─────────────────────────────────────────────────────
   const toggleMic = useCallback(() => {
