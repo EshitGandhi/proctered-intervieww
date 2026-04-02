@@ -16,29 +16,12 @@ const {
 } = require('../controllers/application.controller');
 const Application = require('../models/Application');
 
+const { uploadResume } = require('../services/storage.service');
+
 const router = express.Router();
 
-// Resume upload storage
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const dir = path.join(process.cwd(), 'uploads', 'resumes');
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    cb(null, dir);
-  },
-  filename: (req, file, cb) => {
-    cb(null, `resume-${Date.now()}-${file.originalname}`);
-  },
-});
-const upload = multer({
-  storage,
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype === 'application/pdf') cb(null, true);
-    else cb(new Error('Only PDF files are allowed'), false);
-  },
-});
-
 // ─── Candidate Routes ──────────────────────────────────────────────────────────
-router.post('/apply/:jobId', protect, upload.single('resume'), applyForJob);
+router.post('/apply/:jobId', protect, uploadResume.single('resume'), applyForJob);
 router.get('/my', protect, getMyApplications);
 router.post('/:appId/mcq', protect, submitMCQ);
 

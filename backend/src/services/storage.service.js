@@ -19,6 +19,7 @@ const ensureDirs = () => {
     path.join(UPLOAD_DIR, 'audio'),
     path.join(UPLOAD_DIR, 'screen'),
     path.join(UPLOAD_DIR, 'transcripts'),
+    path.join(UPLOAD_DIR, 'resumes'),
   ];
   dirs.forEach((d) => {
     if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true });
@@ -51,13 +52,15 @@ const localStorage = multer.diskStorage({
       subDir = 'transcripts';
     } else if (file.mimetype.startsWith('audio')) {
       subDir = 'audio';
+    } else if (file.mimetype === 'application/pdf') {
+      subDir = 'resumes';
     } else {
       subDir = 'recordings';
     }
     cb(null, path.join(UPLOAD_DIR, subDir));
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname) || '.webm';
+    const ext = path.extname(file.originalname) || '';
     const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
     cb(null, filename);
   },
@@ -72,8 +75,9 @@ const s3Storage = (STORAGE_TYPE === 's3' && s3) ? multerS3({
   },
   key: (req, file, cb) => {
     const subDir = file.mimetype === 'text/plain' ? 'transcripts' : 
+                   file.mimetype === 'application/pdf' ? 'resumes' :
                    file.mimetype.startsWith('audio') ? 'audio' : 'recordings';
-    const ext = path.extname(file.originalname) || '.webm';
+    const ext = path.extname(file.originalname) || '';
     const key = `${subDir}/${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
     cb(null, key);
   },
@@ -100,6 +104,18 @@ const uploadRecording = multer({
   },
 });
 
+const uploadResume = multer({
+  storage: STORAGE_TYPE === 's3' ? s3Storage : localStorage,
+  limits: { fileSize: 10485760 }, // 10 MB limit for resumes
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'application/pdf') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF files are allowed'), false);
+    }
+  },
+});
+
 /**
  * Get the file URL.
  */
@@ -107,7 +123,7 @@ const getFileUrl = (file, type = 'recordings') => {
   if (STORAGE_TYPE === 's3') {
     return file.location;
   }
-  return `/uploads/${type}/${file.filename}`;
+  return `/uploads/${type}/${file.filename || path.basename(file.path)}`;
 };
 
 /**
@@ -129,7 +145,8 @@ const deleteFile = async (recording) => {
 };
 
 module.exports = { 
-  uploadRecording, 
+  uploadRecording,
+  uploadResume,
   getFileUrl, 
   deleteFile, 
   UPLOAD_DIR,

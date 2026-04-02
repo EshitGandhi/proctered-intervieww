@@ -4,6 +4,7 @@ const Interview = require('../models/Interview');
 const fs = require('fs');
 const axios = require('axios');
 const FormData = require('form-data');
+const { getFileUrl } = require('../services/storage.service');
 
 // ─── Interview Status Auto-Sync Helper ───────────────────────────────────────────
 // Compares the Interview doc status with the Application status and fixes any mismatch.
@@ -59,11 +60,20 @@ const mapDomainToATS = (domain) => {
   return 'MERN Developer'; // Default fallback
 };
 
-const parseResumeAndScore = async (resumePath, jobDomain) => {
+const parseResumeAndScore = async (fileObj, jobDomain) => {
   try {
     const atsDomain = mapDomainToATS(jobDomain);
     const form = new FormData();
-    form.append('resume', fs.createReadStream(resumePath));
+    
+    if (fileObj.location) {
+      // Stream from S3
+      const s3Response = await axios.get(fileObj.location, { responseType: 'stream' });
+      form.append('resume', s3Response.data, { filename: fileObj.originalname, contentType: fileObj.mimetype });
+    } else {
+      // Read from local
+      form.append('resume', fs.createReadStream(fileObj.path));
+    }
+    
     form.append('domain', atsDomain);
 
     const response = await axios.post('https://atsscorer-production.up.railway.app/analyze', form, {
@@ -97,13 +107,13 @@ exports.applyForJob = async (req, res) => {
 
     const job = await Job.findById(jobId);
     if (!job || !job.isActive) {
-      if (req.file) fs.unlinkSync(req.file.path);
+      if (req.file && req.file.path) fs.unlinkSync(req.file.path);
       return res.status(404).json({ success: false, error: 'Job not found or inactive' });
     }
 
     const existingApp = await Application.findOne({ jobId, candidateId });
     if (existingApp) {
-      if (req.file) fs.unlinkSync(req.file.path);
+      if (req.file && req.file.path) fs.unlinkSync(req.file.path);
       return res.status(400).json({ success: false, error: 'You have already applied for this job' });
     }
 
@@ -111,9 +121,11 @@ exports.applyForJob = async (req, res) => {
       return res.status(400).json({ success: false, error: 'Resume PDF is required' });
     }
 
-    const { score, matchedSkills, missingSkills } = await parseResumeAndScore(req.file.path, job.domain);
+    const { score, matchedSkills, missingSkills } = await parseResumeAndScore(req.file, job.domain);
     const isPassed = score >= job.resumeThreshold;
     const status = isPassed ? 'mcq_pending' : 'resume_rejected';
+
+    const resumeUrl = getFileUrl(req.file, 'resumes');
 
     const application = await Application.create({
       jobId,
@@ -124,7 +136,7 @@ exports.applyForJob = async (req, res) => {
           score,
           matchedSkills,
           missingSkills,
-          resumeUrl: `/uploads/resumes/${req.file.filename}`,
+          resumeUrl,
         }
       }
     });
@@ -139,7 +151,7 @@ exports.applyForJob = async (req, res) => {
       data: populated,
     });
   } catch (error) {
-    if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    if (req.file && req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
     res.status(500).json({ success: false, error: error.message });
   }
 };
