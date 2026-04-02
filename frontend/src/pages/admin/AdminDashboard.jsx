@@ -753,11 +753,11 @@ const CandidateDetail = ({ appId, onBack }) => {
   if (!app) return <div>Application not found</div>;
 
   const scoreBox = (label, score, threshold, extra) => (
-    <div style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: 20, textAlign: 'center' }}>
+    <div style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: 20, textAlign: 'center', minHeight: 180, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
       <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 8 }}>{label}</div>
-      <div style={{ fontSize: '2rem', fontWeight: 800, color: score >= (threshold || 0) ? '#10b981' : score === 0 ? 'var(--text-muted)' : '#ef4444', lineHeight: 1 }}>{score}%</div>
+      <div style={{ fontSize: '2.2rem', fontWeight: 800, color: score >= (threshold || 0) ? '#10b981' : score === 0 ? 'var(--text-muted)' : '#ef4444', lineHeight: 1 }}>{score}%</div>
       {threshold && <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 6 }}>Min: {threshold}%</div>}
-      {extra}
+      <div style={{ marginTop: 'auto', width: '100%' }}>{extra}</div>
     </div>
   );
 
@@ -908,6 +908,50 @@ const CandidateDetail = ({ appId, onBack }) => {
           </div>
         </div>
       )}
+
+      {/* Proctoring Logs with Evidence */}
+      <div className="card" style={{ marginBottom: 20 }}>
+        <h3 style={{ fontSize: '0.95rem', marginBottom: 16 }}>Proctoring Logs & Evidence</h3>
+        {proctoringLogs.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '30px 0', color: '#10b981', fontSize: '0.9rem', fontWeight: 600 }}>
+            ✓ No serious proctoring violations recorded for this candidate.
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {proctoringLogs.map((log, idx) => (
+              <div key={log._id || idx} style={{ display: 'flex', gap: 16, padding: 14, borderRadius: 10, background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
+                <div style={{ flexShrink: 0, width: 44, height: 44, borderRadius: '50%', background: log.eventType === 'tab_switch' || log.eventType === 'window_blur' ? '#fee2e2' : '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem' }}>
+                  {log.eventType === 'tab_switch' || log.eventType === 'window_blur' ? '🌐' : '👤'}
+                </div>
+                <div style={{ flexGrow: 1 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 700, textTransform: 'capitalize', color: log.severity === 'high' ? '#ef4444' : 'var(--text-primary)' }}>
+                      {log.eventType.replace(/_/g, ' ')}
+                    </span>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 500 }}>
+                      {new Date(log.timestamp).toLocaleString()}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: 10, lineHeight: 1.4 }}>{log.description}</div>
+                  
+                  {log.screenshot && (
+                    <div style={{ marginTop: 6, padding: 4 }}>
+                      <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 6, letterSpacing: '0.05em' }}>Captured Evidence</div>
+                      <img 
+                        src={log.screenshot} 
+                        alt="Violation Evidence" 
+                        style={{ maxWidth: '100%', maxHeight: 240, borderRadius: 8, border: '2px solid var(--border)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', cursor: 'zoom-in', transition: 'transform 0.2s' }}
+                        onClick={() => window.open(log.screenshot, '_blank')}
+                      />
+                      <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: 4 }}>Click image to view full size</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Interview section */}
       <div className="card">
