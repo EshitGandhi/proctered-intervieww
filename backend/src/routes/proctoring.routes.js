@@ -6,24 +6,29 @@ const router = express.Router();
 
 // POST /api/proctoring/log
 router.post('/log', protect, async (req, res) => {
-  const { interviewId, sessionId, eventType, description, metadata, severity } = req.body;
+  try {
+    const { interviewId, sessionId, eventType, description, metadata, severity } = req.body;
 
-  if (!eventType) {
-    return res.status(400).json({ success: false, message: 'eventType is required' });
+    if (!eventType) {
+      return res.status(400).json({ success: false, message: 'eventType is required' });
+    }
+
+    const log = await ProctoringLog.create({
+      interview: interviewId || undefined,
+      sessionId: sessionId || interviewId || req.user?._id?.toString() || 'unknown',
+      candidate: req.user?._id || null, // Always attach the logged in user as candidate
+      eventType,
+      description: description || '',
+      metadata: metadata || {},
+      severity: severity || 'medium',
+      timestamp: new Date(),
+    });
+
+    res.status(201).json({ success: true, data: log });
+  } catch (error) {
+    console.error('Proctoring log error:', error);
+    res.status(500).json({ success: false, error: error.message });
   }
-
-  const log = await ProctoringLog.create({
-    interview: interviewId || undefined,
-    sessionId: sessionId || interviewId || req.user?._id?.toString() || 'unknown',
-    candidate: req.user?._id || null, // Always attach the logged in user as candidate
-    eventType,
-    description: description || '',
-    metadata: metadata || {},
-    severity: severity || 'medium',
-    timestamp: new Date(),
-  });
-
-  res.status(201).json({ success: true, data: log });
 });
 
 // GET /api/proctoring/session/:sessionId

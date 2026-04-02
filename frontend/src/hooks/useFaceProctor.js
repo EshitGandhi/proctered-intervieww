@@ -24,18 +24,19 @@ const useFaceProctor = ({
   onAutoSubmit,
 } = {}) => {
   const [faceViolationCount, setFaceViolationCount] = useState(0);
-  const [isMonitoring, setIsMonitoring]             = useState(false);
+  const [isMonitoring, setIsMonitoring] = useState(false);
 
   // Internal mutable state — never cause re-renders
-  const stateRef       = useRef({ count: 0, done: false });
-  const detectorRef    = useRef(null);
-  const loopRef        = useRef(null);
-  const lastDetectRef  = useRef(0);
+  const stateRef = useRef({ count: 0, done: false });
+  const detectorRef = useRef(null);
+  const loopRef = useRef(null);
+  const lastDetectRef = useRef(0);
   const onViolationRef = useRef(onViolation);
-  const onAutoSubmitRef= useRef(onAutoSubmit);
+  const onAutoSubmitRef = useRef(onAutoSubmit);
+  const lookAwayStartRef = useRef(null);
 
   // Keep callback refs fresh
-  useEffect(() => { onViolationRef.current  = onViolation;  });
+  useEffect(() => { onViolationRef.current = onViolation; });
   useEffect(() => { onAutoSubmitRef.current = onAutoSubmit; });
 
   // ── Log violation to backend (fire-and-forget) ──────────────────────────────
@@ -99,7 +100,7 @@ const useFaceProctor = ({
     return () => {
       cancelled = true;
       if (detectorRef.current) {
-        try { detectorRef.current.close(); } catch (_) {}
+        try { detectorRef.current.close(); } catch (_) { }
         detectorRef.current = null;
       }
       setIsMonitoring(false);
@@ -110,7 +111,7 @@ const useFaceProctor = ({
   useEffect(() => {
     if (!enabled || !isMonitoring) return;
 
-    const INTERVAL_MS   = 2000; // detect every 2 s
+    const INTERVAL_MS = 2000; // detect every 2 s
 
     const detect = (timestamp) => {
       loopRef.current = requestAnimationFrame(detect);
@@ -150,34 +151,45 @@ const useFaceProctor = ({
         return;
       }
 
-      // ── Head-pose: check if looking away ─────────────────────────────────
-      // keypoints order from BlazeFace: right_eye, left_eye, nose_tip, mouth_center, right_ear_tragion, left_ear_tragion
-      const kp = detections[0]?.keypoints;
-      if (kp && kp.length >= 3) {
-        const isOutOfBounds = kp.some(p => p.x < 0.05 || p.x > 0.95 || p.y < 0.05 || p.y > 0.95);
-        if (isOutOfBounds) {
-          triggerViolation('face_look_away', 'Part of your face is out of the camera frame. Please stay centered.');
-          return;
+      // ── Head-pose & Bounding Box Logic ────────────────────────────────────
+      const detection = detections[0];
+      const box = detection.boundingBox;
+
+      if (box) {
+        const centerX = (box.originX + box.width / 2) / video.videoWidth;
+        const centerY = (box.originY + box.height / 2) / video.videoHeight;
+
+        // Check if looking away (e.g., face is too close to edges)
+        if (centerX < 0.2 || centerX > 0.8 || centerY < 0.2 || centerY > 0.8) {
+          if (!lookAwayStartRef.current) {
+            lookAwayStartRef.current = Date.now();
+          }
+
+          if (Date.now() - lookAwayStartRef.current > 2000) {
+            triggerViolation('face_look_away', 'You appear to be looking away from the screen.');
+          }
+        } else {
+          lookAwayStartRef.current = null;
         }
+      }
 
-        const rightEye = kp[0]; // {x, y}
-        const leftEye  = kp[1];
-        const noseTip  = kp[2];
+      // Keep backup ratio check for head orientation if keypoints available
+      const kp = detection.keypoints;
+      if (kp && kp.length >= 3) {
+        const rightEye = kp[0];
+        const leftEye = kp[1];
+        const noseTip = kp[2];
 
-        // Ensure keypoints exist and have valid structure
         if (rightEye?.x != null && leftEye?.x != null && noseTip?.x != null) {
           const dist1 = Math.abs(noseTip.x - rightEye.x);
           const dist2 = Math.abs(noseTip.x - leftEye.x);
+          const ratio = Math.max(dist1, dist2) / (Math.min(dist1, dist2) || 0.0001);
 
-          const maxDist = Math.max(dist1, dist2);
-          const minDist = Math.min(dist1, dist2);
-          
-          // Ratio of 1.0 means perfectly central nose. 
-          const ratio = maxDist / (minDist || 0.0001);
-
-          if (ratio > 1.6) {
-            triggerViolation('face_look_away', 'You appear to be looking away from the screen.');
-            return;
+          if (ratio > 1.8) { // Ratio check
+            if (!lookAwayStartRef.current) lookAwayStartRef.current = Date.now();
+            if (Date.now() - lookAwayStartRef.current > 2000) {
+              triggerViolation('face_look_away', 'You appear to be looking away from the screen.');
+            }
           }
         }
       }
