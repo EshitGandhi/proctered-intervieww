@@ -141,6 +141,7 @@ const CodeEvalRound = () => {
   const { violationCount } = useTabProctor({
     enabled: proctoringActive,
     maxViolations: 3,
+    sessionId: `coding-${appId}`,
     onViolation: (count, max) => {
       const isFinal = count >= max;
       setProctorFinal(isFinal);

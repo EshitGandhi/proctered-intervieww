@@ -165,6 +165,7 @@ const MCQTest = () => {
   const { violationCount } = useTabProctor({
     enabled: proctoringActive,
     maxViolations: 3,
+    sessionId: `mcq-${appId}`,
     onViolation: (count, max) => {
       const isFinal = count >= max;
       setProctorFinal(isFinal);

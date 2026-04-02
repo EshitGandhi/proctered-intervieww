@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import api from '../services/api';
 
 /**
  * useTabProctor
@@ -10,7 +11,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
  * @param {Function} opts.onAutoSubmit   – () => void, fired 2.5 s after final violation
  * @param {boolean}  opts.enabled        – set false during loading / after result
  */
-const useTabProctor = ({ maxViolations = 3, onViolation, onAutoSubmit, enabled = true } = {}) => {
+const useTabProctor = ({ maxViolations = 3, onViolation, onAutoSubmit, enabled = true, sessionId = '' } = {}) => {
   const [violationCount, setViolationCount] = useState(0);
 
   // Use a ref so the trigger callback never goes stale regardless of re-renders
@@ -22,18 +23,31 @@ const useTabProctor = ({ maxViolations = 3, onViolation, onAutoSubmit, enabled =
   useEffect(() => { onViolationRef.current  = onViolation;  });
   useEffect(() => { onAutoSubmitRef.current = onAutoSubmit; });
 
+  const logToBackend = useCallback((eventType, description) => {
+    api.post('/proctoring/log', {
+      sessionId: sessionId || 'tab-proctor',
+      eventType,
+      description,
+      severity: 'high',
+      metadata: { timestamp: new Date().toISOString() },
+    }).catch(() => {});
+  }, [sessionId]);
+
   const trigger = useCallback(() => {
     if (!enabled || stateRef.current.done) return;
     stateRef.current.count += 1;
     const count = stateRef.current.count;
     setViolationCount(count);
+
+    logToBackend('tab_switch', `Tab switch or window blur detected (Violation ${count}/${maxViolations})`);
+
     onViolationRef.current?.(count, maxViolations);
     if (count >= maxViolations) {
       stateRef.current.done = true;
       // Small delay so the final warning toast is visible before submit fires
       setTimeout(() => onAutoSubmitRef.current?.(), 2500);
     }
-  }, [enabled, maxViolations]);
+  }, [enabled, maxViolations, logToBackend]);
 
   useEffect(() => {
     if (!enabled) return;

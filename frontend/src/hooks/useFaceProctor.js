@@ -111,7 +111,6 @@ const useFaceProctor = ({
     if (!enabled || !isMonitoring) return;
 
     const INTERVAL_MS   = 2000; // detect every 2 s
-    const YAW_THRESHOLD = 0.08; // fraction of frame width — nose offset from eye midpoint (lowered for higher sensitivity)
 
     const detect = (timestamp) => {
       loopRef.current = requestAnimationFrame(detect);
@@ -155,16 +154,31 @@ const useFaceProctor = ({
       // keypoints order from BlazeFace: right_eye, left_eye, nose_tip, mouth_center, right_ear_tragion, left_ear_tragion
       const kp = detections[0]?.keypoints;
       if (kp && kp.length >= 3) {
-        const rightEye = kp[0]; // {x, y} normalised
+        const isOutOfBounds = kp.some(p => p.x < 0.05 || p.x > 0.95 || p.y < 0.05 || p.y > 0.95);
+        if (isOutOfBounds) {
+          triggerViolation('face_look_away', 'Part of your face is out of the camera frame. Please stay centered.');
+          return;
+        }
+
+        const rightEye = kp[0]; // {x, y}
         const leftEye  = kp[1];
         const noseTip  = kp[2];
 
-        const eyeMidX = (rightEye.x + leftEye.x) / 2;
-        const noseOffset = Math.abs(noseTip.x - eyeMidX);
+        // Ensure keypoints exist and have valid structure
+        if (rightEye?.x != null && leftEye?.x != null && noseTip?.x != null) {
+          const dist1 = Math.abs(noseTip.x - rightEye.x);
+          const dist2 = Math.abs(noseTip.x - leftEye.x);
 
-        if (noseOffset > YAW_THRESHOLD) {
-          triggerViolation('face_look_away', 'You appear to be looking away from the screen.');
-          return;
+          const maxDist = Math.max(dist1, dist2);
+          const minDist = Math.min(dist1, dist2);
+          
+          // Ratio of 1.0 means perfectly central nose. 
+          const ratio = maxDist / (minDist || 0.0001);
+
+          if (ratio > 1.6) {
+            triggerViolation('face_look_away', 'You appear to be looking away from the screen.');
+            return;
+          }
         }
       }
     };
