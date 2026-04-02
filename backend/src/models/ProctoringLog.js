@@ -52,6 +52,10 @@ const proctoringLogSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    screenshot: {
+      type: String,
+      default: null,
+    },
     metadata: {
       type: mongoose.Schema.Types.Mixed,
       default: {},

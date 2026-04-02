@@ -7,7 +7,7 @@ const router = express.Router();
 // POST /api/proctoring/log
 router.post('/log', protect, async (req, res) => {
   try {
-    const { interviewId, sessionId, eventType, description, metadata, severity } = req.body;
+    const { interviewId, sessionId, eventType, description, metadata, severity, screenshot } = req.body;
 
     if (!eventType) {
       return res.status(400).json({ success: false, message: 'eventType is required' });
@@ -19,6 +19,7 @@ router.post('/log', protect, async (req, res) => {
       candidate: req.user?._id || null, // Always attach the logged in user as candidate
       eventType,
       description: description || '',
+      screenshot: screenshot || null,
       metadata: metadata || {},
       severity: severity || 'medium',
       timestamp: new Date(),
