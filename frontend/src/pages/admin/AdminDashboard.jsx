@@ -1197,6 +1197,198 @@ const CodingQuestionsTab = () => {
   );
 };
 
+// ─── Tab: Proctoring Violations ────────────────────────────────────────────────
+const ProctoringTab = () => {
+  const [candidates, setCandidates] = useState([]);
+  const [loading,    setLoading]    = useState(true);
+  const [selected,   setSelected]   = useState(null);
+  const [detail,     setDetail]     = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+
+  const TYPE_META = {
+    no_face_detected:       { icon: '🚫', label: 'No Face',        color: '#ef4444', bg: '#fee2e2' },
+    multiple_faces:         { icon: '👥', label: 'Multiple Faces', color: '#ef4444', bg: '#fee2e2' },
+    face_look_away:         { icon: '👀', label: 'Look Away',      color: '#f59e0b', bg: '#fef3c7' },
+    camera_blocked:         { icon: '📵', label: 'Cam Blocked',    color: '#ef4444', bg: '#fee2e2' },
+    face_reference_captured:{ icon: '📷', label: 'Ref Captured',   color: '#10b981', bg: '#d1fae5' },
+    tab_switch:             { icon: '🔖', label: 'Tab Switch',     color: '#8b5cf6', bg: '#ede9fe' },
+    window_blur:            { icon: '💻', label: 'Window Blur',    color: '#8b5cf6', bg: '#ede9fe' },
+    other:                  { icon: '⚠️',  label: 'Other',         color: '#94a3b8', bg: '#f1f5f9' },
+  };
+
+  const SEV_META = {
+    high:   { color: '#ef4444', bg: '#fee2e2', label: 'High' },
+    medium: { color: '#f59e0b', bg: '#fef3c7', label: 'Medium' },
+    low:    { color: '#10b981', bg: '#d1fae5', label: 'Low' },
+  };
+
+  useEffect(() => {
+    api.get('/proctoring/all-candidates')
+      .then(r => setCandidates(r.data.data || []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleViewDetail = async (cand) => {
+    setSelected(cand);
+    setDetail(null);
+    setDetailLoading(true);
+    try {
+      const r = await api.get(`/proctoring/candidate/${cand._id}`);
+      setDetail(r.data);
+    } catch {}
+    setDetailLoading(false);
+  };
+
+  const totalViolations  = candidates.reduce((s, c) => s + (c.total || 0), 0);
+  const highRiskCount    = candidates.filter(c => c.total >= 3).length;
+  const lookAwayTotal    = candidates.reduce((s, c) => s + (c.look_away || 0), 0);
+
+  return (
+    <div>
+      <h2 style={{ margin: '0 0 20px', fontSize: '1.2rem' }}>📷 Face Proctoring Violations</h2>
+
+      {/* Summary cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 24 }}>
+        {[
+          { label: 'Candidates Flagged',   value: candidates.length, icon: '👤', color: '#6366f1' },
+          { label: 'Total Face Violations', value: totalViolations,  icon: '📷', color: '#ef4444' },
+          { label: 'High Risk (≥3)',        value: highRiskCount,    icon: '🚨', color: '#ef4444' },
+          { label: 'Look-Away Events',      value: lookAwayTotal,    icon: '👀', color: '#f59e0b' },
+        ].map(({ label, value, icon, color }) => (
+          <div key={label} className="card" style={{ padding: '16px 20px', borderLeft: `4px solid ${color}` }}>
+            <div style={{ fontSize: 24, marginBottom: 4 }}>{icon}</div>
+            <div style={{ fontSize: '1.8rem', fontWeight: 800, color }}>{value}</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>{label}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: selected ? '1fr 1.1fr' : '1fr', gap: 20, alignItems: 'start' }}>
+        {/* Candidate list */}
+        <div>
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: 40 }}><div className="spinner" /></div>
+          ) : candidates.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 48, color: 'var(--text-muted)', background: 'var(--bg-secondary)', borderRadius: 12 }}>
+              <div style={{ fontSize: 40, marginBottom: 12 }}>👍</div>
+              No face violations recorded yet. All candidates are behaving well!
+            </div>
+          ) : (
+            <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                <thead>
+                  <tr style={{ background: 'var(--bg-secondary)' }}>
+                    {['Candidate', '🚫 No Face', '👥 Multi-Face', '👀 Look Away', '📵 Blocked', 'Total', 'Risk'].map(h => (
+                      <th key={h} style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, color: 'var(--text-muted)', fontSize: '0.72rem', textTransform: 'uppercase', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {candidates.map(c => {
+                    const isHigh = c.total >= 3;
+                    const isSel  = selected?._id === c._id;
+                    return (
+                      <tr
+                        key={c._id || c.email}
+                        onClick={() => handleViewDetail(c)}
+                        style={{ borderBottom: '1px solid var(--border)', cursor: 'pointer', background: isSel ? 'rgba(99,102,241,0.07)' : 'transparent', transition: 'background 0.1s' }}
+                      >
+                        <td style={{ padding: '10px 12px' }}>
+                          <div style={{ fontWeight: 600 }}>{c.name || 'Unknown'}</div>
+                          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{c.email}</div>
+                        </td>
+                        <td style={{ padding: '10px 12px', fontWeight: c.no_face > 0 ? 700 : 400, color: c.no_face > 0 ? '#ef4444' : 'var(--text-muted)' }}>{c.no_face || 0}</td>
+                        <td style={{ padding: '10px 12px', fontWeight: c.multi_face > 0 ? 700 : 400, color: c.multi_face > 0 ? '#ef4444' : 'var(--text-muted)' }}>{c.multi_face || 0}</td>
+                        <td style={{ padding: '10px 12px', fontWeight: c.look_away > 0 ? 700 : 400, color: c.look_away > 0 ? '#f59e0b' : 'var(--text-muted)' }}>{c.look_away || 0}</td>
+                        <td style={{ padding: '10px 12px', fontWeight: c.blocked > 0 ? 700 : 400, color: c.blocked > 0 ? '#ef4444' : 'var(--text-muted)' }}>{c.blocked || 0}</td>
+                        <td style={{ padding: '10px 12px' }}>
+                          <span style={{ fontWeight: 800, fontSize: '1.05rem', color: isHigh ? '#ef4444' : c.total >= 2 ? '#f59e0b' : 'var(--text-primary)' }}>{c.total}</span>
+                        </td>
+                        <td style={{ padding: '10px 12px' }}>
+                          <span style={{ fontSize: '0.65rem', fontWeight: 700, padding: '3px 8px', borderRadius: 20, background: isHigh ? '#fee2e2' : '#fef3c7', color: isHigh ? '#ef4444' : '#92400e' }}>
+                            {isHigh ? '🚨 High' : '⚠️ Medium'}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Violation detail panel */}
+        {selected && (
+          <div>
+            <div className="card" style={{ position: 'sticky', top: 20 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '1rem' }}>{selected.name || 'Unknown'}</div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{selected.email}</div>
+                </div>
+                <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: 'var(--text-muted)', lineHeight: 1 }}>✕</button>
+              </div>
+
+              {/* Face type summary mini-grid */}
+              {detail && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
+                  {[
+                    { key: 'no_face_detected', val: detail.faceSummary?.no_face_detected || 0 },
+                    { key: 'multiple_faces',   val: detail.faceSummary?.multiple_faces    || 0 },
+                    { key: 'face_look_away',   val: detail.faceSummary?.face_look_away    || 0 },
+                    { key: 'camera_blocked',   val: detail.faceSummary?.camera_blocked    || 0 },
+                  ].map(({ key, val }) => {
+                    const m = TYPE_META[key];
+                    return (
+                      <div key={key} style={{ background: m.bg, borderRadius: 8, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 22 }}>{m.icon}</span>
+                        <div>
+                          <div style={{ fontWeight: 800, fontSize: '1.3rem', color: m.color, lineHeight: 1 }}>{val}</div>
+                          <div style={{ fontSize: '0.7rem', color: m.color, opacity: 0.8 }}>{m.label}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Event log */}
+              <div style={{ fontWeight: 600, fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.04em' }}>
+                Event Log ({detail?.data.length || 0} events)
+              </div>
+              {detailLoading && <div style={{ textAlign: 'center', padding: 24 }}><div className="spinner" /></div>}
+              {detail && (
+                <div style={{ maxHeight: 420, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {detail.data.length === 0 && <div style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>No events recorded.</div>}
+                  {detail.data.map((log, i) => {
+                    const meta = TYPE_META[log.eventType] || TYPE_META.other;
+                    const sev  = SEV_META[log.severity]  || SEV_META.low;
+                    return (
+                      <div key={i} style={{ background: 'var(--bg-secondary)', borderRadius: 8, padding: '8px 12px', borderLeft: `3px solid ${meta.color}` }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
+                          <span style={{ fontWeight: 700, fontSize: '0.8rem' }}>{meta.icon} {meta.label}</span>
+                          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                            <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '1px 6px', borderRadius: 10, background: sev.bg, color: sev.color }}>{sev.label}</span>
+                            <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{new Date(log.timestamp).toLocaleTimeString()}</span>
+                          </div>
+                        </div>
+                        {log.description && <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>{log.description}</div>}
+                        <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: 2, opacity: 0.6 }}>Session: {log.sessionId}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // ─── Admin Dashboard Shell ─────────────────────────────────────────────────────
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -1222,10 +1414,11 @@ const AdminDashboard = () => {
   }, [location.pathname]);
 
   const nav = [
-    { id: 'jobs', label: '💼 Jobs' },
-    { id: 'mcq', label: '📝 MCQ' },
-    { id: 'coding', label: '💻 Coding Questions' },
+    { id: 'jobs',       label: '💼 Jobs' },
+    { id: 'mcq',        label: '📝 MCQ' },
+    { id: 'coding',     label: '💻 Coding Questions' },
     { id: 'candidates', label: '👥 Candidates' },
+    { id: 'proctoring', label: '📷 Proctoring' },
   ];
 
   const handleSelectCandidate = (appId) => {
@@ -1273,10 +1466,11 @@ const AdminDashboard = () => {
           )}
         </div>
 
-        {tab === 'jobs' && <JobsTab />}
-        {tab === 'mcq' && <MCQTab />}
-        {tab === 'coding' && <CodingQuestionsTab />}
+        {tab === 'jobs'       && <JobsTab />}
+        {tab === 'mcq'        && <MCQTab />}
+        {tab === 'coding'     && <CodingQuestionsTab />}
         {tab === 'candidates' && <CandidatesTab onSelectCandidate={handleSelectCandidate} />}
+        {tab === 'proctoring' && <ProctoringTab />}
         {tab === 'detail' && selectedAppId && (
           <CandidateDetail appId={selectedAppId} onBack={() => setTab('candidates')} />
         )}

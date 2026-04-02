@@ -38,6 +38,12 @@ const proctoringLogSchema = new mongoose.Schema(
         'session_start',
         'session_end',
         'warning_issued',
+        // ── Face detection events ──────────────────────────────────────────
+        'no_face_detected',
+        'multiple_faces',
+        'face_look_away',
+        'camera_blocked',
+        'face_reference_captured',
         'other',
       ],
       required: true,

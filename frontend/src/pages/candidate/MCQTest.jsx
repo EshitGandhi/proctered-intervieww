@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import useTabProctor from '../../hooks/useTabProctor';
+import useFaceProctor from '../../hooks/useFaceProctor';
+import FaceCheckModal from '../../components/FaceCheckModal';
 
 // ─── Question status helpers ───────────────────────────────────────────────────
 const getQStatus = (idx, qId, answers, visited, markedForReview) => {
@@ -37,6 +39,10 @@ const ProctoringBanner = ({ msg, isFinal }) => (
 const MCQTest = () => {
   const { appId }  = useParams();
   const navigate   = useNavigate();
+
+  // ── Face verification gate ───────────────────────────────────────────────────
+  const [faceReady,    setFaceReady]    = useState(false);
+  const webcamVideoRef = useRef(null);  // set by FaceCheckModal when candidate starts
 
   // ── Core state ───────────────────────────────────────────────────────────────
   const [application, setApplication] = useState(null);
@@ -130,7 +136,7 @@ const MCQTest = () => {
   }, [currentQ]);
 
   // ── Tab Proctoring ─────────────────────────────────────────────────────────────
-  const proctoringActive = timerReady && !result && !error && !submitting;
+  const proctoringActive = timerReady && !result && !error && !submitting && faceReady;
 
   const { violationCount } = useTabProctor({
     enabled: proctoringActive,
@@ -139,7 +145,7 @@ const MCQTest = () => {
       const isFinal = count >= max;
       setProctorFinal(isFinal);
       const msg = isFinal
-        ? `🚨 Violation ${count}/${max}: Auto-submitting your test now…`
+        ? `🚨 Tab Violation ${count}/${max}: Auto-submitting your test now…`
         : `⚠️ Warning ${count}/${max}: Tab switching detected! ${max - count} more violation${max - count > 1 ? 's' : ''} will auto-submit your test.`;
       setProctorMsg(msg);
       if (!isFinal) {
@@ -149,6 +155,34 @@ const MCQTest = () => {
     },
     onAutoSubmit: () => submitRef.current?.(),
   });
+
+  // ── Face Proctoring ─────────────────────────────────────────────────────────
+  const { faceViolationCount } = useFaceProctor({
+    videoRef: webcamVideoRef,
+    enabled: proctoringActive,
+    maxViolations: 3,
+    sessionId: `mcq-${appId}`,
+    onViolation: (count, max, type, description) => {
+      const isFinal = count >= max;
+      setProctorFinal(isFinal);
+      const label = {
+        no_face_detected: '🚫 No Face Detected',
+        multiple_faces:   '👥 Multiple Faces Detected',
+        face_look_away:   '👀 Looking Away',
+        camera_blocked:   '📵 Camera Blocked',
+      }[type] || '⚠️ Face Violation';
+      const msg = isFinal
+        ? `🚨 ${label}: Auto-submitting (${count}/${max} face violations)…`
+        : `${label} — Warning ${count}/${max}: ${description}`;
+      setProctorMsg(msg);
+      if (!isFinal) {
+        if (msgTimerRef.current) clearTimeout(msgTimerRef.current);
+        msgTimerRef.current = setTimeout(() => setProctorMsg(null), 5000);
+      }
+    },
+    onAutoSubmit: () => submitRef.current?.(),
+  });
+
 
   // ── Handlers ──────────────────────────────────────────────────────────────────
   const handleSelect = (qId, option) => setAnswers(prev => ({ ...prev, [qId]: option }));
@@ -198,6 +232,19 @@ const MCQTest = () => {
     </div>
   );
 
+  // ── Face verification gate ─────────────────────────────────────────────────
+  if (!faceReady) {
+    return (
+      <FaceCheckModal
+        roundName="MCQ Test"
+        onReady={(videoRef) => {
+          webcamVideoRef.current = videoRef.current;
+          setFaceReady(true);
+        }}
+      />
+    );
+  }
+
   if (result) {
     const passed = result.data.status === 'coding_pending';
     return (
@@ -228,7 +275,31 @@ const MCQTest = () => {
       {/* ── Proctoring Toast ─────────────────────────────────────────────────── */}
       {proctorMsg && <ProctoringBanner msg={proctorMsg} isFinal={proctorFinal} />}
 
-      {/* ── Header ───────────────────────────────────────────────────────────── */}
+      {/* ── Webcam PiP (always visible while test is active) ─────────────────── */}
+      <div style={{
+        position: 'fixed', bottom: 20, right: 20, zIndex: 9000,
+        width: 160, height: 120, borderRadius: 12, overflow: 'hidden',
+        border: `2px solid ${faceViolationCount > 0 ? '#ef4444' : '#10b981'}`,
+        boxShadow: '0 4px 24px rgba(0,0,0,0.5)',
+        background: '#000',
+      }}>
+        <video
+          ref={webcamVideoRef}
+          autoPlay muted playsInline
+          style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)' }}
+        />
+        {/* Monitoring indicator */}
+        <div style={{
+          position: 'absolute', top: 6, left: 6,
+          background: faceViolationCount > 0 ? '#ef4444' : '#10b981',
+          borderRadius: 20, padding: '2px 8px',
+          fontSize: '0.6rem', fontWeight: 700, color: '#fff',
+          display: 'flex', alignItems: 'center', gap: 4,
+        }}>
+          <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff', display: 'inline-block', animation: 'pulse-dot 1.5s infinite' }} />
+          LIVE
+        </div>
+      </div>
       <div style={{ maxWidth: 1160, width: '100%', margin: '24px auto 0', padding: '0 20px' }}>
         <div style={{
           background: 'var(--bg-card)', border: '1px solid var(--border)',
@@ -245,7 +316,12 @@ const MCQTest = () => {
               <span>{answered} answered</span>
               {violationCount > 0 && (
                 <span style={{ color: violationCount >= 3 ? '#ef4444' : '#f59e0b', fontWeight: 700 }}>
-                  ⚠ {violationCount}/3 violations
+                  ⚠ Tab: {violationCount}/3
+                </span>
+              )}
+              {faceViolationCount > 0 && (
+                <span style={{ color: faceViolationCount >= 3 ? '#ef4444' : '#f59e0b', fontWeight: 700 }}>
+                  📷 Face: {faceViolationCount}/3
                 </span>
               )}
             </div>

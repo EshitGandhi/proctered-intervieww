@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
 import api from '../../services/api';
 import useTabProctor from '../../hooks/useTabProctor';
+import useFaceProctor from '../../hooks/useFaceProctor';
+import FaceCheckModal from '../../components/FaceCheckModal';
 import { DEFAULT_CODE } from '../../hooks/useCodeExecution';
 
 const LANGUAGES = [
@@ -18,6 +20,10 @@ const DIFF_COLORS = { easy: '#10b981', medium: '#f59e0b', hard: '#ef4444' };
 const CodeEvalRound = () => {
   const { appId } = useParams();
   const navigate = useNavigate();
+
+  // ── Face verification gate ───────────────────────────────────────────────
+  const [faceReady, setFaceReady] = useState(false);
+  const webcamVideoRef = useRef(null);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -106,19 +112,48 @@ const CodeEvalRound = () => {
   // Keep a stable ref to handleFinishTest so the proctor hook never goes stale
   const handleFinishRef = useRef(null);
 
+  const proctoringActive = !loading && !result && !error && questions.length > 0 && faceReady;
+
   const { violationCount } = useTabProctor({
-    enabled: !loading && !result && !error && questions.length > 0,
+    enabled: proctoringActive,
     maxViolations: 3,
     onViolation: (count, max) => {
       const isFinal = count >= max;
       setProctorFinal(isFinal);
       const msg = isFinal
-        ? `🚨 Violation ${count}/${max}: Auto-submitting coding round now…`
-        : `⚠️ Warning ${count}/${max}: Tab switching detected! ${max - count} more violation${max - count > 1 ? 's' : ''} will auto-submit.`;
+        ? `🚨 Tab Violation ${count}/${max}: Auto-submitting coding round now…`
+        : `⚠️ Tab Warning ${count}/${max}: Tab switching detected! ${max - count} more violation${max - count > 1 ? 's' : ''} will auto-submit.`;
       setProctorMsg(msg);
       if (!isFinal) {
         if (proctorMsgTimer.current) clearTimeout(proctorMsgTimer.current);
         proctorMsgTimer.current = setTimeout(() => setProctorMsg(null), 4000);
+      }
+    },
+    onAutoSubmit: () => handleFinishRef.current?.(true),
+  });
+
+  // ── Face Proctoring ─────────────────────────────────────────────────────
+  const { faceViolationCount } = useFaceProctor({
+    videoRef: webcamVideoRef,
+    enabled: proctoringActive,
+    maxViolations: 3,
+    sessionId: `coding-${appId}`,
+    onViolation: (count, max, type, description) => {
+      const isFinal = count >= max;
+      setProctorFinal(isFinal);
+      const label = {
+        no_face_detected: '🚫 No Face Detected',
+        multiple_faces:   '👥 Multiple Faces Detected',
+        face_look_away:   '👀 Looking Away',
+        camera_blocked:   '📵 Camera Blocked',
+      }[type] || '⚠️ Face Violation';
+      const msg = isFinal
+        ? `🚨 ${label}: Auto-submitting (${count}/${max} face violations)…`
+        : `${label} — Warning ${count}/${max}: ${description}`;
+      setProctorMsg(msg);
+      if (!isFinal) {
+        if (proctorMsgTimer.current) clearTimeout(proctorMsgTimer.current);
+        proctorMsgTimer.current = setTimeout(() => setProctorMsg(null), 5000);
       }
     },
     onAutoSubmit: () => handleFinishRef.current?.(true),
@@ -236,7 +271,20 @@ const CodeEvalRound = () => {
     </div>
   );
 
-  // ─── Result Screen ─────────────────────────────────────────────────────────
+  // ── Face verification gate ────────────────────────────────────────────────
+  if (!faceReady) {
+    return (
+      <FaceCheckModal
+        roundName="Coding Round"
+        onReady={(videoRef) => {
+          webcamVideoRef.current = videoRef.current;
+          setFaceReady(true);
+        }}
+      />
+    );
+  }
+
+  // ── Result Screen ─────────────────────────────────────────────────────────
   if (result) {
     const passed = result.data?.status === 'interview_pending';
     return (
@@ -300,6 +348,31 @@ const CodeEvalRound = () => {
         </div>
       )}
 
+      {/* ── Webcam PiP ────────────────────────────────────────────────── */}
+      <div style={{
+        position: 'fixed', bottom: 20, right: 20, zIndex: 9000,
+        width: 160, height: 120, borderRadius: 12, overflow: 'hidden',
+        border: `2px solid ${faceViolationCount > 0 ? '#ef4444' : '#10b981'}`,
+        boxShadow: '0 4px 24px rgba(0,0,0,0.5)',
+        background: '#000',
+      }}>
+        <video
+          ref={webcamVideoRef}
+          autoPlay muted playsInline
+          style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)' }}
+        />
+        <div style={{
+          position: 'absolute', top: 6, left: 6,
+          background: faceViolationCount > 0 ? '#ef4444' : '#10b981',
+          borderRadius: 20, padding: '2px 8px',
+          fontSize: '0.6rem', fontWeight: 700, color: '#fff',
+          display: 'flex', alignItems: 'center', gap: 4,
+        }}>
+          <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff', display: 'inline-block' }} />
+          LIVE
+        </div>
+      </div>
+
       {/* Top bar */}
       <div style={{ flexShrink: 0, padding: '10px 20px', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -310,7 +383,12 @@ const CodeEvalRound = () => {
           <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{questions.length} Question{questions.length !== 1 ? 's' : ''}</span>
           {violationCount > 0 && (
             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: violationCount >= 3 ? '#ef4444' : '#f59e0b', background: violationCount >= 3 ? '#fee2e2' : '#fef3c7', padding: '2px 8px', borderRadius: 20 }}>
-              ⚠ {violationCount}/3 violations
+              ⚠ Tab: {violationCount}/3
+            </span>
+          )}
+          {faceViolationCount > 0 && (
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: faceViolationCount >= 3 ? '#ef4444' : '#f59e0b', background: faceViolationCount >= 3 ? '#fee2e2' : '#fef3c7', padding: '2px 8px', borderRadius: 20 }}>
+              📷 Face: {faceViolationCount}/3
             </span>
           )}
         </div>
