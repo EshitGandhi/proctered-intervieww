@@ -10,7 +10,7 @@ const proctoringLogSchema = new mongoose.Schema(
     interview: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Interview',
-      required: true,
+      required: false, // Changed: Not all rounds are connected to an interview doc (e.g., MCQ, Coding)
     },
     candidate: {
       type: mongoose.Schema.Types.ObjectId,

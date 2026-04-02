@@ -15,7 +15,7 @@ router.post('/log', protect, async (req, res) => {
   const log = await ProctoringLog.create({
     interview: interviewId || undefined,
     sessionId: sessionId || interviewId || req.user?._id?.toString() || 'unknown',
-    candidate: req.user?.role === 'candidate' ? req.user._id : null,
+    candidate: req.user?._id || null, // Always attach the logged in user as candidate
     eventType,
     description: description || '',
     metadata: metadata || {},

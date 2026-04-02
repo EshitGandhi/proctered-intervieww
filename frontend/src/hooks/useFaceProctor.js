@@ -111,7 +111,7 @@ const useFaceProctor = ({
     if (!enabled || !isMonitoring) return;
 
     const INTERVAL_MS   = 2000; // detect every 2 s
-    const YAW_THRESHOLD = 0.22; // fraction of frame width — nose offset from eye midpoint
+    const YAW_THRESHOLD = 0.08; // fraction of frame width — nose offset from eye midpoint (lowered for higher sensitivity)
 
     const detect = (timestamp) => {
       loopRef.current = requestAnimationFrame(detect);

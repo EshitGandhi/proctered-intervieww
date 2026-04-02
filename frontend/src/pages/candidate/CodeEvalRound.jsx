@@ -33,6 +33,15 @@ const CodeEvalRound = () => {
     }
   }, [faceReady]);
 
+  // Clean up stream on unmount
+  useEffect(() => {
+    return () => {
+      if (camStreamRef.current) {
+        camStreamRef.current.getTracks().forEach(t => t.stop());
+      }
+    };
+  }, []);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [questions, setQuestions] = useState([]); // [{ _id, title, description, difficulty, constraints, testCases }]
@@ -45,6 +54,13 @@ const CodeEvalRound = () => {
   const [result, setResult] = useState(null);
   const [timeLeft, setTimeLeft] = useState(null); // in seconds
   const timerRef = useRef(null);
+
+  // Turn off camera as soon as we have a result
+  useEffect(() => {
+    if (result && camStreamRef.current) {
+      camStreamRef.current.getTracks().forEach(t => t.stop());
+    }
+  }, [result]);
 
   // Load questions on mount
   useEffect(() => {

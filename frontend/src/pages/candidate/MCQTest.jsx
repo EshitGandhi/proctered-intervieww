@@ -52,6 +52,15 @@ const MCQTest = () => {
     }
   }, [faceReady]);
 
+  // Clean up stream on unmount
+  useEffect(() => {
+    return () => {
+      if (camStreamRef.current) {
+        camStreamRef.current.getTracks().forEach(t => t.stop());
+      }
+    };
+  }, []);
+
   // ── Core state ───────────────────────────────────────────────────────────────
   const [application, setApplication] = useState(null);
   const [questions,   setQuestions]   = useState([]);
@@ -63,6 +72,13 @@ const MCQTest = () => {
   const [timerReady,  setTimerReady]  = useState(false);
   const [submitting,  setSubmitting]  = useState(false);
   const [result,      setResult]      = useState(null);
+
+  // Turn off camera as soon as we have a result
+  useEffect(() => {
+    if (result && camStreamRef.current) {
+      camStreamRef.current.getTracks().forEach(t => t.stop());
+    }
+  }, [result]);
 
   // ── Question tracking state ──────────────────────────────────────────────────
   const [visited,         setVisited]         = useState(new Set()); // indices seen
