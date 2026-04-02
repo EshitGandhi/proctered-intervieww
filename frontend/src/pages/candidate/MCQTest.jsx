@@ -262,6 +262,7 @@ const MCQTest = () => {
     return (
       <FaceCheckModal
         roundName="MCQ Test"
+        sessionId={`mcq-${appId}`}
         onReady={(stream) => {
           camStreamRef.current = stream;
           setFaceReady(true);

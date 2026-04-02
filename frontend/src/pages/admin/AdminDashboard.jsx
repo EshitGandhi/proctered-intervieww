@@ -673,7 +673,7 @@ const CandidateDetail = ({ appId, onBack }) => {
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState('');
   const [proctoringLogs, setProctoringLogs] = useState([]);
-  const [selectedScreenshot, setSelectedScreenshot] = useState(null);
+  const [screenshotModal, setScreenshotModal] = useState(null); // { round, refPhotos, violationPhotos }
 
   useEffect(() => {
     api.get(`/applications/${appId}`)
@@ -694,38 +694,51 @@ const CandidateDetail = ({ appId, onBack }) => {
 
   const getViolationsFor = (round) => proctoringLogs.filter(l => l.sessionId === `${round}-${appId}`);
 
-  const renderViolations = (logs) => {
-    if (!logs || !logs.length) return <div style={{ fontSize: '0.72rem', color: '#10b981', marginTop: 8, fontWeight: 600 }}>✓ No violations</div>;
-    
-    const grouped = logs.reduce((acc, l) => {
-      const type = l.eventType === 'tab_switch' || l.eventType === 'window_blur' ? 'tab' : 'face';
-      acc[type] = (acc[type] || 0) + 1;
-      return acc;
-    }, {});
+  const renderViolations = (logs, round) => {
+    const tabCount = (logs || []).filter(l => l.eventType === 'tab_switch' || l.eventType === 'window_blur').length;
+    const faceCount = (logs || []).filter(l => ['no_face_detected', 'multiple_faces', 'face_look_away', 'camera_blocked'].includes(l.eventType)).length;
+    const hasViolations = tabCount > 0 || faceCount > 0;
 
-    const screenshots = logs.filter(l => l.screenshot).map(l => l.screenshot);
+    // Separate reference/first photos from violation screenshots
+    const refPhotos = (logs || []).filter(l => l.eventType === 'face_reference_captured' && l.screenshot).map(l => ({ src: l.screenshot, time: l.timestamp, label: 'Reference Photo (Round Start)' }));
+    const violationPhotos = (logs || []).filter(l => l.eventType !== 'face_reference_captured' && l.screenshot).map(l => ({ src: l.screenshot, time: l.timestamp, label: l.eventType.replace(/_/g, ' ') }));
+    const hasPhotos = refPhotos.length > 0 || violationPhotos.length > 0;
 
     return (
-      <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'center' }}>
-        {grouped.tab > 0 && (
-          <div style={{ fontSize: '0.7rem', color: '#ef4444', fontWeight: 700, background: '#fee2e2', padding: '2px 8px', borderRadius: 10 }}>
-            ⚠️ {grouped.tab} Tab Violations
+      <div style={{ marginTop: 12, width: '100%', display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'center' }}>
+        {/* Violation Counts */}
+        {hasViolations ? (
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'center' }}>
+            <div style={{ fontSize: '0.68rem', color: '#b45309', fontWeight: 700, background: '#fef3c7', border: '1px solid #fbbf24', padding: '3px 9px', borderRadius: 20, display: 'flex', alignItems: 'center', gap: 3 }}>
+              💻 {tabCount} Tab Switch
+            </div>
+            <div style={{ fontSize: '0.68rem', color: '#b91c1c', fontWeight: 700, background: '#fee2e2', border: '1px solid #fca5a5', padding: '3px 9px', borderRadius: 20, display: 'flex', alignItems: 'center', gap: 3 }}>
+              👤 {faceCount} Face
+            </div>
+          </div>
+        ) : (
+          <div style={{ fontSize: '0.72rem', color: '#10b981', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+            ✓ No violations
           </div>
         )}
-        {grouped.face > 0 && (
-          <div style={{ fontSize: '0.7rem', color: '#f59e0b', fontWeight: 700, background: '#fef3c7', padding: '2px 8px', borderRadius: 10 }}>
-            📷 {grouped.face} Face Violations
-          </div>
-        )}
-        {screenshots.length > 0 && (
-          <button 
-            className="btn btn-ghost btn-sm" 
-            style={{ fontSize: '0.65rem', padding: '2px 10px', marginTop: 4, height: 'auto', background: 'var(--bg-tertiary)', border: '1px solid var(--border)' }}
-            onClick={(e) => { e.stopPropagation(); window.open(screenshots[0], '_blank'); }}
-          >
-            📸 See Screenshot
-          </button>
-        )}
+        {/* Screenshot Button — always shown if any photos captured */}
+        <button
+          className="btn btn-sm"
+          style={{
+            fontSize: '0.68rem', padding: '4px 12px', marginTop: 4,
+            background: hasPhotos ? '#eff6ff' : 'var(--bg-tertiary)',
+            color: hasPhotos ? '#1d4ed8' : 'var(--text-muted)',
+            border: hasPhotos ? '1px solid #bfdbfe' : '1px solid var(--border)',
+            borderRadius: 8, fontWeight: 600, cursor: hasPhotos ? 'pointer' : 'default',
+            opacity: hasPhotos ? 1 : 0.55,
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (hasPhotos) setScreenshotModal({ round, refPhotos, violationPhotos });
+          }}
+        >
+          📸 {hasPhotos ? `View Screenshots (${refPhotos.length + violationPhotos.length})` : 'No Screenshots'}
+        </button>
       </div>
     );
   };
@@ -776,6 +789,85 @@ const CandidateDetail = ({ appId, onBack }) => {
   return (
     <div>
       <button className="btn btn-ghost btn-sm" onClick={onBack} style={{ marginBottom: 20 }}>← Back to Candidates</button>
+
+      {/* Screenshot Lightbox Modal */}
+      {screenshotModal && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
+          onClick={() => setScreenshotModal(null)}
+        >
+          <div
+            style={{ background: 'var(--bg-card)', borderRadius: 16, padding: 28, maxWidth: 920, width: '100%', maxHeight: '92vh', overflow: 'auto', boxShadow: '0 32px 80px rgba(0,0,0,0.7)' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.05rem' }}>📸 {screenshotModal.round?.toUpperCase()} Round — Captured Photos</h3>
+                <p style={{ margin: '4px 0 0', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                  {screenshotModal.refPhotos.length} reference photo{screenshotModal.refPhotos.length !== 1 ? 's' : ''} · {screenshotModal.violationPhotos.length} violation screenshot{screenshotModal.violationPhotos.length !== 1 ? 's' : ''}
+                </p>
+              </div>
+              <button className="btn btn-ghost btn-sm" onClick={() => setScreenshotModal(null)}>✕ Close</button>
+            </div>
+
+            {/* Reference / First Photo Section */}
+            {screenshotModal.refPhotos.length > 0 && (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ background: '#d1fae5', border: '1px solid #6ee7b7', borderRadius: 6, padding: '2px 8px' }}>✓ Reference Photo — Captured at Round Start</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 10 }}>
+                  {screenshotModal.refPhotos.map((photo, i) => (
+                    <div key={i} style={{ borderRadius: 10, overflow: 'hidden', border: '2px solid #6ee7b7', background: 'var(--bg-secondary)', boxShadow: '0 4px 12px rgba(16,185,129,0.15)' }}>
+                      <img
+                        src={photo.src}
+                        alt={`Reference photo ${i + 1}`}
+                        style={{ width: '100%', display: 'block', cursor: 'zoom-in' }}
+                        onClick={() => window.open(photo.src, '_blank')}
+                      />
+                      <div style={{ padding: '8px 12px', fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span>📷 Round Start Photo #{i + 1}</span>
+                        <span style={{ color: '#10b981' }}>{photo.time ? new Date(photo.time).toLocaleTimeString() : ''}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Violation Screenshots Section */}
+            {screenshotModal.violationPhotos.length > 0 && (
+              <div>
+                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#ef4444', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: 6, padding: '2px 8px' }}>⚠ Violation Screenshots ({screenshotModal.violationPhotos.length})</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 10 }}>
+                  {screenshotModal.violationPhotos.map((photo, i) => (
+                    <div key={i} style={{ borderRadius: 10, overflow: 'hidden', border: '2px solid #fca5a5', background: 'var(--bg-secondary)', boxShadow: '0 4px 12px rgba(239,68,68,0.12)' }}>
+                      <img
+                        src={photo.src}
+                        alt={`Violation ${i + 1}`}
+                        style={{ width: '100%', display: 'block', cursor: 'zoom-in' }}
+                        onClick={() => window.open(photo.src, '_blank')}
+                      />
+                      <div style={{ padding: '8px 12px', fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ textTransform: 'capitalize', color: '#ef4444' }}>⚠ {photo.label} #{i + 1}</span>
+                        <span>{photo.time ? new Date(photo.time).toLocaleTimeString() : ''}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {screenshotModal.refPhotos.length === 0 && screenshotModal.violationPhotos.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                No screenshots were captured during this round.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Header */}
       <div className="card" style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 20 }}>
@@ -876,8 +968,8 @@ const CandidateDetail = ({ appId, onBack }) => {
       {/* Scores */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
         {scoreBox('Resume', app.scores?.resume?.score || 0, app.jobId?.resumeThreshold)}
-        {scoreBox('MCQ', app.scores?.mcq?.score || 0, app.jobId?.mcqThreshold, renderViolations(getViolationsFor('mcq')))}
-        {scoreBox('Coding', app.scores?.coding?.score || 0, app.jobId?.codingThreshold, renderViolations(getViolationsFor('coding')))}
+        {scoreBox('MCQ', app.scores?.mcq?.score || 0, app.jobId?.mcqThreshold, renderViolations(getViolationsFor('mcq'), 'mcq'))}
+        {scoreBox('Coding', app.scores?.coding?.score || 0, app.jobId?.codingThreshold, renderViolations(getViolationsFor('coding'), 'coding'))}
         {scoreBox('Final Score', app.scores?.finalScore || 0, null)}
       </div>
 
@@ -920,49 +1012,6 @@ const CandidateDetail = ({ appId, onBack }) => {
           </div>
         </div>
       )}
-
-      {/* Proctoring Logs with Evidence */}
-      <div className="card" style={{ marginBottom: 20 }}>
-        <h3 style={{ fontSize: '0.95rem', marginBottom: 16 }}>Proctoring Logs & Evidence</h3>
-        {proctoringLogs.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '30px 0', color: '#10b981', fontSize: '0.9rem', fontWeight: 600 }}>
-            ✓ No serious proctoring violations recorded for this candidate.
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {proctoringLogs.map((log, idx) => (
-              <div key={log._id || idx} style={{ display: 'flex', gap: 16, padding: 14, borderRadius: 10, background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
-                <div style={{ flexShrink: 0, width: 44, height: 44, borderRadius: '50%', background: log.eventType === 'tab_switch' || log.eventType === 'window_blur' ? '#fee2e2' : '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem' }}>
-                  {log.eventType === 'tab_switch' || log.eventType === 'window_blur' ? '🌐' : '👤'}
-                </div>
-                <div style={{ flexGrow: 1 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.85rem', fontWeight: 700, textTransform: 'capitalize', color: log.severity === 'high' ? '#ef4444' : 'var(--text-primary)' }}>
-                      {log.eventType.replace(/_/g, ' ')}
-                    </span>
-                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 500 }}>
-                      {new Date(log.timestamp).toLocaleString()}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: 10, lineHeight: 1.4 }}>{log.description}</div>
-                  
-                  {log.screenshot && (
-                    <div style={{ marginTop: 6, padding: 4 }}>
-                      <button 
-                        className="btn btn-secondary btn-sm" 
-                        style={{ fontSize: '0.75rem', padding: '6px 12px' }}
-                        onClick={() => window.open(log.screenshot, '_blank')}
-                      >
-                        📸 See Screenshot
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
 
       {/* Interview section */}
       <div className="card">

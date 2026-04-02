@@ -301,6 +301,7 @@ const CodeEvalRound = () => {
     return (
       <FaceCheckModal
         roundName="Coding Round"
+        sessionId={`coding-${appId}`}
         onReady={(stream) => {
           camStreamRef.current = stream;
           setFaceReady(true);

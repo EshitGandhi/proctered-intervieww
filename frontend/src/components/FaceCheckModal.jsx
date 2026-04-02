@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
+import api from '../services/api';
 
-const FaceCheckModal = ({ onReady, roundName = 'Test' }) => {
+const FaceCheckModal = ({ onReady, roundName = 'Test', sessionId = '' }) => {
   const videoRef     = useRef(null);
   const streamRef    = useRef(null);
   const canvasRef    = useRef(null);
@@ -91,6 +92,17 @@ const FaceCheckModal = ({ onReady, roundName = 'Test' }) => {
   const handleRetake = () => { setCapturedImg(null); setStep('preview'); };
   const handleStart  = () => {
     handedOffRef.current = true;           // mark as handed off — don't kill stream on unmount
+    // Upload reference photo to backend before starting
+    if (capturedImg && sessionId) {
+      api.post('/proctoring/log', {
+        sessionId,
+        eventType: 'face_reference_captured',
+        description: `Reference photo captured at the start of ${roundName}.`,
+        severity: 'low',
+        screenshot: capturedImg,
+        metadata: { roundName, capturedAt: new Date().toISOString() },
+      }).catch(() => {});
+    }
     onReady(streamRef.current);            // pass the live MediaStream to the parent
   };
 
