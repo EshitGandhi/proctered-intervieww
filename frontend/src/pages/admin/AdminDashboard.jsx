@@ -673,6 +673,7 @@ const CandidateDetail = ({ appId, onBack }) => {
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState('');
   const [proctoringLogs, setProctoringLogs] = useState([]);
+  const [selectedScreenshot, setSelectedScreenshot] = useState(null);
 
   useEffect(() => {
     api.get(`/applications/${appId}`)
@@ -702,6 +703,8 @@ const CandidateDetail = ({ appId, onBack }) => {
       return acc;
     }, {});
 
+    const screenshots = logs.filter(l => l.screenshot).map(l => l.screenshot);
+
     return (
       <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'center' }}>
         {grouped.tab > 0 && (
@@ -713,6 +716,15 @@ const CandidateDetail = ({ appId, onBack }) => {
           <div style={{ fontSize: '0.7rem', color: '#f59e0b', fontWeight: 700, background: '#fef3c7', padding: '2px 8px', borderRadius: 10 }}>
             📷 {grouped.face} Face Violations
           </div>
+        )}
+        {screenshots.length > 0 && (
+          <button 
+            className="btn btn-ghost btn-sm" 
+            style={{ fontSize: '0.65rem', padding: '2px 10px', marginTop: 4, height: 'auto', background: 'var(--bg-tertiary)', border: '1px solid var(--border)' }}
+            onClick={(e) => { e.stopPropagation(); window.open(screenshots[0], '_blank'); }}
+          >
+            📸 See Screenshot
+          </button>
         )}
       </div>
     );
@@ -936,14 +948,13 @@ const CandidateDetail = ({ appId, onBack }) => {
                   
                   {log.screenshot && (
                     <div style={{ marginTop: 6, padding: 4 }}>
-                      <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 6, letterSpacing: '0.05em' }}>Captured Evidence</div>
-                      <img 
-                        src={log.screenshot} 
-                        alt="Violation Evidence" 
-                        style={{ maxWidth: '100%', maxHeight: 240, borderRadius: 8, border: '2px solid var(--border)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', cursor: 'zoom-in', transition: 'transform 0.2s' }}
+                      <button 
+                        className="btn btn-secondary btn-sm" 
+                        style={{ fontSize: '0.75rem', padding: '6px 12px' }}
                         onClick={() => window.open(log.screenshot, '_blank')}
-                      />
-                      <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: 4 }}>Click image to view full size</div>
+                      >
+                        📸 See Screenshot
+                      </button>
                     </div>
                   )}
                 </div>
