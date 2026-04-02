@@ -142,6 +142,7 @@ const CodeEvalRound = () => {
     enabled: proctoringActive,
     maxViolations: 3,
     sessionId: `coding-${appId}`,
+    videoRef: webcamVideoRef,
     onViolation: (count, max) => {
       const isFinal = count >= max;
       setProctorFinal(isFinal);

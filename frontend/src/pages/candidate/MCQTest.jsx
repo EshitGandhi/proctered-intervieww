@@ -166,6 +166,7 @@ const MCQTest = () => {
     enabled: proctoringActive,
     maxViolations: 3,
     sessionId: `mcq-${appId}`,
+    videoRef: webcamVideoRef,
     onViolation: (count, max) => {
       const isFinal = count >= max;
       setProctorFinal(isFinal);

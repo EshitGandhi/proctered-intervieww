@@ -170,7 +170,7 @@ const useFaceProctor = ({
         const centerX = (box.originX + box.width / 2) / video.videoWidth;
         const centerY = (box.originY + box.height / 2) / video.videoHeight;
 
-        if (centerX < 0.2 || centerX > 0.8 || centerY < 0.2 || centerY > 0.8) {
+        if (centerX < 0.1 || centerX > 0.9 || centerY < 0.1 || centerY > 0.9) {
           if (!lookAwayStartRef.current) lookAwayStartRef.current = Date.now();
           if (Date.now() - lookAwayStartRef.current > 2000) {
             triggerViolation('face_look_away', 'You appear to be looking away from the screen.');
@@ -187,7 +187,7 @@ const useFaceProctor = ({
           const dist1 = Math.abs(noseTip.x - rightEye.x);
           const dist2 = Math.abs(noseTip.x - leftEye.x);
           const ratio = Math.max(dist1, dist2) / (Math.min(dist1, dist2) || 0.0001);
-          if (ratio > 1.8) {
+          if (ratio > 2.4) {
             if (!lookAwayStartRef.current) lookAwayStartRef.current = Date.now();
             if (Date.now() - lookAwayStartRef.current > 2000) {
               triggerViolation('face_look_away', 'You appear to be looking away from the screen.');

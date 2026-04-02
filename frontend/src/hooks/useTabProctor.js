@@ -11,7 +11,7 @@ import api from '../services/api';
  * @param {Function} opts.onAutoSubmit   – () => void, fired 2.5 s after final violation
  * @param {boolean}  opts.enabled        – set false during loading / after result
  */
-const useTabProctor = ({ maxViolations = 3, onViolation, onAutoSubmit, enabled = true, sessionId = '' } = {}) => {
+const useTabProctor = ({ maxViolations = 3, onViolation, onAutoSubmit, enabled = true, sessionId = '', videoRef } = {}) => {
   const [violationCount, setViolationCount] = useState(0);
 
   // Use a ref so the trigger callback never goes stale regardless of re-renders
@@ -23,15 +23,32 @@ const useTabProctor = ({ maxViolations = 3, onViolation, onAutoSubmit, enabled =
   useEffect(() => { onViolationRef.current  = onViolation;  });
   useEffect(() => { onAutoSubmitRef.current = onAutoSubmit; });
 
+  const captureScreenshot = useCallback(() => {
+    if (!videoRef?.current || videoRef.current.readyState < 2) return null;
+    try {
+      const video = videoRef.current;
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      return canvas.toDataURL('image/jpeg', 0.6);
+    } catch (err) {
+      return null;
+    }
+  }, [videoRef]);
+
   const logToBackend = useCallback((eventType, description) => {
+    const screenshot = captureScreenshot();
     api.post('/proctoring/log', {
       sessionId: sessionId || 'tab-proctor',
       eventType,
       description,
       severity: 'high',
+      screenshot,
       metadata: { timestamp: new Date().toISOString() },
     }).catch(() => {});
-  }, [sessionId]);
+  }, [sessionId, captureScreenshot]);
 
   const lastTriggerRef = useRef(0);
 
