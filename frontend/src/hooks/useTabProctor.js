@@ -33,8 +33,16 @@ const useTabProctor = ({ maxViolations = 3, onViolation, onAutoSubmit, enabled =
     }).catch(() => {});
   }, [sessionId]);
 
+  const lastTriggerRef = useRef(0);
+
   const trigger = useCallback(() => {
     if (!enabled || stateRef.current.done) return;
+
+    // Debounce to prevent double-counting when blur and visibilitychange fire sequentially
+    const now = Date.now();
+    if (now - lastTriggerRef.current < 2000) return;
+    lastTriggerRef.current = now;
+
     stateRef.current.count += 1;
     const count = stateRef.current.count;
     setViolationCount(count);
