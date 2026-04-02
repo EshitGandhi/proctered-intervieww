@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 
 const FaceCheckModal = ({ onReady, roundName = 'Test' }) => {
-  const videoRef  = useRef(null);
-  const streamRef = useRef(null);
-  const canvasRef = useRef(null);
+  const videoRef     = useRef(null);
+  const streamRef    = useRef(null);
+  const canvasRef    = useRef(null);
+  const handedOffRef = useRef(false); // true once user confirms — prevents cleanup from killing stream
 
   const [step, setStep]             = useState('requesting');
   const [capturedImg, setCapturedImg] = useState(null);
@@ -48,7 +49,11 @@ const FaceCheckModal = ({ onReady, roundName = 'Test' }) => {
 
     return () => {
       active = false;
-      streamRef.current?.getTracks().forEach(t => t.stop());
+      // Only stop the stream if we never handed it off to the parent.
+      // If the user clicked "Start Test", the parent owns the stream now.
+      if (!handedOffRef.current) {
+        streamRef.current?.getTracks().forEach(t => t.stop());
+      }
     };
   }, []);
 
@@ -82,8 +87,12 @@ const FaceCheckModal = ({ onReady, roundName = 'Test' }) => {
     return () => clearTimeout(t);
   }, [countdown]);
 
+  // ── Confirm and hand off ─────────────────────────────────────────────────────
   const handleRetake = () => { setCapturedImg(null); setStep('preview'); };
-  const handleStart  = () => onReady(videoRef, streamRef.current);
+  const handleStart  = () => {
+    handedOffRef.current = true;           // mark as handed off — don't kill stream on unmount
+    onReady(streamRef.current);            // pass the live MediaStream to the parent
+  };
 
   // ── Styles ────────────────────────────────────────────────────────────────────
   const overlay = {

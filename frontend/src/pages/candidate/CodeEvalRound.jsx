@@ -24,6 +24,14 @@ const CodeEvalRound = () => {
   // ── Face verification gate ───────────────────────────────────────────────
   const [faceReady, setFaceReady] = useState(false);
   const webcamVideoRef = useRef(null);
+  const camStreamRef   = useRef(null);
+
+  useEffect(() => {
+    if (faceReady && webcamVideoRef.current && camStreamRef.current) {
+      webcamVideoRef.current.srcObject = camStreamRef.current;
+      webcamVideoRef.current.play().catch(() => {});
+    }
+  }, [faceReady]);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -276,8 +284,8 @@ const CodeEvalRound = () => {
     return (
       <FaceCheckModal
         roundName="Coding Round"
-        onReady={(videoRef) => {
-          webcamVideoRef.current = videoRef.current;
+        onReady={(stream) => {
+          camStreamRef.current = stream;
           setFaceReady(true);
         }}
       />

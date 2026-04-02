@@ -43,6 +43,14 @@ const MCQTest = () => {
   // ── Face verification gate ───────────────────────────────────────────────────
   const [faceReady,    setFaceReady]    = useState(false);
   const webcamVideoRef = useRef(null);  // set by FaceCheckModal when candidate starts
+  const camStreamRef   = useRef(null);
+
+  useEffect(() => {
+    if (faceReady && webcamVideoRef.current && camStreamRef.current) {
+      webcamVideoRef.current.srcObject = camStreamRef.current;
+      webcamVideoRef.current.play().catch(() => {});
+    }
+  }, [faceReady]);
 
   // ── Core state ───────────────────────────────────────────────────────────────
   const [application, setApplication] = useState(null);
@@ -237,8 +245,8 @@ const MCQTest = () => {
     return (
       <FaceCheckModal
         roundName="MCQ Test"
-        onReady={(videoRef) => {
-          webcamVideoRef.current = videoRef.current;
+        onReady={(stream) => {
+          camStreamRef.current = stream;
           setFaceReady(true);
         }}
       />
