@@ -1399,6 +1399,7 @@ const AdminDashboard = () => {
     if (path.includes('mcq')) return 'mcq';
     if (path.includes('candidates')) return 'candidates';
     if (path.includes('coding')) return 'coding';
+    if (path.includes('proctoring')) return 'proctoring';
     return 'jobs';
   };
 
