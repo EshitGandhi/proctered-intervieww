@@ -44,7 +44,7 @@ const analyzeTranscript = async (transcript, scores, role) => {
 
     const response = await axios.post(ANALYSIS_API_URL, payload, {
       headers: {
-        'x-api-key': process.env.TEAM_ANALYSIS_API_KEY || process.env.GROQ_API_KEY, 
+        'x-api-key': process.env.TEAM_ANALYSIS_API_KEY, 
         'Content-Type': 'application/json'
       }
     });
