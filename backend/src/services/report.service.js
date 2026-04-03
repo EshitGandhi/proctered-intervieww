@@ -7,7 +7,7 @@ const axios = require('axios');
 
 // Configuration
 const UPLOAD_DIR = path.resolve(process.cwd(), 'uploads/reports');
-const ANALYSIS_API_URL = 'https://mahimadangi-ai-hiring-evaluator.hf.space/generate-report';
+const ANALYSIS_API_URL = process.env.TEAM_ANALYSIS_API_URL;
 
 /**
  * Extracts text from DOCX, PDF, or TXT file
