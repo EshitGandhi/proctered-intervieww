@@ -1,81 +1,92 @@
 const Report = require('../models/Report');
+const Application = require('../models/Application');
+const { extractText, analyzeTranscript, generatePDF } = require('../services/report.service');
 const path = require('path');
 const fs = require('fs');
-const mammoth = require('mammoth');
-const { generateManualReport, generateDirectPDFStream } = require('../services/report.service');
 
 /**
- * Helper to extract text from uploaded File (.txt, .docx)
+ * Generate Candidate Evaluation Report
  */
-const extractTextFromFile = async (file) => {
-  if (!file) throw new Error('No file uploaded');
-  const ext = path.extname(file.originalname).toLowerCase();
-  
-  if (ext === '.txt') {
-    return fs.readFileSync(file.path, 'utf8');
-  } else if (ext === '.docx') {
-    const result = await mammoth.extractRawText({ path: file.path });
-    return result.value;
-  } else {
-    throw new Error('Unsupported file format. Please upload .txt or .docx');
-  }
-};
-
-/**
- * Get all reports
- */
-const getReports = async (req, res) => {
+const generateReport = async (req, res) => {
   try {
-    const filter = req.user.role === 'admin' ? {} : { candidate: req.user._id };
-    const reports = await Report.find(filter)
-      .populate('interview', 'title candidateName candidateEmail scheduledAt status')
-      .populate('candidate', 'name email')
-      .sort({ createdAt: -1 });
+    const { appId } = req.params;
+    const application = await Application.findById(appId).populate('candidateId jobId');
 
-    res.json({ success: true, data: reports });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
-
-/**
- * Generate report from manual transcript upload
- */
-const createManualReport = async (req, res) => {
-  try {
-    const { candidateName, candidateEmail } = req.body;
-    if (!candidateName || !candidateEmail) {
-      return res.status(400).json({ success: false, message: 'Missing candidate details' });
+    if (!application) {
+      return res.status(404).json({ success: false, message: 'Application not found' });
     }
 
-    // Extract text from file
-    const transcript = await extractTextFromFile(req.file);
+    // 1. Extract text from uploaded transcript
+    const transcript = await extractText(req.file);
 
-    const report = await generateManualReport({
+    // 2. Prepare scores
+    const scores = {
+      resume_score: application.scores?.resume?.score || 0,
+      coding_score: application.scores?.coding?.score || 0,
+      mcq_score: application.scores?.mcq?.score || 0,
+      final_score: application.scores?.finalScore || 0,
+    };
+
+    // 3. AI Analysis
+    const analysisData = await analyzeTranscript(transcript, scores, application.jobId.title);
+
+    // 4. Create/Update Report in DB
+    const reportData = {
+      applicationId: appId,
+      candidateId: application.candidateId._id,
+      role: application.jobId.title,
+      scores,
+      ...analysisData,
       transcript,
-      candidateName,
-      candidateEmail,
-      userId: req.user._id
-    });
+    };
 
-    // Cleanup temp file
+    let report = await Report.findOne({ applicationId: appId });
+    if (report) {
+      Object.assign(report, reportData);
+      await report.save();
+    } else {
+      report = await Report.create(reportData);
+    }
+
+    // 5. Generate PDF
+    const pdfPath = await generatePDF(report, application);
+    report.pdfPath = pdfPath;
+    await report.save();
+
+    // 6. Cleanup temp file
     if (req.file) fs.unlinkSync(req.file.path);
 
-    res.status(201).json({ success: true, data: report });
+    res.status(200).json({ success: true, data: report });
   } catch (err) {
-    if (req.file) fs.unlinkSync(req.file.path);
+    if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    console.error('[Generate Report Error]:', err);
     res.status(500).json({ success: false, message: err.message });
   }
 };
 
 /**
- * Download a PDF report
+ * Get Report by Application ID
+ */
+const getReportByApplication = async (req, res) => {
+  try {
+    const report = await Report.findOne({ applicationId: req.params.appId });
+    if (!report) {
+      return res.status(404).json({ success: false, message: 'Report not found for this application' });
+    }
+    res.json({ success: true, data: report });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/**
+ * Download PDF Report
  */
 const downloadReport = async (req, res) => {
   try {
     const report = await Report.findById(req.params.id);
     if (!report || !report.pdfPath) {
-      return res.status(404).json({ success: false, message: 'Report not found or not generated' });
+      return res.status(404).json({ success: false, message: 'Report or PDF not found' });
     }
 
     const fullPath = path.resolve(process.cwd(), report.pdfPath.replace(/^\//, ''));
@@ -89,37 +100,4 @@ const downloadReport = async (req, res) => {
   }
 };
 
-/**
- * Generate and stream report without saving to DB
- */
-const downloadReportDirect = async (req, res) => {
-  try {
-    const { candidateName, candidateEmail } = req.body;
-    
-    // Extract text from file
-    const transcript = await extractTextFromFile(req.file);
-
-    console.log(`Starting direct PDF generation for ${candidateName}...`);
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename=Report_${candidateName}.pdf`);
-
-    await generateDirectPDFStream(res, { transcript, candidateName, candidateEmail });
-    
-    // Cleanup
-    if (req.file) fs.unlinkSync(req.file.path);
-  } catch (err) {
-    if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-    console.error('[Direct PDF Error]:', err);
-    
-    const errorMessage = err.response?.data?.message || err.message || 'Failed to generate report';
-    
-    if (!res.headersSent) {
-      res.status(500).json({ 
-        success: false, 
-        message: `Report generation failed: ${errorMessage}` 
-      });
-    }
-  }
-};
-
-module.exports = { getReports, downloadReport, createManualReport, downloadReportDirect };
+module.exports = { generateReport, getReportByApplication, downloadReport };

@@ -14,6 +14,7 @@ const jobRoutes = require('./routes/job.routes');
 const mcqRoutes = require('./routes/mcq.routes');
 const applicationRoutes = require('./routes/application.routes');
 const codingQuestionRoutes = require('./routes/codingQuestion.routes');
+const reportRoutes = require('./routes/report.routes');
 
 // ─── App Setup ────────────────────────────────────────────────────────────────
 const app = express();
@@ -57,6 +58,7 @@ app.use('/api/jobs', jobRoutes);
 app.use('/api/mcq', mcqRoutes);
 app.use('/api/applications', applicationRoutes);
 app.use('/api/coding-questions', codingQuestionRoutes);
+app.use('/api/reports', reportRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

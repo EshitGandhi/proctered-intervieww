@@ -651,11 +651,21 @@ const CandidateDetail = ({ appId, onBack }) => {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState('');
+  const [report, setReport] = useState(null);
+  const [fetchingReport, setFetchingReport] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = React.useRef(null);
 
   useEffect(() => {
     api.get(`/applications/${appId}`)
       .then(r => setApp(r.data.data))
       .finally(() => setLoading(false));
+
+    setFetchingReport(true);
+    api.get(`/reports/application/${appId}`)
+      .then(r => setReport(r.data.data))
+      .catch(() => setReport(null))
+      .finally(() => setFetchingReport(false));
   }, [appId]);
 
 
@@ -675,6 +685,35 @@ const CandidateDetail = ({ appId, onBack }) => {
     } finally {
       setGenerating(false);
     }
+  };
+
+  const handleGenerateReport = async () => {
+    const file = fileInputRef.current?.files[0];
+    if (!file) return alert('Please select a transcript file (PDF/DOCX)');
+
+    setUploading(true);
+    setGenError('');
+
+    const formData = new FormData();
+    formData.append('transcript', file);
+
+    try {
+      const { data } = await api.post(`/reports/generate/${appId}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setReport(data.data);
+      alert('Report generated successfully!');
+    } catch (err) {
+      setGenError(err.response?.data?.message || 'Failed to generate report');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDownloadPDF = () => {
+    if (!report?._id) return;
+    const url = `${api.defaults.baseURL}/reports/download/${report._id}`;
+    window.open(url, '_blank');
   };
 
   if (loading) return <div style={{ textAlign: 'center', padding: 60 }}><div className="spinner" /></div>;
@@ -767,7 +806,86 @@ const CandidateDetail = ({ appId, onBack }) => {
         {scoreBox('Coding', app.scores?.coding?.score || 0, app.jobId?.codingThreshold)}
       </div>
 
+      {/* Evaluation Report Section */}
+      <div className="card" style={{ marginBottom: 20 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <h3 style={{ margin: 0, fontSize: '1.05rem' }}>📋 Interview Evaluation Report</h3>
+          {report && (
+            <button className="btn btn-primary btn-sm" onClick={handleDownloadPDF}>
+              📥 Download PDF Report
+            </button>
+          )}
+        </div>
 
+        {!report ? (
+          <div style={{ background: 'var(--bg-secondary)', padding: '24px', borderRadius: 12, textAlign: 'center', border: '2px dashed var(--border)' }}>
+            <p style={{ margin: '0 0 16px', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+              No evaluation report generated yet. Upload the interview transcript to begin.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                accept=".pdf,.docx,.txt" 
+                style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}
+              />
+              <button 
+                className="btn btn-primary" 
+                onClick={handleGenerateReport} 
+                disabled={uploading}
+                style={{ padding: '10px 24px' }}
+              >
+                {uploading ? 'Processing AI Analysis...' : '✨ Generate Evaluation Report'}
+              </button>
+              {genError && <p style={{ color: 'var(--danger)', fontSize: '0.8rem', marginTop: 8 }}>{genError}</p>}
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+            {/* Left Column: Analysis */}
+            <div style={{ background: 'rgba(37,99,235,0.03)', padding: 16, borderRadius: 12, border: '1px solid rgba(37,99,235,0.1)' }}>
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>Sentiment & Confidence</div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, background: 'var(--bg-app)', padding: '4px 10px', borderRadius: 6 }}>{report.analysis.sentiment}</span>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, background: 'var(--bg-app)', padding: '4px 10px', borderRadius: 6 }}>{report.analysis.confidence_level} Confidence</span>
+                </div>
+              </div>
+              
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--success)', textTransform: 'uppercase', marginBottom: 6 }}>Strengths</div>
+                <ul style={{ margin: 0, paddingLeft: 16, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                  {report.analysis.strengths.map((s, i) => <li key={i} style={{ marginBottom: 4 }}>{s}</li>)}
+                </ul>
+              </div>
+
+              <div>
+                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--danger)', textTransform: 'uppercase', marginBottom: 6 }}>Weaknesses</div>
+                <ul style={{ margin: 0, paddingLeft: 16, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                  {report.analysis.weaknesses.map((w, i) => <li key={i} style={{ marginBottom: 4 }}>{w}</li>)}
+                </ul>
+              </div>
+            </div>
+
+            {/* Right Column: Recommendation & Insights */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div style={{ background: 'var(--bg-secondary)', padding: 16, borderRadius: 12 }}>
+                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 8 }}>Recommendation</div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 700, color: report.recommendation.decision === 'Hire' ? 'var(--success)' : report.recommendation.decision === 'Reject' ? 'var(--danger)' : 'var(--warning)', marginBottom: 4 }}>
+                  {report.recommendation.decision}
+                </div>
+                <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-muted)' }}>{report.recommendation.reason}</p>
+                <div style={{ marginTop: 8, fontSize: '0.75rem', fontWeight: 600 }}>Risk Level: {report.recommendation.risk_level}</div>
+              </div>
+
+              <div style={{ background: 'var(--bg-secondary)', padding: 16, borderRadius: 12 }}>
+                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 8 }}>Candidate Summary</div>
+                <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{report.insights.candidate_summary}</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
     </div>
   );
