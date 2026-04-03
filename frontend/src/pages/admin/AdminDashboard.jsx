@@ -767,45 +767,7 @@ const CandidateDetail = ({ appId, onBack }) => {
         {scoreBox('Coding', app.scores?.coding?.score || 0, app.jobId?.codingThreshold)}
       </div>
 
-      {/* Resume detail */}
-      {(app.scores?.resume?.matchedSkills?.length > 0 || app.scores?.resume?.resumeUrl) && (
-        <div className="card" style={{ marginBottom: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-            <h3 style={{ fontSize: '0.95rem', margin: 0 }}>Resume Analysis</h3>
-            {app.scores?.resume?.resumeUrl && (
-              <a
-                href={`${api.defaults.baseURL?.replace('/api', '') || 'http://localhost:5000'}${app.scores.resume.resumeUrl}`}
-                target="_blank"
-                rel="noreferrer"
-                className="btn btn-secondary btn-sm"
-                style={{ textDecoration: 'none' }}
-              >
-                📄 View Resume
-              </a>
-            )}
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-            <div>
-              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#10b981', marginBottom: 8, textTransform: 'uppercase' }}>Matched Skills</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {app.scores.resume.matchedSkills.map(s => (
-                  <span key={s} style={{ fontSize: '0.75rem', padding: '3px 10px', borderRadius: 20, background: '#d1fae5', color: '#065f46', fontWeight: 600 }}>✓ {s}</span>
-                ))}
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#ef4444', marginBottom: 8, textTransform: 'uppercase' }}>Missing Skills</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {app.scores.resume.missingSkills.length === 0 ? (
-                  <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>None</span>
-                ) : app.scores.resume.missingSkills.map(s => (
-                  <span key={s} style={{ fontSize: '0.75rem', padding: '3px 10px', borderRadius: 20, background: '#fee2e2', color: '#991b1b', fontWeight: 600 }}>✗ {s}</span>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+
 
     </div>
   );
