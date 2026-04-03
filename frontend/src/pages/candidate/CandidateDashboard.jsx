@@ -49,7 +49,6 @@ const getStepInfo = (app) => {
         : 'passed',
       score: app.scores?.mcq?.score,
       threshold: app.jobId?.mcqThreshold,
-      // Hide button if job is deactivated
       actionLabel: s === 'mcq_pending' && jobActive ? 'Start MCQ Test' : null,
       actionPath: s === 'mcq_pending' && jobActive ? `/mcq/${app._id}` : null,
       jobDeactivated: s === 'mcq_pending' && !jobActive,
@@ -63,24 +62,9 @@ const getStepInfo = (app) => {
         : 'passed',
       score: app.scores?.coding?.score,
       threshold: app.jobId?.codingThreshold,
-      // Hide button if job is deactivated
       actionLabel: s === 'coding_pending' && jobActive ? 'Open Code Editor' : null,
       actionPath: s === 'coding_pending' && jobActive ? `/coding/${app._id}` : null,
       jobDeactivated: s === 'coding_pending' && !jobActive,
-    },
-    {
-      label: 'Interview',
-      icon: '🎥',
-      status: ['resume_rejected', 'applied', 'mcq_pending', 'mcq_failed', 'coding_pending', 'coding_failed'].includes(s) ? 'locked'
-        : s === 'interview_pending' ? 'pending'
-        : s === 'interview_scheduled' ? 'scheduled'
-        : s === 'interview_completed' ? 'passed'
-        : 'pending',
-      score: app.scores?.interview?.score,
-      threshold: null,
-      actionLabel: s === 'interview_scheduled' && app.scores?.interview?.interviewId?.roomId ? 'Join Interview' : null,
-      actionPath: s === 'interview_scheduled' && app.scores?.interview?.interviewId?.roomId
-        ? `/room/${app.scores.interview.interviewId.roomId}` : null,
     },
   ];
   return steps;
@@ -112,7 +96,7 @@ const PipelineCard = ({ app, navigate }) => {
       </div>
 
       {/* Step Tracker */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
         {steps.map((step, i) => (
           <div key={i} style={{
             background: step.status === 'locked' ? 'var(--bg-secondary)' : 'var(--bg-primary)',
@@ -124,7 +108,7 @@ const PipelineCard = ({ app, navigate }) => {
             transition: 'all 0.2s',
           }}>
             {/* Step number connector line */}
-            {i < 3 && (
+            {i < 2 && (
               <div style={{
                 position: 'absolute',
                 right: -7, top: '50%',
@@ -163,11 +147,6 @@ const PipelineCard = ({ app, navigate }) => {
               </div>
             )}
 
-            {step.status === 'pending' && step.label === 'Interview' && (
-              <div style={{ marginTop: 10, fontSize: '0.7rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
-                Awaiting admin to schedule your interview
-              </div>
-            )}
           </div>
         ))}
       </div>

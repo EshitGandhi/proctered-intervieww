@@ -40,8 +40,7 @@ const jobSchema = new mongoose.Schema(
     // Evaluation Weights (for Final Score Calculation)
     resumeWeight: { type: Number, default: 20 },
     mcqWeight: { type: Number, default: 20 },
-    codingWeight: { type: Number, default: 30 },
-    interviewWeight: { type: Number, default: 30 },
+    codingWeight: { type: Number, default: 60 },
     // Test Configurations
     mcqCount: { type: Number, default: 20 },
     mcqDuration: { type: Number, default: 30 }, // Minutes for MCQ Round

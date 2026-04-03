@@ -13,8 +13,7 @@ const INITIAL_JOB_FORM = {
   codingThreshold: 50,
   resumeWeight: 20,
   mcqWeight: 20,
-  codingWeight: 30,
-  interviewWeight: 30,
+  codingWeight: 60,
   mcqDuration: 30,     // Minutes for MCQ round
   codingDuration: 60,  // Minutes for Coding round
   isActive: true,
@@ -56,7 +55,7 @@ const JobManagement = () => {
     setError('');
 
     // Sum weights validation
-    const totalWeight = Number(form.resumeWeight) + Number(form.mcqWeight) + Number(form.codingWeight) + Number(form.interviewWeight);
+    const totalWeight = Number(form.resumeWeight) + Number(form.mcqWeight) + Number(form.codingWeight);
     if (totalWeight !== 100) {
       setError(`Weights must sum up to 100. Current sum: ${totalWeight}`);
       setSaving(false);
@@ -226,7 +225,7 @@ const JobManagement = () => {
               </div>
 
               <h3 style={{ fontSize: '1rem', marginTop: 10, borderBottom: '1px solid var(--border)', paddingBottom: 8 }}>Final Score Weights (must sum to 100)</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
                 <div className="form-group">
                   <label>Resume Wt</label>
                   <input className="input" type="number" min="0" max="100" value={form.resumeWeight} onChange={e => setForm({...form, resumeWeight: e.target.value})} />
@@ -238,10 +237,6 @@ const JobManagement = () => {
                 <div className="form-group">
                   <label>Coding Wt</label>
                   <input className="input" type="number" min="0" max="100" value={form.codingWeight} onChange={e => setForm({...form, codingWeight: e.target.value})} />
-                </div>
-                <div className="form-group">
-                  <label>Interview Wt</label>
-                  <input className="input" type="number" min="0" max="100" value={form.interviewWeight} onChange={e => setForm({...form, interviewWeight: e.target.value})} />
                 </div>
               </div>
 

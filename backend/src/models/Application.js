@@ -25,9 +25,6 @@ const applicationSchema = new mongoose.Schema(
         'coding_pending',
         'coding_passed',
         'coding_failed',
-        'interview_pending',
-        'interview_scheduled',
-        'interview_completed',
         'hired',
         'rejected',
       ],
@@ -52,11 +49,6 @@ const applicationSchema = new mongoose.Schema(
       },
       coding: {
         score: { type: Number, default: 0 },
-        submissionId: { type: mongoose.Schema.Types.ObjectId, ref: 'CodeSubmission' }, // Link to existing code submission logic if applicable
-      },
-      interview: {
-        score: { type: Number, default: 0 },
-        interviewId: { type: mongoose.Schema.Types.ObjectId, ref: 'Interview' }, // Link to actual video session
       },
       finalScore: { type: Number, default: 0 },
     },

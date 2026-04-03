@@ -14,7 +14,7 @@ const JobsTab = () => {
   const [form, setForm] = useState({
     title: '', domain: '', description: '', skills: '',
     resumeThreshold: 60, mcqThreshold: 70, codingThreshold: 50,
-    resumeWeight: 20, mcqWeight: 20, codingWeight: 30, interviewWeight: 30,
+    resumeWeight: 30, mcqWeight: 30, codingWeight: 40,
     mcqCount: 20, mcqDuration: 30, codingDuration: 60
   });
   const [showInactive, setShowInactive] = useState(false);
@@ -40,7 +40,7 @@ const JobsTab = () => {
         requiredSkills: form.skills.split(',').map(s => s.trim()).filter(Boolean),
       });
       setShowForm(false);
-      setForm({ title: '', domain: '', description: '', skills: '', resumeThreshold: 60, mcqThreshold: 70, codingThreshold: 50, resumeWeight: 20, mcqWeight: 20, codingWeight: 30, interviewWeight: 30, mcqCount: 20, mcqDuration: 30, codingDuration: 60 });
+      setForm({ title: '', domain: '', description: '', skills: '', resumeThreshold: 60, mcqThreshold: 70, codingThreshold: 50, resumeWeight: 30, mcqWeight: 30, codingWeight: 40, mcqCount: 20, mcqDuration: 30, codingDuration: 60 });
       fetchJobs();
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to create job');
@@ -121,8 +121,8 @@ const JobsTab = () => {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 20 }}>
-              {['resumeWeight', 'mcqWeight', 'codingWeight', 'interviewWeight'].map(k => (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginBottom: 20 }}>
+              {['resumeWeight', 'mcqWeight', 'codingWeight'].map(k => (
                 <div key={k}>
                   <label style={labelStyle}>{k.replace('Weight', '').replace(/([A-Z])/g, ' $1')} Weight</label>
                   <input type="number" min="0" max="100" style={inputStyle} value={form[k]} onChange={e => setForm(f => ({ ...f, [k]: Number(e.target.value) }))} />
@@ -265,16 +265,10 @@ const MetricsModal = ({ job, onClose }) => {
             pending: apps.filter(a => a.status === 'mcq_pending').length,
           },
           coding: {
-            passed: apps.filter(a => ['interview_pending', 'interview_scheduled', 'interview_completed', 'hired', 'rejected'].includes(a.status)).length,
+            passed: apps.filter(a => ['coding_passed', 'hired', 'rejected'].includes(a.status)).length,
             rejected: apps.filter(a => a.status === 'coding_failed').length,
             pending: apps.filter(a => a.status === 'coding_pending').length,
           },
-          interview: {
-            passed: apps.filter(a => ['hired'].includes(a.status)).length,
-            rejected: apps.filter(a => ['rejected'].includes(a.status)).length,
-            completed: apps.filter(a => ['interview_completed'].includes(a.status)).length,
-            scheduled: apps.filter(a => ['interview_scheduled'].includes(a.status)).length,
-          }
         };
         setMetrics(data);
       } catch (err) {
@@ -359,21 +353,7 @@ const MetricsModal = ({ job, onClose }) => {
                 )}
               </div>
 
-              <div className="card" style={{ padding: 16, border: '1px solid var(--border)' }}>
-                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: 12, textTransform: 'uppercase' }}>🎥 Final Stage</div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Hired 🎉</span>
-                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--success)' }}>{metrics.interview.passed}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Rejected</span>
-                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--danger)' }}>{metrics.interview.rejected}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Scheduled</span>
-                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--accent-primary)' }}>{metrics.interview.scheduled + metrics.interview.completed}</span>
-                </div>
-              </div>
+
             </div>
 
             <div style={{ marginTop: 8 }}>
@@ -565,9 +545,8 @@ const CandidatesTab = ({ onSelectCandidate }) => {
 
   const statusColors = {
     applied: '#94a3b8', resume_rejected: '#ef4444', mcq_pending: '#f59e0b',
-    mcq_failed: '#ef4444', coding_pending: '#3b82f6', coding_failed: '#ef4444',
-    interview_pending: '#8b5cf6', interview_scheduled: '#8b5cf6',
-    interview_completed: '#10b981', hired: '#10b981', rejected: '#ef4444',
+    mcq_failed: '#ef4444', coding_pending: '#3b82f6', coding_passed: '#10b981', coding_failed: '#ef4444',
+    hired: '#10b981', rejected: '#ef4444',
   };
 
   const inputStyle = { padding: '7px 10px', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '0.8rem' };
@@ -597,10 +576,10 @@ const CandidatesTab = ({ onSelectCandidate }) => {
               <option value="mcq_pending">MCQ Pending</option>
               <option value="mcq_failed">MCQ Failed</option>
               <option value="coding_pending">Coding Pending</option>
-              <option value="interview_pending">Interview Pending</option>
-              <option value="interview_scheduled">Interview Scheduled</option>
-              <option value="interview_completed">Interview Completed</option>
+              <option value="coding_failed">Coding Failed</option>
+              <option value="coding_passed">Coding Passed (Ready)</option>
               <option value="hired">Hired</option>
+              <option value="rejected">Rejected</option>
             </select>
           </div>
           <div>
@@ -672,8 +651,6 @@ const CandidateDetail = ({ appId, onBack }) => {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState('');
-  const [proctoringLogs, setProctoringLogs] = useState([]);
-  const [screenshotModal, setScreenshotModal] = useState(null); // { round, refPhotos, violationPhotos }
 
   useEffect(() => {
     api.get(`/applications/${appId}`)
@@ -681,80 +658,6 @@ const CandidateDetail = ({ appId, onBack }) => {
       .finally(() => setLoading(false));
   }, [appId]);
 
-  useEffect(() => {
-    if (app?.candidateId?._id) {
-      api.get(`/proctoring/candidate/${app.candidateId._id}`)
-        .then(r => {
-           const appLogs = (r.data.data || []).filter(log => log.sessionId === `mcq-${appId}` || log.sessionId === `coding-${appId}`);
-           setProctoringLogs(appLogs);
-        })
-        .catch(() => {});
-    }
-  }, [app, appId]);
-
-  const getViolationsFor = (round) => proctoringLogs.filter(l => l.sessionId === `${round}-${appId}`);
-
-  const renderViolations = (logs, round) => {
-    const tabCount = (logs || []).filter(l => l.eventType === 'tab_switch' || l.eventType === 'window_blur').length;
-    const faceCount = (logs || []).filter(l => ['no_face_detected', 'multiple_faces', 'face_look_away', 'camera_blocked'].includes(l.eventType)).length;
-    const hasViolations = tabCount > 0 || faceCount > 0;
-
-    // Separate reference/first photos from violation screenshots
-    const refPhotos = (logs || []).filter(l => l.eventType === 'face_reference_captured' && l.screenshot).map(l => ({ src: l.screenshot, time: l.timestamp, label: 'Reference Photo (Round Start)' }));
-    const violationPhotos = (logs || []).filter(l => l.eventType !== 'face_reference_captured' && l.screenshot).map(l => ({ src: l.screenshot, time: l.timestamp, label: l.eventType.replace(/_/g, ' ') }));
-    const hasPhotos = refPhotos.length > 0 || violationPhotos.length > 0;
-
-    return (
-      <div style={{ marginTop: 12, width: '100%', display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'center' }}>
-        {/* Violation Counts */}
-        {hasViolations ? (
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'center' }}>
-            <div style={{ fontSize: '0.68rem', color: '#b45309', fontWeight: 700, background: '#fef3c7', border: '1px solid #fbbf24', padding: '3px 9px', borderRadius: 20, display: 'flex', alignItems: 'center', gap: 3 }}>
-              💻 {tabCount} Tab Switch
-            </div>
-            <div style={{ fontSize: '0.68rem', color: '#b91c1c', fontWeight: 700, background: '#fee2e2', border: '1px solid #fca5a5', padding: '3px 9px', borderRadius: 20, display: 'flex', alignItems: 'center', gap: 3 }}>
-              👤 {faceCount} Face
-            </div>
-          </div>
-        ) : (
-          <div style={{ fontSize: '0.72rem', color: '#10b981', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-            ✓ No violations
-          </div>
-        )}
-        {/* Screenshot Button — always shown if any photos captured */}
-        <button
-          className="btn btn-sm"
-          style={{
-            fontSize: '0.68rem', padding: '4px 12px', marginTop: 4,
-            background: hasPhotos ? '#eff6ff' : 'var(--bg-tertiary)',
-            color: hasPhotos ? '#1d4ed8' : 'var(--text-muted)',
-            border: hasPhotos ? '1px solid #bfdbfe' : '1px solid var(--border)',
-            borderRadius: 8, fontWeight: 600, cursor: hasPhotos ? 'pointer' : 'default',
-            opacity: hasPhotos ? 1 : 0.55,
-          }}
-          onClick={(e) => {
-            e.stopPropagation();
-            if (hasPhotos) setScreenshotModal({ round, refPhotos, violationPhotos });
-          }}
-        >
-          📸 {hasPhotos ? `View Screenshots (${refPhotos.length + violationPhotos.length})` : 'No Screenshots'}
-        </button>
-      </div>
-    );
-  };
-
-  const handleGenerate = async (timeStr) => {
-    setGenerating(true); setGenError('');
-    try {
-      const payload = timeStr ? { startTime: new Date(timeStr).toISOString() } : {};
-      const { data } = await api.post(`/applications/${appId}/generate-interview`, payload);
-      setApp(data.data);
-    } catch (err) {
-      setGenError(err.response?.data?.error || 'Failed to generate interview');
-    } finally {
-      setGenerating(false);
-    }
-  };
 
   const handleOverride = async (action) => {
     if (!window.confirm('Are you sure you want to perform this override action?')) return;
@@ -762,7 +665,7 @@ const CandidateDetail = ({ appId, onBack }) => {
     try {
       if (action === 'delete') {
         await api.delete(`/applications/${appId}`);
-        onBack(); // go back to candidates list
+        onBack();
       } else {
         const { data } = await api.post(`/applications/${appId}/override`, { action });
         setApp(data.data);
@@ -777,97 +680,17 @@ const CandidateDetail = ({ appId, onBack }) => {
   if (loading) return <div style={{ textAlign: 'center', padding: 60 }}><div className="spinner" /></div>;
   if (!app) return <div>Application not found</div>;
 
-  const scoreBox = (label, score, threshold, extra) => (
-    <div style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: 20, textAlign: 'center', minHeight: 180, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+  const scoreBox = (label, score, threshold) => (
+    <div style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: 20, textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
       <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 8 }}>{label}</div>
       <div style={{ fontSize: '2.2rem', fontWeight: 800, color: score >= (threshold || 0) ? '#10b981' : score === 0 ? 'var(--text-muted)' : '#ef4444', lineHeight: 1 }}>{score}%</div>
       {threshold && <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 6 }}>Min: {threshold}%</div>}
-      <div style={{ marginTop: 'auto', width: '100%' }}>{extra}</div>
     </div>
   );
 
   return (
     <div>
       <button className="btn btn-ghost btn-sm" onClick={onBack} style={{ marginBottom: 20 }}>← Back to Candidates</button>
-
-      {/* Screenshot Lightbox Modal */}
-      {screenshotModal && (
-        <div
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
-          onClick={() => setScreenshotModal(null)}
-        >
-          <div
-            style={{ background: 'var(--bg-card)', borderRadius: 16, padding: 28, maxWidth: 920, width: '100%', maxHeight: '92vh', overflow: 'auto', boxShadow: '0 32px 80px rgba(0,0,0,0.7)' }}
-            onClick={e => e.stopPropagation()}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <div>
-                <h3 style={{ margin: 0, fontSize: '1.05rem' }}>📸 {screenshotModal.round?.toUpperCase()} Round — Captured Photos</h3>
-                <p style={{ margin: '4px 0 0', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                  {screenshotModal.refPhotos.length} reference photo{screenshotModal.refPhotos.length !== 1 ? 's' : ''} · {screenshotModal.violationPhotos.length} violation screenshot{screenshotModal.violationPhotos.length !== 1 ? 's' : ''}
-                </p>
-              </div>
-              <button className="btn btn-ghost btn-sm" onClick={() => setScreenshotModal(null)}>✕ Close</button>
-            </div>
-
-            {/* Reference / First Photo Section */}
-            {screenshotModal.refPhotos.length > 0 && (
-              <div style={{ marginBottom: 20 }}>
-                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ background: '#d1fae5', border: '1px solid #6ee7b7', borderRadius: 6, padding: '2px 8px' }}>✓ Reference Photo — Captured at Round Start</span>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 10 }}>
-                  {screenshotModal.refPhotos.map((photo, i) => (
-                    <div key={i} style={{ borderRadius: 10, overflow: 'hidden', border: '2px solid #6ee7b7', background: 'var(--bg-secondary)', boxShadow: '0 4px 12px rgba(16,185,129,0.15)' }}>
-                      <img
-                        src={photo.src}
-                        alt={`Reference photo ${i + 1}`}
-                        style={{ width: '100%', display: 'block', cursor: 'zoom-in' }}
-                        onClick={() => window.open(photo.src, '_blank')}
-                      />
-                      <div style={{ padding: '8px 12px', fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span>📷 Round Start Photo #{i + 1}</span>
-                        <span style={{ color: '#10b981' }}>{photo.time ? new Date(photo.time).toLocaleTimeString() : ''}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Violation Screenshots Section */}
-            {screenshotModal.violationPhotos.length > 0 && (
-              <div>
-                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#ef4444', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: 6, padding: '2px 8px' }}>⚠ Violation Screenshots ({screenshotModal.violationPhotos.length})</span>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 10 }}>
-                  {screenshotModal.violationPhotos.map((photo, i) => (
-                    <div key={i} style={{ borderRadius: 10, overflow: 'hidden', border: '2px solid #fca5a5', background: 'var(--bg-secondary)', boxShadow: '0 4px 12px rgba(239,68,68,0.12)' }}>
-                      <img
-                        src={photo.src}
-                        alt={`Violation ${i + 1}`}
-                        style={{ width: '100%', display: 'block', cursor: 'zoom-in' }}
-                        onClick={() => window.open(photo.src, '_blank')}
-                      />
-                      <div style={{ padding: '8px 12px', fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ textTransform: 'capitalize', color: '#ef4444' }}>⚠ {photo.label} #{i + 1}</span>
-                        <span>{photo.time ? new Date(photo.time).toLocaleTimeString() : ''}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {screenshotModal.refPhotos.length === 0 && screenshotModal.violationPhotos.length === 0 && (
-              <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                No screenshots were captured during this round.
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Header */}
       <div className="card" style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 20 }}>
@@ -898,7 +721,7 @@ const CandidateDetail = ({ appId, onBack }) => {
       </div>
 
       {/* Admin Overrides */}
-      {['resume_rejected', 'mcq_pending', 'mcq_failed', 'coding_pending', 'coding_failed', 'interview_scheduled', 'interview_completed'].includes(app.status) && (
+      {['resume_rejected', 'mcq_pending', 'mcq_failed', 'coding_pending', 'coding_failed'].includes(app.status) && (
         <div className="card" style={{ marginBottom: 20, background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
           <h3 style={{ fontSize: '0.95rem', marginBottom: 10 }}>Admin Controls &amp; Overrides</h3>
           <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: 14 }}>
@@ -932,45 +755,16 @@ const CandidateDetail = ({ appId, onBack }) => {
                 🔄 Allow Coding Retry
               </button>
             )}
-
-            {(app.status === 'coding_pending' || app.status === 'coding_failed') && (
-              <button className="btn btn-secondary btn-sm" onClick={() => handleOverride('skip_coding')} disabled={generating}>
-                ⏩ Skip Coding Round
-              </button>
-            )}
-
-
-            {/* Final disposition after interview */}
-            {app.status === 'interview_completed' && (
-              <>
-                <button
-                  className="btn btn-primary btn-sm"
-                  style={{ background: '#10b981', borderColor: '#10b981' }}
-                  onClick={() => handleOverride('mark_hired')}
-                  disabled={generating}
-                >
-                  🎉 Mark as Hired
-                </button>
-                <button
-                  className="btn btn-danger btn-sm"
-                  onClick={() => handleOverride('mark_rejected')}
-                  disabled={generating}
-                >
-                  ✗ Mark as Rejected
-                </button>
-              </>
-            )}
           </div>
         </div>
       )}
 
 
       {/* Scores */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 20 }}>
         {scoreBox('Resume', app.scores?.resume?.score || 0, app.jobId?.resumeThreshold)}
-        {scoreBox('MCQ', app.scores?.mcq?.score || 0, app.jobId?.mcqThreshold, renderViolations(getViolationsFor('mcq'), 'mcq'))}
-        {scoreBox('Coding', app.scores?.coding?.score || 0, app.jobId?.codingThreshold, renderViolations(getViolationsFor('coding'), 'coding'))}
-        {scoreBox('Final Score', app.scores?.finalScore || 0, null)}
+        {scoreBox('MCQ', app.scores?.mcq?.score || 0, app.jobId?.mcqThreshold)}
+        {scoreBox('Coding', app.scores?.coding?.score || 0, app.jobId?.codingThreshold)}
       </div>
 
       {/* Resume detail */}
@@ -1013,92 +807,6 @@ const CandidateDetail = ({ appId, onBack }) => {
         </div>
       )}
 
-      {/* Interview section */}
-      <div className="card">
-        <h3 style={{ fontSize: '0.95rem', marginBottom: 14 }}>Interview Stage</h3>
-
-        {app.scores?.interview?.interviewId ? (
-          <div>
-            <div className="alert alert-success" style={{ marginBottom: 14 }}>
-              Interview session provisioned · Status: <strong>{app.scores.interview.interviewId.status || 'scheduled'}</strong>
-            </div>
-            {app.scores.interview.interviewId.roomId && (
-              <div style={{ display: 'flex', gap: 10 }}>
-                <button className="btn btn-primary" onClick={() => navigate(`/monitor/${app.scores.interview.interviewId.roomId}`)}>
-                  Join as Interviewer
-                </button>
-                <button className="btn btn-secondary" onClick={() => navigate(`/playback/${app.scores.interview.interviewId._id}`)}>
-                  View Recording / Transcript
-                </button>
-              </div>
-            )}
-            <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
-              <h4 style={{ fontSize: '0.85rem', marginBottom: 10 }}>Reschedule Interview</h4>
-              {genError && <div className="alert alert-danger" style={{ marginBottom: 12 }}>{genError}</div>}
-              <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>
-                    NEW SCHEDULE TIME
-                  </label>
-                  <input
-                    type="datetime-local"
-                    id="interviewRescheduleTime"
-                    defaultValue={new Date((app.scores.interview.interviewId.scheduledAt ? new Date(app.scores.interview.interviewId.scheduledAt).getTime() : Date.now()) - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)}
-                    className="input"
-                    style={{ padding: '8px 12px', width: '220px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '6px' }}
-                  />
-                </div>
-                <button
-                  className="btn btn-secondary"
-                  style={{ alignSelf: 'flex-end', height: '40px' }}
-                  onClick={() => {
-                    const el = document.getElementById('interviewRescheduleTime');
-                    handleGenerate(el ? el.value : null);
-                  }}
-                  disabled={generating}>
-                  {generating ? 'Updating...' : '🔄 Reschedule Session'}
-                </button>
-              </div>
-            </div>
-          </div>
-        ) : app.status === 'interview_pending' ? (
-          <div>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: 14 }}>
-              This candidate has passed all rounds and is awaiting an interview session.
-            </p>
-            {genError && <div className="alert alert-danger" style={{ marginBottom: 12 }}>{genError}</div>}
-
-            <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 16, flexWrap: 'wrap' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>
-                  SCHEDULE TIME
-                </label>
-                <input
-                  type="datetime-local"
-                  id="interviewScheduleTime"
-                  defaultValue={new Date(Date.now() + 86400000 - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)}
-                  className="input"
-                  style={{ padding: '8px 12px', width: '220px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '6px' }}
-                />
-              </div>
-              <button
-                className="btn btn-primary"
-                style={{ alignSelf: 'flex-end', height: '40px' }}
-                onClick={() => {
-                  const el = document.getElementById('interviewScheduleTime');
-                  handleGenerate(el ? el.value : null);
-                }}
-                disabled={generating}>
-                {generating ? 'Generating...' : '🎥 Generate Interview Session'}
-              </button>
-            </div>
-          </div>
-        ) : (
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-            Candidate has not yet reached the interview stage.
-          </p>
-        )}
-      </div>
     </div>
   );
 };

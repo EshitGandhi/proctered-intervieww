@@ -1,7 +1,5 @@
 require('dotenv').config();
 const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
@@ -10,22 +8,15 @@ const fs = require('fs');
 
 const connectDB = require('./config/db');
 const errorHandler = require('./middleware/error.middleware');
-const setupSignaling = require('./socket/signalingHandler');
-
-// Routes
 const authRoutes = require('./routes/auth.routes');
-const interviewRoutes = require('./routes/interview.routes');
 const codeRoutes = require('./routes/code.routes');
-const recordingRoutes = require('./routes/recording.routes');
 const jobRoutes = require('./routes/job.routes');
 const mcqRoutes = require('./routes/mcq.routes');
 const applicationRoutes = require('./routes/application.routes');
-const proctoringRoutes = require('./routes/proctoring.routes');
 const codingQuestionRoutes = require('./routes/codingQuestion.routes');
 
 // ─── App Setup ────────────────────────────────────────────────────────────────
 const app = express();
-const httpServer = http.createServer(app);
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 const ALLOWED_ORIGINS = [
@@ -34,25 +25,6 @@ const ALLOWED_ORIGINS = [
   'http://localhost:3000',
   'https://proctered-intervieww.vercel.app'
 ];
-
-// ─── Socket.io ────────────────────────────────────────────────────────────────
-const io = new Server(httpServer, {
-  cors: {
-    origin: (origin, callback) => {
-      // Allow if no origin (e.g. mobile apps, curl), exactly matches ALLOWED_ORIGINS, or is a Vercel preview deployment
-      if (!origin || ALLOWED_ORIGINS.includes(origin) || origin.endsWith('.vercel.app')) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    credentials: true,
-  },
-  maxHttpBufferSize: 1e8, // 100MB for potential data transfers
-});
-
-setupSignaling(io);
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
 app.use(
@@ -79,23 +51,16 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Serve uploaded files statically
 app.use('/uploads', express.static(path.resolve(process.cwd(), 'uploads')));
 
-const reportRoutes = require('./routes/report.routes');
-
-// ─── App Setup ────────────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
-app.use('/api/interviews', interviewRoutes);
 app.use('/api/code', codeRoutes);
-app.use('/api/recordings', recordingRoutes);
 app.use('/api/jobs', jobRoutes);
 app.use('/api/mcq', mcqRoutes);
 app.use('/api/applications', applicationRoutes);
-app.use('/api/proctoring', proctoringRoutes);
 app.use('/api/coding-questions', codingQuestionRoutes);
-app.use('/api/reports', reportRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ success: true, message: 'Interview Platform API is running', timestamp: new Date() });
+  res.json({ success: true, message: 'Assessment Platform API is running', timestamp: new Date() });
 });
 
 // 404 handler
@@ -110,27 +75,31 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 5000;
 
 const start = async () => {
-  await connectDB();
-  
-  // Ensure directories exist (wrapped in try-catch for read-only environments like Vercel)
-  const dirs = ['uploads/reports', 'uploads/temp'];
-  dirs.forEach(d => {
-    try {
-      const p = path.resolve(process.cwd(), d);
-      if (!fs.existsSync(p)) {
-        fs.mkdirSync(p, { recursive: true });
-        console.log(`Created directory: ${p}`);
+  try {
+    await connectDB();
+    
+    // Ensure directories exist (wrapped in try-catch for read-only environments like Vercel)
+    const dirs = ['uploads/reports', 'uploads/temp'];
+    dirs.forEach(d => {
+      try {
+        const p = path.resolve(process.cwd(), d);
+        if (!fs.existsSync(p)) {
+          fs.mkdirSync(p, { recursive: true });
+          console.log(`Created directory: ${p}`);
+        }
+      } catch (dirErr) {
+        console.warn(`[Warning] Could not ensure directory '${d}': ${dirErr.message}`);
       }
-    } catch (dirErr) {
-      console.warn(`[Warning] Could not ensure directory '${d}': ${dirErr.message}`);
-    }
-  });
+    });
 
-  httpServer.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT} [${process.env.NODE_ENV}]`);
-    console.log(`📡 Socket.io ready`);
-    console.log(`🌐 Frontend origin: ${FRONTEND_URL}`);
-  });
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT} [${process.env.NODE_ENV}]`);
+      console.log(`🌐 Frontend origin: ${FRONTEND_URL}`);
+    });
+  } catch (err) {
+    console.error('Failed to start server:', err);
+    process.exit(1);
+  }
 };
 
 start();

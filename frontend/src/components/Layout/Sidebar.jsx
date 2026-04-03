@@ -18,7 +18,7 @@ const Sidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const isAdmin = user?.role === 'admin' || user?.role === 'interviewer';
+  const isAdmin = user?.role === 'admin';
   const navLinks = isAdmin ? adminNav : candidateNav;
 
   const handleLogout = () => {
@@ -93,28 +93,6 @@ const Sidebar = () => {
           );
         })}
 
-        {/* Admin also has access to Interviews via old dashboard */}
-        {isAdmin && (
-          <Link
-            to="/reports"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 14,
-              padding: '12px 24px',
-              fontWeight: 600,
-              fontSize: '0.9rem',
-              textDecoration: 'none',
-              color: location.pathname === '/reports' ? 'var(--accent-primary)' : 'var(--text-secondary)',
-              background: location.pathname === '/reports' ? 'rgba(37, 99, 235, 0.08)' : 'transparent',
-              borderLeft: location.pathname === '/reports' ? '4px solid var(--accent-primary)' : '4px solid transparent',
-              transition: 'all 0.15s',
-            }}
-          >
-            <span style={{ fontSize: 18, filter: location.pathname === '/reports' ? 'none' : 'grayscale(100%) opacity(0.7)' }}>📈</span>
-            Reports
-          </Link>
-        )}
       </nav>
 
       {/* Logout */}

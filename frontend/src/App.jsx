@@ -8,13 +8,7 @@ import CandidateRegister from './pages/CandidateRegister';
 import CandidateDashboard from './pages/candidate/CandidateDashboard';
 import MCQTest from './pages/candidate/MCQTest';
 import CodeEvalRound from './pages/candidate/CodeEvalRound';
-import CandidateRoom from './pages/CandidateRoom';
 import AdminDashboard from './pages/admin/AdminDashboard';
-import InterviewerDashboard from './pages/InterviewerDashboard';
-import InterviewerRoom from './pages/InterviewerRoom';
-import SessionPlayback from './pages/SessionPlayback';
-import ReportsPage from './pages/ReportsPage';
-import FeedbackForm from './pages/admin/FeedbackForm';
 
 import './index.css';
 
@@ -74,11 +68,6 @@ const AppRouter = () => {
           <CodeEvalRound />
         </ProtectedRoute>
       } />
-      <Route path="/room/:roomId" element={
-        <ProtectedRoute roles={['candidate']}>
-          <CandidateRoom />
-        </ProtectedRoute>
-      } />
 
       {/* ── Admin Routes ── */}
       <Route path="/admin" element={
@@ -89,26 +78,6 @@ const AppRouter = () => {
       <Route path="/admin/:tab" element={
         <ProtectedRoute roles={['admin']}>
           <AdminDashboard />
-        </ProtectedRoute>
-      } />
-      <Route path="/reports" element={
-        <ProtectedRoute roles={['admin']}>
-          <ReportsPage />
-        </ProtectedRoute>
-      } />
-      <Route path="/monitor/:roomId" element={
-        <ProtectedRoute roles={['admin']}>
-          <InterviewerRoom />
-        </ProtectedRoute>
-      } />
-      <Route path="/playback/:interviewId" element={
-        <ProtectedRoute roles={['admin']}>
-          <SessionPlayback />
-        </ProtectedRoute>
-      } />
-      <Route path="/admin/feedback/:interviewId" element={
-        <ProtectedRoute roles={['admin']}>
-          <FeedbackForm />
         </ProtectedRoute>
       } />
 

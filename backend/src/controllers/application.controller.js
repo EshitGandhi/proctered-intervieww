@@ -1,31 +1,12 @@
 const Application = require('../models/Application');
 const Job = require('../models/Job');
-const Interview = require('../models/Interview');
+
 const fs = require('fs');
 const axios = require('axios');
 const FormData = require('form-data');
 const { getFileUrl } = require('../services/storage.service');
 
-// ─── Interview Status Auto-Sync Helper ───────────────────────────────────────────
-// Compares the Interview doc status with the Application status and fixes any mismatch.
-const syncInterviewStatus = async (app) => {
-  const interview = app.scores?.interview?.interviewId;
-  if (!interview || !interview.status) return; // nothing to sync
 
-  const appStatus = app.status;
-  const intStatus = interview.status;
-
-  // Interview completed → Application should be interview_completed
-  if (intStatus === 'completed' && appStatus === 'interview_scheduled') {
-    await Application.findByIdAndUpdate(app._id, { status: 'interview_completed' });
-    app.status = 'interview_completed'; // mutate in-memory so response is correct
-  }
-  // Interview rescheduled (back to scheduled/active) → Application should be interview_scheduled
-  else if (['scheduled', 'active'].includes(intStatus) && appStatus === 'interview_completed') {
-    await Application.findByIdAndUpdate(app._id, { status: 'interview_scheduled' });
-    app.status = 'interview_scheduled';
-  }
-};
 
 // ─── External ATS API Integration ─────────────────────────────────────────────
 const mapDomainToATS = (domain) => {
@@ -161,8 +142,7 @@ exports.applyForJob = async (req, res) => {
 exports.getMyApplications = async (req, res) => {
   try {
     const apps = await Application.find({ candidateId: req.user.id })
-      .populate('jobId', 'title domain resumeThreshold mcqThreshold codingThreshold resumeWeight mcqWeight codingWeight interviewWeight mcqDuration codingDuration isActive')
-      .populate('scores.interview.interviewId', 'roomId status scheduledAt')
+      .populate('jobId', 'title domain resumeThreshold mcqThreshold codingThreshold resumeWeight mcqWeight codingWeight mcqDuration codingDuration isActive')
       .sort('-createdAt');
     res.status(200).json({ success: true, count: apps.length, data: apps });
   } catch (error) {
@@ -183,11 +163,7 @@ exports.getAdminAllApplications = async (req, res) => {
     let apps = await Application.find(filter)
       .populate('candidateId', 'name email avatar')
       .populate('jobId', 'title domain mcqDuration codingDuration')
-      .populate('scores.interview.interviewId', 'roomId status')
       .sort('-createdAt');
-
-    // Auto-sync all applications whose interview status doesn't match app status
-    await Promise.all(apps.map(a => syncInterviewStatus(a)));
 
     // Apply score filters in JS (simpler than complex mongo aggregation)
     if (minResume) apps = apps.filter(a => (a.scores.resume?.score || 0) >= Number(minResume));
@@ -206,7 +182,6 @@ exports.getJobApplications = async (req, res) => {
   try {
     const apps = await Application.find({ jobId: req.params.jobId })
       .populate('candidateId', 'name email avatar')
-      .populate('scores.interview.interviewId', 'roomId status scheduledAt')
       .sort('-createdAt');
     res.status(200).json({ success: true, count: apps.length, data: apps });
   } catch (error) {
@@ -220,13 +195,9 @@ exports.getApplicationDetail = async (req, res) => {
   try {
     const app = await Application.findById(req.params.appId)
       .populate('candidateId', 'name email avatar')
-      .populate('jobId', 'title domain resumeThreshold mcqThreshold codingThreshold resumeWeight mcqWeight codingWeight interviewWeight')
-      .populate('scores.interview.interviewId', 'roomId status scheduledAt duration');
+      .populate('jobId', 'title domain resumeThreshold mcqThreshold codingThreshold resumeWeight mcqWeight codingWeight');
 
     if (!app) return res.status(404).json({ success: false, error: 'Application not found' });
-
-    // Auto-sync application status based on interview document status
-    await syncInterviewStatus(app);
 
     res.status(200).json({ success: true, data: app });
   } catch (error) {
@@ -273,74 +244,7 @@ exports.submitMCQ = async (req, res) => {
   }
 };
 
-// ─── Admin: Generate Interview ────────────────────────────────────────────────
-// POST /api/applications/:appId/generate-interview
-exports.generateInterview = async (req, res) => {
-  try {
-    const app = await Application.findById(req.params.appId)
-      .populate('jobId')
-      .populate('candidateId');
 
-    if (!app) return res.status(404).json({ success: false, error: 'Application not found' });
-    if (!['interview_pending', 'interview_scheduled', 'interview_completed'].includes(app.status)) {
-      return res.status(400).json({ success: false, error: 'Candidate status does not allow scheduling' });
-    }
-    
-    const { startTime, duration } = req.body || {};
-    
-    let interview;
-    if (app.scores?.interview?.interviewId) {
-      // Reschedule/Reset existing interview
-      interview = await Interview.findById(app.scores.interview.interviewId);
-      if (!interview) return res.status(404).json({ success: false, error: 'Linked interview not found' });
-      
-      interview.scheduledAt = startTime || new Date(Date.now() + 24 * 60 * 60 * 1000);
-      if (duration) interview.duration = duration;
-      
-      // Reset status to scheduled (allows retake/reschedule of completed sessions)
-      interview.status = 'scheduled';
-      await interview.save();
-
-      // Ensure app status is back to scheduled
-      app.status = 'interview_scheduled';
-      await app.save();
-    } else {
-      // Create new interview
-      interview = await Interview.create({
-        title: `${app.jobId.title} — Final Interview`,
-        description: `Final interview for candidate ${app.candidateId.name}`,
-        interviewer: req.user.id,
-        candidate: app.candidateId._id,
-        candidateName: app.candidateId.name,
-        candidateEmail: app.candidateId.email,
-        status: 'scheduled',
-        scheduledAt: startTime || new Date(Date.now() + 24 * 60 * 60 * 1000),
-        duration: duration || 60,
-        settings: {
-          allowCamera: true,
-          allowMicrophone: true,
-          enableProctoring: true,
-          codeExecutionEnabled: true,
-          fullscreenRequired: true,
-        },
-      });
-
-      app.scores.interview = { interviewId: interview._id, score: 0 };
-      app.status = 'interview_scheduled';
-      await app.save();
-    }
-
-    // Refresh application to send back populated data
-    const updatedApp = await Application.findById(app._id)
-      .populate('jobId')
-      .populate('candidateId')
-      .populate('scores.interview.interviewId');
-
-    res.status(200).json({ success: true, data: updatedApp, interview });
-  } catch (error) {
-    res.status(400).json({ success: false, error: error.message });
-  }
-};
 
 // ─── Admin overrides ───────────────────────────────────────────────────────────
 // DELETE /api/applications/:appId
@@ -387,22 +291,12 @@ exports.overrideApplicationStatus = async (req, res) => {
       app.status = 'coding_pending';
       message = 'MCQ round skipped. Candidate proceeds to coding.';
     } else if (action === 'skip_coding' && (app.status === 'coding_pending' || app.status === 'coding_failed')) {
-      app.status = 'interview_pending';
-      message = 'Coding round skipped. Candidate proceeds to interview.';
-    } else if (action === 'mark_interview_completed' && app.status === 'interview_scheduled') {
-      app.status = 'interview_completed';
-      // Also mark the linked interview as completed if it's still active/scheduled
-      if (app.scores?.interview?.interviewId) {
-        await Interview.findByIdAndUpdate(app.scores.interview.interviewId, {
-          status: 'completed',
-          endedAt: new Date(),
-        });
-      }
-      message = 'Interview marked as completed.';
-    } else if (action === 'mark_hired' && app.status === 'interview_completed') {
+      app.status = 'coding_passed';
+      message = 'Coding round skipped. Candidate proceeds to final selection.';
+    } else if (action === 'mark_hired' && app.status === 'coding_passed') {
       app.status = 'hired';
       message = 'Candidate marked as hired.';
-    } else if (action === 'mark_rejected' && app.status === 'interview_completed') {
+    } else if (action === 'mark_rejected' && app.status === 'coding_passed') {
       app.status = 'rejected';
       message = 'Candidate marked as rejected.';
     } else {

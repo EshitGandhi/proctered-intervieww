@@ -10,7 +10,6 @@ const {
   getAdminAllApplications,
   getApplicationDetail,
   submitMCQ,
-  generateInterview,
   deleteApplication,
   overrideApplicationStatus,
 } = require('../controllers/application.controller');
@@ -96,9 +95,10 @@ router.post('/:appId/coding', protect, async (req, res) => {
     const score = totalTestCases > 0 ? Math.round((passedTestCases / totalTestCases) * 100) : 0;
     const isPassed = score >= application.jobId.codingThreshold;
 
-    const resW = application.jobId.resumeWeight / 100;
-    const mcqW = application.jobId.mcqWeight / 100;
-    const codeW = application.jobId.codingWeight / 100;
+    const totalWeight = application.jobId.resumeWeight + application.jobId.mcqWeight + application.jobId.codingWeight;
+    const resW = application.jobId.resumeWeight / totalWeight;
+    const mcqW = application.jobId.mcqWeight / totalWeight;
+    const codeW = application.jobId.codingWeight / totalWeight;
     const finalScore = Math.round(
       ((application.scores.resume?.score || 0) * resW) +
       ((application.scores.mcq?.score || 0) * mcqW) +
@@ -107,7 +107,7 @@ router.post('/:appId/coding', protect, async (req, res) => {
 
     application.scores.coding = { score };
     application.scores.finalScore = finalScore;
-    application.status = isPassed ? 'interview_pending' : 'coding_failed';
+    application.status = isPassed ? 'coding_passed' : 'coding_failed';
     await application.save();
 
     res.status(200).json({
@@ -116,7 +116,7 @@ router.post('/:appId/coding', protect, async (req, res) => {
       score,
       results, // detailed per-question breakdown
       message: isPassed
-        ? `Coding passed! Score: ${score}%. Awaiting interview.`
+        ? `Coding passed! Score: ${score}%. Pipeline finished.`
         : `Coding failed. Score: ${score}%. Required: ${application.jobId.codingThreshold}%.`
     });
   } catch (error) {
@@ -185,7 +185,6 @@ router.post('/:appId/coding/evaluate', protect, async (req, res) => {
 router.get('/admin/all', protect, requireRole('admin'), getAdminAllApplications);
 router.get('/job/:jobId', protect, requireRole('admin'), getJobApplications);
 router.get('/:appId', protect, getApplicationDetail);
-router.post('/:appId/generate-interview', protect, requireRole('admin'), generateInterview);
 router.delete('/:appId', protect, requireRole('admin'), deleteApplication);
 router.post('/:appId/override', protect, requireRole('admin'), overrideApplicationStatus);
 
