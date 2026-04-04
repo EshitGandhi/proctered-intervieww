@@ -49,7 +49,7 @@ const Sidebar = () => {
           <img 
             src="/logo.png" 
             alt="Kadel Labs" 
-            style={{ maxHeight: 36, maxWidth: '100%', objectFit: 'contain' }}
+            style={{ maxHeight: 120%, maxWidth: '200%', objectFit: 'contain' }}
             onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }}
           />
           <span style={{ display: 'none', fontWeight: 900, color: 'var(--accent-primary)', fontSize: '1.2rem' }}>Kadel Labs</span>
