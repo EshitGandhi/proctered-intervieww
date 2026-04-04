@@ -7,9 +7,11 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Attach JWT token to every request
+// Attach JWT token to every request based on current portal path
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
+  const isAdminPath = window.location.pathname.startsWith('/admin');
+  const tokenKey = isAdminPath ? 'token_admin' : 'token_candidate';
+  const token = localStorage.getItem(tokenKey);
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
@@ -22,9 +24,13 @@ api.interceptors.response.use(
     const isLoginEndpoint = err.config?.url?.includes('/auth/login');
 
     if (err.response?.status === 401 && !isAuthPage && !isLoginEndpoint) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+      const isAdminPath = window.location.pathname.startsWith('/admin');
+      const tokenKey = isAdminPath ? 'token_admin' : 'token_candidate';
+      const userKey = isAdminPath ? 'user_admin' : 'user_candidate';
+      
+      localStorage.removeItem(tokenKey);
+      localStorage.removeItem(userKey);
+      window.location.href = isAdminPath ? '/admin/login' : '/login';
     }
     return Promise.reject(err);
   }

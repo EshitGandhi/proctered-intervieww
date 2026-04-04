@@ -4,9 +4,13 @@ import api from '../services/api';
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
+  // Determine role context based on path on load and continuously
+  const getRolePrefix = () => window.location.pathname.startsWith('/admin') ? 'admin' : 'candidate';
+
   const [user, setUser] = useState(() => {
     try {
-      const saved = localStorage.getItem('user');
+      const activeRole = getRolePrefix();
+      const saved = localStorage.getItem(`user_${activeRole}`);
       return saved ? JSON.parse(saved) : null;
     } catch {
       return null;
@@ -17,15 +21,19 @@ export const AuthProvider = ({ children }) => {
   // Verify token on mount
   useEffect(() => {
     const verify = async () => {
-      const token = localStorage.getItem('token');
+      const activeRole = getRolePrefix();
+      const tKey = `token_${activeRole}`;
+      const uKey = `user_${activeRole}`;
+      const token = localStorage.getItem(tKey);
+      
       if (!token) { setLoading(false); return; }
       try {
         const { data } = await api.get('/auth/me');
         setUser(data.user);
-        localStorage.setItem('user', JSON.stringify(data.user));
+        localStorage.setItem(uKey, JSON.stringify(data.user));
       } catch {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        localStorage.removeItem(tKey);
+        localStorage.removeItem(uKey);
         setUser(null);
       } finally {
         setLoading(false);
@@ -36,27 +44,36 @@ export const AuthProvider = ({ children }) => {
 
   const login = useCallback(async (email, password) => {
     const { data } = await api.post('/auth/login', { email, password });
-    localStorage.setItem('token', data.token);
-    localStorage.setItem('user', JSON.stringify(data.user));
-    setUser(data.user);
+    const userRole = data.user.role === 'admin' ? 'admin' : 'candidate';
+    localStorage.setItem(`token_${userRole}`, data.token);
+    localStorage.setItem(`user_${userRole}`, JSON.stringify(data.user));
+    
+    // Only update active user state if the layout matches the login profile
+    if (getRolePrefix() === userRole) {
+      setUser(data.user);
+    }
     return data.user;
   }, []);
 
   const register = useCallback(async (name, email, password, role, adminKey) => {
     const { data } = await api.post('/auth/register', { name, email, password, role, adminKey });
-    localStorage.setItem('token', data.token);
-    localStorage.setItem('user', JSON.stringify(data.user));
-    setUser(data.user);
+    const userRole = data.user.role === 'admin' ? 'admin' : 'candidate';
+    localStorage.setItem(`token_${userRole}`, data.token);
+    localStorage.setItem(`user_${userRole}`, JSON.stringify(data.user));
+    
+    if (getRolePrefix() === userRole) {
+      setUser(data.user);
+    }
     return data.user;
   }, []);
 
   const logout = useCallback(() => {
-    const isEmployee = user && user.role === 'admin';
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    const activeRole = getRolePrefix();
+    localStorage.removeItem(`token_${activeRole}`);
+    localStorage.removeItem(`user_${activeRole}`);
     setUser(null);
-    window.location.href = isEmployee ? '/admin/login' : '/login';
-  }, [user]);
+    window.location.href = activeRole === 'admin' ? '/admin/login' : '/login';
+  }, []);
 
   return (
     <AuthContext.Provider value={{ user, loading, login, register, logout, isAuthenticated: !!user }}>

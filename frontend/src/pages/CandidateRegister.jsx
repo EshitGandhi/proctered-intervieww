@@ -83,9 +83,9 @@ const CandidateRegister = () => {
         domain: form.domain,
       });
 
-      // Store token
-      localStorage.setItem('token', regData.token);
-      localStorage.setItem('user', JSON.stringify(regData.user));
+      // Store token with candidate-specific scope
+      localStorage.setItem('token_candidate', regData.token);
+      localStorage.setItem('user_candidate', JSON.stringify(regData.user));
 
       setStep(2); // show success screen
     } catch (err) {
