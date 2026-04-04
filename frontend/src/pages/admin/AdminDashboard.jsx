@@ -672,15 +672,12 @@ const CandidateDetail = ({ appId, onBack }) => {
   }, [appId]);
 
   useEffect(() => {
-    if (app?.candidateId?._id) {
-      api.get(`/proctoring/candidate/${app.candidateId._id}`)
-        .then(r => {
-           const appLogs = (r.data.data || []).filter(log => log.sessionId === `mcq-${appId}` || log.sessionId === `coding-${appId}`);
-           setProctoringLogs(appLogs);
-        })
+    if (appId) {
+      api.get(`/proctoring/application/${appId}`)
+        .then(r => setProctoringLogs(r.data.data || []))
         .catch(() => {});
     }
-  }, [app, appId]);
+  }, [appId]);
 
   const getViolationsFor = (round) => proctoringLogs.filter(l => l.sessionId === `${round}-${appId}`);
 
