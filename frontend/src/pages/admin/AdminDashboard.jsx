@@ -896,7 +896,7 @@ const CandidateDetail = ({ appId, onBack }) => {
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
           {app.scores?.resume?.resumeUrl && (
             <a
-              href={`${api.defaults.baseURL?.replace('/api', '') || 'http://localhost:5000'}${app.scores.resume.resumeUrl}`}
+              href={app.scores.resume.resumeUrl.startsWith('http') ? app.scores.resume.resumeUrl : `${api.defaults.baseURL?.replace('/api', '') || 'http://localhost:5000'}${app.scores.resume.resumeUrl}`}
               target="_blank"
               rel="noreferrer"
               className="btn btn-secondary btn-sm"

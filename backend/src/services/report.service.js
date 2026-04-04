@@ -84,11 +84,24 @@ const generatePDF = async (report, application) => {
   drawHeader();
   doc.moveDown(2);
 
+  // Candidate Info Section
+  const infoY = doc.y;
+  doc.fillColor('#e0f2fe').rect(50, infoY, doc.page.width - 100, 25).fill();
+  doc.fillColor('#0369a1').fontSize(12).text('CANDIDATE INFO', 60, infoY + 7);
+  doc.moveDown(1.5);
+  
+  doc.fillColor('#000000').fontSize(10);
+  doc.text(`NAME: ${application.candidateId.name}`, 60);
+  doc.moveDown(0.3);
+  doc.text(`EMAIL: ${application.candidateId.email}`, 60);
+  doc.moveDown(2);
+
   // Role Section
   const roleY = doc.y;
-  doc.fillColor('#e0f2fe').rect(50, roleY, doc.page.width - 100, 30).fill();
-  doc.fillColor('#0369a1').fontSize(12).text('ROLE', 60, roleY + 10);
-  doc.fillColor('#000000').text(report.role, 120, roleY + 10);
+  doc.fillColor('#e0f2fe').rect(50, roleY, doc.page.width - 100, 25).fill();
+  doc.fillColor('#0369a1').fontSize(12).text('ROLE', 60, roleY + 7);
+  doc.moveDown(1.5);
+  doc.fillColor('#000000').fontSize(10).text(report.role, 60);
   doc.moveDown(2);
 
   // Scores Section
@@ -126,15 +139,24 @@ const generatePDF = async (report, application) => {
   drawSection('ANALYSIS', null, '#dbeafe', '#1e40af');
   doc.fillColor('#000000').fontSize(10);
   doc.text(`SENTIMENT: ${report.analysis.sentiment}`, 60);
+  doc.moveDown(0.3);
   doc.text(`CONFIDENCE LEVEL: ${report.analysis.confidence_level}`, 60);
-  doc.moveDown(0.5);
+  doc.moveDown(1.5);
   
-  const analysisY = doc.y;
-  doc.text('STRENGTHS:', 60, analysisY);
-  report.analysis.strengths.forEach(s => doc.text(`• ${s}`, 70));
+  doc.text('STRENGTHS:', 60);
+  doc.moveDown(0.2);
+  report.analysis.strengths.forEach(s => {
+      doc.text(`• ${s}`, 70);
+      doc.moveDown(0.2);
+  });
+  doc.moveDown(1);
   
-  doc.text('WEAKNESSES:', doc.page.width / 2 + 10, analysisY);
-  report.analysis.weaknesses.forEach(w => doc.text(`• ${w}`, doc.page.width / 2 + 20));
+  doc.text('WEAKNESSES:', 60);
+  doc.moveDown(0.2);
+  report.analysis.weaknesses.forEach(w => {
+      doc.text(`• ${w}`, 70);
+      doc.moveDown(0.2);
+  });
 
   // Recommendation
   drawSection('RECOMMENDATION', null, '#f1f5f9', '#334155');
@@ -146,9 +168,13 @@ const generatePDF = async (report, application) => {
   drawSection('INSIGHTS', null, '#f0fdf9', '#0d9488');
   doc.fillColor('#000000').fontSize(10);
   doc.text(`CANDIDATE SUMMARY: ${report.insights.candidate_summary}`, 60);
-  doc.moveDown(0.5);
+  doc.moveDown(1);
   doc.text('IMPROVEMENT SUGGESTIONS:', 60);
-  report.insights.improvement_suggestions.forEach(s => doc.text(`• ${s}`, 70));
+  doc.moveDown(0.2);
+  report.insights.improvement_suggestions.forEach(s => {
+      doc.text(`• ${s}`, 70);
+      doc.moveDown(0.2);
+  });
 
   doc.end();
   
