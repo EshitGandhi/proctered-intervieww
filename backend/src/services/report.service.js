@@ -78,24 +78,27 @@ const generatePDF = async (report, application) => {
   const TEXT_DARK = '#1e293b';
   const TEXT_LIGHT = '#64748b';
   const BORDER_LIGHT = '#e2e8f0';
-  const LOGO_PATH = 'C:\\Users\\admin\\.gemini\\antigravity\\brain\\71833a6d-2ea0-4f02-97d9-287ae05320af\\media__1775300843955.png';
+  const LOGO_PATH = path.join(__dirname, '..', 'assets', 'logo.png');
 
   // White Background
   doc.rect(0, 0, doc.page.width, doc.page.height).fill('#ffffff');
 
   const marginX = 40;
-  let currentY = 40;
+  let currentY = 30; // Shifted up slightly
 
-  // --- 2. Header with Logo ---
+  // --- 2. Header with Logo (Extreme Top Left) ---
   try {
     if (fs.existsSync(LOGO_PATH)) {
-      doc.image(LOGO_PATH, marginX, currentY, { width: 120 });
+      doc.image(LOGO_PATH, 20, 20, { width: 140 });
+    } else {
+      // Fallback text branding if logo is missing on Render disk
+      doc.fillColor(KADEL_BLUE).fontSize(16).text('Kadel Labs', 20, 25);
     }
   } catch (e) {
-    console.error('Logo not found at path:', LOGO_PATH);
+    console.error('Logo render error:', e.message);
   }
 
-  doc.fillColor(KADEL_BLUE).fontSize(20).text('CANDIDATE PERFORMANCE REPORT', marginX, currentY + 10, { align: 'right', width: doc.page.width - 2 * marginX });
+  doc.fillColor(KADEL_BLUE).fontSize(20).text('CANDIDATE PERFORMANCE REPORT', marginX, 60, { align: 'right', width: doc.page.width - 2 * marginX });
   doc.fillColor(TEXT_LIGHT).fontSize(10).text(`Generated on: ${new Date().toLocaleDateString()}`, marginX, currentY + 35, { align: 'right', width: doc.page.width - 2 * marginX });
   
   currentY += 80;
