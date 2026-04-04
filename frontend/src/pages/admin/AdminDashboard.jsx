@@ -963,9 +963,14 @@ const CandidateDetail = ({ appId, onBack }) => {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <h3 style={{ margin: 0, fontSize: '1.05rem' }}>📋 Interview Evaluation Report</h3>
           {report && (
-            <button className="btn btn-primary btn-sm" onClick={handleDownloadPDF}>
-              📥 Download PDF Report
-            </button>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button className="btn btn-secondary btn-sm" onClick={() => { if(window.confirm('Are you sure you want to re-upload a different transcript? This will override the current report.')) setReport(null); }} style={{ background: 'var(--bg-app)' }}>
+                🔄 Replace Transcript
+              </button>
+              <button className="btn btn-primary btn-sm" onClick={handleDownloadPDF}>
+                📥 Download PDF Report
+              </button>
+            </div>
           )}
         </div>
 
