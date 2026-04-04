@@ -710,10 +710,22 @@ const CandidateDetail = ({ appId, onBack }) => {
     }
   };
 
-  const handleDownloadPDF = () => {
+  const handleDownloadPDF = async () => {
     if (!report?._id) return;
-    const url = `${api.defaults.baseURL}/reports/download/${report._id}`;
-    window.open(url, '_blank');
+    try {
+      const response = await api.get(`/reports/download/${report._id}`, {
+        responseType: 'blob',
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Report_${app.candidateId.name}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      alert('Failed to download report');
+    }
   };
 
   if (loading) return <div style={{ textAlign: 'center', padding: 60 }}><div className="spinner" /></div>;
