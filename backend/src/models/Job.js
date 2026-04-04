@@ -49,4 +49,14 @@ const jobSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Ensure the sum of weights is 100 before saving
+jobSchema.pre('save', function (next) {
+  const total = (this.resumeWeight || 0) + (this.mcqWeight || 0) + (this.codingWeight || 0);
+  if (total !== 100) {
+    const err = new Error(`Weights must sum to 100. Current total is ${total}`);
+    return next(err);
+  }
+  next();
+});
+
 module.exports = mongoose.model('Job', jobSchema);

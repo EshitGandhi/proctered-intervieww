@@ -224,7 +224,12 @@ const JobManagement = () => {
                 </div>
               </div>
 
-              <h3 style={{ fontSize: '1rem', marginTop: 10, borderBottom: '1px solid var(--border)', paddingBottom: 8 }}>Final Score Weights (must sum to 100)</h3>
+              <h3 style={{ fontSize: '1rem', marginTop: 10, borderBottom: '1px solid var(--border)', paddingBottom: 8, display: 'flex', justifyContent: 'space-between' }}>
+                Final Score Weights (must sum to 100)
+                <span style={{ color: (Number(form.resumeWeight) + Number(form.mcqWeight) + Number(form.codingWeight)) === 100 ? 'var(--success)' : 'var(--danger)', fontWeight: 700 }}>
+                  Total: {Number(form.resumeWeight) + Number(form.mcqWeight) + Number(form.codingWeight)}/100
+                </span>
+              </h3>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
                 <div className="form-group">
                   <label>Resume Wt</label>
@@ -259,7 +264,11 @@ const JobManagement = () => {
 
               <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
                 <button type="button" className="btn btn-secondary w-full" onClick={() => setShowModal(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary w-full" disabled={saving}>
+                <button 
+                  type="submit" 
+                  className="btn btn-primary w-full" 
+                  disabled={saving || (Number(form.resumeWeight) + Number(form.mcqWeight) + Number(form.codingWeight)) !== 100}
+                >
                   {saving ? 'Saving...' : 'Save Job'}
                 </button>
               </div>
