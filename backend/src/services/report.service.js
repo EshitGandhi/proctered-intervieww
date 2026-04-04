@@ -7,7 +7,8 @@ const axios = require('axios');
 
 // Configuration
 const UPLOAD_DIR = path.resolve(process.cwd(), 'uploads/reports');
-const ANALYSIS_API_URL = process.env.TEAM_ANALYSIS_API_URL;
+const ANALYSIS_API_URL = process.env.TEAM_ANALYSIS_API_URL || 'https://mahimadangi-ai-hiring-evaluator.hf.space/generate-report';
+const ANALYSIS_API_KEY = process.env.TEAM_ANALYSIS_API_KEY || process.env.GROQ_API_KEY;
 
 /**
  * Extracts text from DOCX, PDF, or TXT file
@@ -44,7 +45,7 @@ const analyzeTranscript = async (transcript, scores, role) => {
 
     const response = await axios.post(ANALYSIS_API_URL, payload, {
       headers: {
-        'x-api-key': process.env.TEAM_ANALYSIS_API_KEY, 
+        'x-api-key': ANALYSIS_API_KEY, 
         'Content-Type': 'application/json'
       }
     });
