@@ -42,9 +42,9 @@ const CandidateLogin = () => {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: 28, margin: '0 auto 16px',
           }}>🎯</div>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: 4 }}>KL Prarambh</h1>
+          <h1 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: 4 }}>Candidate Portal</h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-            Welcome back! Sign in to continue.
+            Sign in to track your applications and interviews.
           </p>
         </div>
 
@@ -96,7 +96,7 @@ const CandidateLogin = () => {
 
         <div style={{ textAlign: 'center', marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
           <Link to="/admin/login" style={{ color: 'var(--text-muted)', fontSize: '0.78rem', textDecoration: 'none' }}>
-            Employee Login →
+            Are you an employee? → Employee Portal
           </Link>
         </div>
       </div>

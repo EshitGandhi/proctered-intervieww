@@ -9,6 +9,7 @@ import CandidateDashboard from './pages/candidate/CandidateDashboard';
 import MCQTest from './pages/candidate/MCQTest';
 import CodeEvalRound from './pages/candidate/CodeEvalRound';
 import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminRegister from './pages/AdminRegister';
 
 import './index.css';
 
@@ -47,6 +48,7 @@ const AppRouter = () => {
       {/* Auth */}
       <Route path="/login" element={<CandidateLogin />} />
       <Route path="/admin/login" element={<AdminLogin />} />
+      <Route path="/admin/register" element={<AdminRegister />} />
       <Route path="/register" element={<CandidateRegister />} />
       {/* Legacy links bridging to candidate router */}
       <Route path="/register/candidate" element={<Navigate to="/register" replace />} />
