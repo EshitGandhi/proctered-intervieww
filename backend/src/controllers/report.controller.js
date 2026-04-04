@@ -89,9 +89,17 @@ const downloadReport = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Report or PDF not found' });
     }
 
-    const fullPath = path.resolve(process.cwd(), report.pdfPath.replace(/^\//, ''));
+    let fullPath = path.resolve(process.cwd(), report.pdfPath.replace(/^\//, ''));
     if (!fs.existsSync(fullPath)) {
-      return res.status(404).json({ success: false, message: 'PDF file not found on disk' });
+      // PDF file was wiped by Render ephemeral storage. Regenerate it!
+      const application = await Application.findById(report.applicationId).populate('candidateId jobId');
+      if (!application) {
+        return res.status(404).json({ success: false, message: 'PDF missing and Application data not found to regenerate.' });
+      }
+      const newPdfPath = await generatePDF(report, application);
+      report.pdfPath = newPdfPath;
+      await report.save();
+      fullPath = path.resolve(process.cwd(), newPdfPath.replace(/^\//, ''));
     }
 
     res.download(fullPath);
