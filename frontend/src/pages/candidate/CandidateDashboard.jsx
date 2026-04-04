@@ -317,7 +317,6 @@ const CandidateDashboard = () => {
   const navigate = useNavigate();
 
   const fetchApplications = async () => {
-    setLoading(true);
     try {
       const { data } = await api.get('/applications/my');
       setApplications(data.data);
@@ -326,7 +325,23 @@ const CandidateDashboard = () => {
     }
   };
 
-  useEffect(() => { fetchApplications(); }, [tab]);
+  // Initial fetch + re-fetch on tab switch
+  useEffect(() => { setLoading(true); fetchApplications(); }, [tab]);
+
+  // Refetch when the user returns to the window (e.g., after admin deletes an application)
+  useEffect(() => {
+    const onFocus = () => fetchApplications();
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) fetchApplications();
+    });
+    // Also poll every 30s so the dashboard stays in sync
+    const poll = setInterval(fetchApplications, 30000);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      clearInterval(poll);
+    };
+  }, []);
 
   return (
     <AppLayout>

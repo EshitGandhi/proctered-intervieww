@@ -246,17 +246,30 @@ const MCQTest = () => {
     </div>
   );
 
-  if (error) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div className="card" style={{ maxWidth: 500, textAlign: 'center' }}>
-        <div style={{ fontSize: 48, marginBottom: 12 }}>⚠️</div>
-        <div className="alert alert-danger">{error}</div>
-        <button className="btn btn-secondary" style={{ marginTop: 16 }} onClick={() => navigate('/dashboard')}>
-          Back to Dashboard
-        </button>
+  if (error) {
+    const isDeleted = error.toLowerCase().includes('not found') || error.toLowerCase().includes('not active');
+    if (isDeleted) {
+      // Auto-redirect after 3s
+      setTimeout(() => navigate('/dashboard'), 3000);
+    }
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="card" style={{ maxWidth: 500, textAlign: 'center' }}>
+          <div style={{ fontSize: 48, marginBottom: 12 }}>{isDeleted ? '🗑️' : '⚠️'}</div>
+          <h3 style={{ marginBottom: 8 }}>{isDeleted ? 'Application Removed' : 'Cannot Access Test'}</h3>
+          <div className="alert alert-danger" style={{ marginBottom: 16 }}>{error}</div>
+          {isDeleted && (
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: 16 }}>
+              This application was removed by the admin. You will be redirected to the Job Board to re-apply in a moment...
+            </p>
+          )}
+          <button className="btn btn-primary" onClick={() => navigate('/dashboard')}>
+            {isDeleted ? 'Go to Job Board' : 'Back to Dashboard'}
+          </button>
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
 
   // ── Face verification gate ─────────────────────────────────────────────────
   if (!faceReady) {
