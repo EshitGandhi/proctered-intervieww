@@ -36,9 +36,31 @@ const CandidateRegister = () => {
     marginBottom: 6, color: 'var(--text-secondary)',
   };
 
+  const ALLOWED_EMAIL_DOMAINS = ['gmail.com', 'outlook.com', 'kadellabs.com'];
+
+  const handleNameChange = (e) => {
+    // Allow only English alphabets and spaces
+    const value = e.target.value.replace(/[^a-zA-Z ]/g, '');
+    setForm(f => ({ ...f, name: value }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    // Validate Full Name
+    if (!/^[a-zA-Z ]+$/.test(form.name.trim())) {
+      return setError('Full Name must contain only English alphabets.');
+    }
+    if (form.name.trim().length < 2) {
+      return setError('Full Name must be at least 2 characters.');
+    }
+
+    // Validate Email Domain
+    const emailDomain = form.email.split('@')[1]?.toLowerCase();
+    if (!emailDomain || !ALLOWED_EMAIL_DOMAINS.includes(emailDomain)) {
+      return setError(`Invalid email domain. Only @gmail.com, @outlook.com, or @kadellabs.com are allowed.`);
+    }
 
     if (form.password !== form.confirmPassword) {
       return setError('Passwords do not match');
@@ -148,8 +170,9 @@ const CandidateRegister = () => {
               type="text"
               placeholder="e.g. Priya Sharma"
               value={form.name}
-              onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+              onChange={handleNameChange}
               required
+              title="Only English alphabets are allowed"
             />
           </div>
 
@@ -159,12 +182,15 @@ const CandidateRegister = () => {
             <input
               style={inputStyle}
               type="email"
-              placeholder="you@example.com"
+              placeholder="you@gmail.com / @outlook.com / @kadellabs.com"
               value={form.email}
               onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
               required
               autoComplete="email"
             />
+            <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 4, marginBottom: 0 }}>
+              Accepted domains: @gmail.com, @outlook.com, @kadellabs.com
+            </p>
           </div>
 
           {/* Domain */}

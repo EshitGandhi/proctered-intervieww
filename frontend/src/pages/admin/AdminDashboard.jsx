@@ -1176,6 +1176,17 @@ const AdminDashboard = () => {
     setTab('detail');
   };
 
+  const handleNavTab = (tabId) => {
+    setSelectedAppId(null);
+    setTab(tabId);
+    navigate(`/admin/${tabId}`);
+  };
+
+  const handleBack = () => {
+    setTab('candidates');
+    setSelectedAppId(null);
+  };
+
   return (
     <AppLayout>
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
@@ -1189,7 +1200,7 @@ const AdminDashboard = () => {
           {nav.map(n => {
             const isActive = tab === n.id;
             return (
-              <button key={n.id} onClick={() => { navigate(`/admin/${n.id}`); }} style={{
+              <button key={n.id} onClick={() => handleNavTab(n.id)} style={{
                 padding: '8px 16px',
                 border: isActive ? '1px solid var(--accent-primary)' : '1px solid var(--border)',
                 borderRadius: 8,
@@ -1220,8 +1231,8 @@ const AdminDashboard = () => {
         {tab === 'mcq'        && <MCQTab />}
         {tab === 'coding'     && <CodingQuestionsTab />}
         {tab === 'candidates' && <CandidatesTab onSelectCandidate={handleSelectCandidate} />}
-                {tab === 'detail' && selectedAppId && (
-          <CandidateDetail appId={selectedAppId} onBack={() => setTab('candidates')} />
+        {tab === 'detail' && selectedAppId && (
+          <CandidateDetail appId={selectedAppId} onBack={handleBack} />
         )}
       </div>
     </AppLayout>

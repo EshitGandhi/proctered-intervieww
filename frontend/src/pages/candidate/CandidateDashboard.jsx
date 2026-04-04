@@ -169,9 +169,27 @@ const JobBoard = ({ myApplications, onApply }) => {
 
   const appliedJobIds = new Set(myApplications.map(a => a.jobId?._id));
 
+  const handleResumeChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (!['pdf', 'doc', 'docx'].includes(ext)) {
+      setError("Only resume files (PDF/DOC) are accepted");
+      e.target.value = '';
+      setResume(null);
+      return;
+    }
+    setError('');
+    setResume(file);
+  };
+
   const handleApplySubmit = async (e) => {
     e.preventDefault();
     if (!resume) return setError('Please select your resume PDF');
+    const ext = resume.name.split('.').pop().toLowerCase();
+    if (!['pdf', 'doc', 'docx'].includes(ext)) {
+      return setError("Only resume files (PDF/DOC) are accepted");
+    }
     setApplyingId(applyTarget._id);
     setError('');
     const formData = new FormData();
@@ -264,15 +282,18 @@ const JobBoard = ({ myApplications, onApply }) => {
               </p>
               {error && <div className="alert alert-danger">{error}</div>}
               <div className="form-group">
-                <label style={{ fontWeight: 600, marginBottom: 6, display: 'block' }}>Resume (PDF only)</label>
+                <label style={{ fontWeight: 600, marginBottom: 6, display: 'block' }}>Resume (PDF / DOC / DOCX)</label>
                 <input
                   type="file"
-                  accept=".pdf"
-                  onChange={e => setResume(e.target.files[0])}
+                  accept=".pdf,.doc,.docx"
+                  onChange={handleResumeChange}
                   className="input"
                   style={{ padding: 8 }}
                   required
                 />
+                <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 4, marginBottom: 0 }}>
+                  Only PDF or DOC/DOCX files are accepted
+                </p>
               </div>
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                 <button type="button" className="btn btn-secondary" onClick={() => setApplyTarget(null)}>Cancel</button>
