@@ -28,7 +28,7 @@ const reportSchema = new mongoose.Schema(
       weaknesses: [String],
     },
     recommendation: {
-      decision: { type: String, enum: ['Hire', 'Reject', 'Hold'] },
+      decision: { type: String },
       reason: { type: String },
       risk_level: { type: String },
     },
