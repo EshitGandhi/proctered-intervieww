@@ -122,10 +122,33 @@ const generatePDF = async (report, application) => {
 
   scoreLabels.forEach((label, i) => {
     const x = marginX + i * (boxWidth + 20);
-    // Score Box
-    doc.roundedRect(x, currentY, boxWidth, 70, 8).fillAndStroke('#f8fafc', BORDER_LIGHT);
-    doc.fillColor(TEXT_LIGHT).fontSize(8).text(label.toUpperCase(), x, currentY + 15, { width: boxWidth, align: 'center' });
-    doc.fillColor(KADEL_BLUE).fontSize(20).text(`${scoreValues[i]}%`, x, currentY + 32, { width: boxWidth, align: 'center' });
+    const scoreValue = scoreValues[i];
+    
+    // Determine Color
+    let color = '#dc2626'; // Red
+    if (scoreValue >= 75) color = '#059669'; // Green
+    else if (scoreValue >= 50) color = '#d97706'; // Orange
+    
+    // Score Box Background
+    doc.roundedRect(x, currentY, boxWidth, 75, 8).fillAndStroke('#f8fafc', BORDER_LIGHT);
+    
+    // Label
+    doc.fillColor(TEXT_LIGHT).fontSize(8).text(label.toUpperCase(), x, currentY + 12, { width: boxWidth, align: 'center' });
+    
+    // Colored Score Text
+    doc.fillColor(color).fontSize(18).text(`${scoreValue}%`, x, currentY + 28, { width: boxWidth, align: 'center' });
+
+    // Graphical Representation (Progress Bar)
+    const barWidth = boxWidth - 30;
+    const barX = x + 15;
+    const barY = currentY + 54;
+    
+    // Background bar
+    doc.roundedRect(barX, barY, barWidth, 5, 2).fill('#e2e8f0');
+    // Foreground bar (filled part)
+    if (scoreValue > 0) {
+      doc.roundedRect(barX, barY, (barWidth * scoreValue) / 100, 5, 2).fill(color);
+    }
   });
 
   currentY += 100;
