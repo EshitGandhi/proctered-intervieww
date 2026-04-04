@@ -2,6 +2,7 @@ const Application = require('../models/Application');
 const Job = require('../models/Job');
 
 const fs = require('fs');
+const path = require('path');
 const axios = require('axios');
 const FormData = require('form-data');
 const { getFileUrl } = require('../services/storage.service');
