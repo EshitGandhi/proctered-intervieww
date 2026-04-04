@@ -158,11 +158,6 @@ const generatePDF = async (report, application) => {
       doc.moveDown(0.2);
   });
 
-  // Recommendation
-  drawSection('RECOMMENDATION', null, '#f1f5f9', '#334155');
-  doc.fillColor('#000000').fontSize(10);
-  doc.text(`REASON: ${report.recommendation.reason}`, 60);
-  doc.text(`RISK LEVEL: ${report.recommendation.risk_level}`, 60);
 
   // Insights
   drawSection('INSIGHTS', null, '#f0fdf9', '#0d9488');

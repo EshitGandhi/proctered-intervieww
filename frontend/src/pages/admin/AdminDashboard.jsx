@@ -1022,12 +1022,6 @@ const CandidateDetail = ({ appId, onBack }) => {
             {/* Right Column: Recommendation & Insights */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div style={{ background: 'var(--bg-secondary)', padding: 16, borderRadius: 12 }}>
-                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 8 }}>Recommendation</div>
-                <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-muted)' }}>{report.recommendation.reason}</p>
-                <div style={{ marginTop: 8, fontSize: '0.75rem', fontWeight: 600 }}>Risk Level: {report.recommendation.risk_level}</div>
-              </div>
-
-              <div style={{ background: 'var(--bg-secondary)', padding: 16, borderRadius: 12 }}>
                 <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 8 }}>Candidate Summary</div>
                 <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{report.insights.candidate_summary}</p>
               </div>
