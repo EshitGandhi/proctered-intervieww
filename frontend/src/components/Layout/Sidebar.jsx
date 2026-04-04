@@ -42,24 +42,35 @@ const Sidebar = () => {
         padding: '24px 20px',
         borderBottom: '1px solid var(--border)',
         display: 'flex',
-        alignItems: 'center',
-        gap: 14,
+        flexDirection: 'column',
+        gap: 16,
       }}>
-        <div style={{
-          width: 44, height: 44, borderRadius: '50%',
-          background: 'var(--bg-tertiary)',
-          border: '1px solid var(--border)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: 'var(--text-primary)', fontWeight: 700, fontSize: '1.2rem', flexShrink: 0,
-        }}>
-          {user?.name ? user.name.charAt(0).toUpperCase() : 'KL'}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 4 }}>
+          <img 
+            src="/logo.png" 
+            alt="Kadel Labs" 
+            style={{ maxHeight: 36, maxWidth: '100%', objectFit: 'contain' }}
+            onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }}
+          />
+          <span style={{ display: 'none', fontWeight: 900, color: 'var(--accent-primary)', fontSize: '1.2rem' }}>Kadel Labs</span>
         </div>
-        <div style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <div style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', title: user?.name }}>
-            {user?.name || 'KL Prarambh'}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{
+            width: 44, height: 44, borderRadius: '50%',
+            background: 'var(--bg-tertiary)',
+            border: '1px solid var(--border)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: 'var(--text-primary)', fontWeight: 700, fontSize: '1.2rem', flexShrink: 0,
+          }}>
+            {user?.name ? user.name.charAt(0).toUpperCase() : 'KL'}
           </div>
-          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', title: user?.email }}>
-            {user?.email || (isAdmin ? 'Admin | Interviewer' : 'Candidate')}
+          <div style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <div style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', title: user?.name }}>
+              {user?.name || 'KL Prarambh'}
+            </div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', title: user?.email }}>
+              {user?.email || (isAdmin ? 'Admin | Interviewer' : 'Candidate')}
+            </div>
           </div>
         </div>
       </div>
