@@ -2,7 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
 import api from '../../services/api';
-
+import useTabProctor from '../../hooks/useTabProctor';
+import useFaceProctor from '../../hooks/useFaceProctor';
+import FaceCheckModal from '../../components/FaceCheckModal';
 import { DEFAULT_CODE } from '../../hooks/useCodeExecution';
 
 const LANGUAGES = [
@@ -19,6 +21,26 @@ const CodeEvalRound = () => {
   const { appId } = useParams();
   const navigate = useNavigate();
 
+  // ── Face verification gate ───────────────────────────────────────────────
+  const [faceReady, setFaceReady] = useState(false);
+  const webcamVideoRef = useRef(null);
+  const camStreamRef   = useRef(null);
+
+  useEffect(() => {
+    if (faceReady && webcamVideoRef.current && camStreamRef.current) {
+      webcamVideoRef.current.srcObject = camStreamRef.current;
+      webcamVideoRef.current.play().catch(() => {});
+    }
+  }, [faceReady]);
+
+  // Clean up stream on unmount
+  useEffect(() => {
+    return () => {
+      if (camStreamRef.current) {
+        camStreamRef.current.getTracks().forEach(t => t.stop());
+      }
+    };
+  }, []);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -33,7 +55,12 @@ const CodeEvalRound = () => {
   const [timeLeft, setTimeLeft] = useState(null); // in seconds
   const timerRef = useRef(null);
 
-
+  // Turn off camera as soon as we have a result
+  useEffect(() => {
+    if (result && camStreamRef.current) {
+      camStreamRef.current.getTracks().forEach(t => t.stop());
+    }
+  }, [result]);
 
   // Load questions on mount
   useEffect(() => {
@@ -100,8 +127,63 @@ const CodeEvalRound = () => {
     return () => clearInterval(interval);
   }, [loading, result, timeLeft === null]);
 
-  // Keep a stable ref to handleFinishTest
+  // ─── Tab Proctoring ────────────────────────────────────────────────────────
+  const [proctorMsg,   setProctorMsg]   = useState(null);
+  const [proctorFinal, setProctorFinal] = useState(false);
+  const proctorMsgTimer = useRef(null);
+  const autoFinishRef   = useRef(null);
+
+  // Keep a stable ref to handleFinishTest so the proctor hook never goes stale
   const handleFinishRef = useRef(null);
+
+  const proctoringActive = !loading && !result && !error && questions.length > 0 && faceReady;
+
+  const { violationCount } = useTabProctor({
+    enabled: proctoringActive,
+    maxViolations: 3,
+    sessionId: `coding-${appId}`,
+    videoRef: webcamVideoRef,
+    onViolation: (count, max) => {
+      const isFinal = count >= max;
+      setProctorFinal(isFinal);
+      const msg = isFinal
+        ? `🚨 Tab Violation ${count}/${max}: Auto-submitting coding round now…`
+        : `⚠️ Tab Warning ${count}/${max}: Tab switching detected! ${max - count} more violation${max - count > 1 ? 's' : ''} will auto-submit.`;
+      setProctorMsg(msg);
+      if (!isFinal) {
+        if (proctorMsgTimer.current) clearTimeout(proctorMsgTimer.current);
+        proctorMsgTimer.current = setTimeout(() => setProctorMsg(null), 4000);
+      }
+    },
+    onAutoSubmit: () => handleFinishRef.current?.(true),
+  });
+
+  // ── Face Proctoring ─────────────────────────────────────────────────────
+  const { faceViolationCount } = useFaceProctor({
+    videoRef: webcamVideoRef,
+    enabled: proctoringActive,
+    maxViolations: 3,
+    sessionId: `coding-${appId}`,
+    onViolation: (count, max, type, description) => {
+      const isFinal = count >= max;
+      setProctorFinal(isFinal);
+      const label = {
+        no_face_detected: '🚫 No Face Detected',
+        multiple_faces:   '👥 Multiple Faces Detected',
+        face_look_away:   '👀 Looking Away',
+        camera_blocked:   '📵 Camera Blocked',
+      }[type] || '⚠️ Face Violation';
+      const msg = isFinal
+        ? `🚨 ${label}: Auto-submitting (${count}/${max} face violations)…`
+        : `${label} — Warning ${count}/${max}: ${description}`;
+      setProctorMsg(msg);
+      if (!isFinal) {
+        if (proctorMsgTimer.current) clearTimeout(proctorMsgTimer.current);
+        proctorMsgTimer.current = setTimeout(() => setProctorMsg(null), 5000);
+      }
+    },
+    onAutoSubmit: () => handleFinishRef.current?.(true),
+  });
 
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -215,11 +297,23 @@ const CodeEvalRound = () => {
     </div>
   );
 
-
+  // ── Face verification gate ────────────────────────────────────────────────
+  if (!faceReady) {
+    return (
+      <FaceCheckModal
+        roundName="Coding Round"
+        sessionId={`coding-${appId}`}
+        onReady={(stream) => {
+          camStreamRef.current = stream;
+          setFaceReady(true);
+        }}
+      />
+    );
+  }
 
   // ── Result Screen ─────────────────────────────────────────────────────────
   if (result) {
-    const passed = result.data?.status === 'coding_passed';
+    const passed = result.data?.status === 'interview_pending';
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)', padding: 24 }}>
         <div className="card" style={{ maxWidth: 560, width: '100%', textAlign: 'center' }}>
@@ -248,7 +342,7 @@ const CodeEvalRound = () => {
             <div style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: 14, marginBottom: 20, textAlign: 'left' }}>
               <h4 style={{ margin: '0 0 6px' }}>🎯 What's Next?</h4>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', margin: 0 }}>
-                You've passed all automated rounds! An admin will review your profile shortly. Check your dashboard for updates.
+                You've passed all automated rounds! An admin will review your profile and schedule the final interview. Check your dashboard for updates.
               </p>
             </div>
           )}
@@ -266,6 +360,46 @@ const CodeEvalRound = () => {
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)', overflow: 'hidden' }}>
 
+      {/* ── Proctoring Toast ─────────────────────────────────────────────── */}
+      {proctorMsg && (
+        <div style={{
+          position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)',
+          background: proctorFinal ? '#1c0a0a' : '#1e1b4b',
+          color: '#fff', borderRadius: 12, padding: '14px 28px',
+          border: `2px solid ${proctorFinal ? '#ef4444' : '#7c3aed'}`,
+          zIndex: 9999, fontSize: '0.9rem', fontWeight: 600,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+          maxWidth: 520, textAlign: 'center', pointerEvents: 'none',
+        }}>
+          {proctorMsg}
+        </div>
+      )}
+
+      {/* ── Webcam PiP ────────────────────────────────────────────────── */}
+      <div style={{
+        position: 'fixed', bottom: 20, right: 20, zIndex: 9000,
+        width: 160, height: 120, borderRadius: 12, overflow: 'hidden',
+        border: `2px solid ${faceViolationCount > 0 ? '#ef4444' : '#10b981'}`,
+        boxShadow: '0 4px 24px rgba(0,0,0,0.5)',
+        background: '#000',
+      }}>
+        <video
+          ref={webcamVideoRef}
+          autoPlay muted playsInline
+          style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)' }}
+        />
+        <div style={{
+          position: 'absolute', top: 6, left: 6,
+          background: faceViolationCount > 0 ? '#ef4444' : '#10b981',
+          borderRadius: 20, padding: '2px 8px',
+          fontSize: '0.6rem', fontWeight: 700, color: '#fff',
+          display: 'flex', alignItems: 'center', gap: 4,
+        }}>
+          <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff', display: 'inline-block' }} />
+          LIVE
+        </div>
+      </div>
+
       {/* Top bar */}
       <div style={{ flexShrink: 0, padding: '10px 20px', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -274,6 +408,16 @@ const CodeEvalRound = () => {
             <span style={{ fontSize: 16 }}>⏱</span> {formatTime(timeLeft)}
           </div>
           <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{questions.length} Question{questions.length !== 1 ? 's' : ''}</span>
+          {violationCount > 0 && (
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: violationCount >= 3 ? '#ef4444' : '#f59e0b', background: violationCount >= 3 ? '#fee2e2' : '#fef3c7', padding: '2px 8px', borderRadius: 20 }}>
+              ⚠ Tab: {violationCount}/3
+            </span>
+          )}
+          {faceViolationCount > 0 && (
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: faceViolationCount >= 3 ? '#ef4444' : '#f59e0b', background: faceViolationCount >= 3 ? '#fee2e2' : '#fef3c7', padding: '2px 8px', borderRadius: 20 }}>
+              📷 Face: {faceViolationCount}/3
+            </span>
+          )}
         </div>
 
         {/* Question tabs */}
