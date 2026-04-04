@@ -9,10 +9,10 @@ const CandidateLogin = () => {
   const { login, user } = useAuth();
   const navigate = useNavigate();
 
-  // Redirect if already logged in
+  // Redirect if already logged in as a candidate
   React.useEffect(() => {
-    if (user) {
-      navigate(user.role === 'candidate' ? '/dashboard' : '/admin');
+    if (user && user.role === 'candidate') {
+      navigate('/dashboard');
     }
   }, [user, navigate]);
 
@@ -22,8 +22,14 @@ const CandidateLogin = () => {
     setLoading(true);
     try {
       const u = await login(form.email, form.password);
-      // Even if an admin logs in here by mistake, it redirects them appropriately.
-      navigate(u.role === 'candidate' ? '/dashboard' : '/admin');
+      if (u.role !== 'candidate') {
+        // Admin credentials used on candidate portal — clear session and show error
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setError('Access denied. These credentials belong to an Admin account. Please use the Employee Portal to sign in.');
+        return;
+      }
+      navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'An error occurred');
     } finally {

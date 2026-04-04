@@ -11,8 +11,8 @@ const AdminLogin = () => {
   const navigate = useNavigate();
 
   React.useEffect(() => {
-    if (user) {
-      navigate(user.role === 'admin' ? '/admin' : '/dashboard');
+    if (user && user.role === 'admin') {
+      navigate('/admin');
     }
   }, [user, navigate]);
 
@@ -22,7 +22,14 @@ const AdminLogin = () => {
     setLoading(true);
     try {
       const u = await login(form.email, form.password);
-      navigate(u.role === 'admin' ? '/admin' : '/dashboard');
+      if (u.role !== 'admin') {
+        // Candidate credentials used on admin portal — clear session and show error
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setError('Access denied. These credentials belong to a Candidate account. Please use the Candidate Portal to sign in.');
+        return;
+      }
+      navigate('/admin');
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Invalid credentials');
     } finally {
