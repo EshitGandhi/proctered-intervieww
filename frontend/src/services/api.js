@@ -14,11 +14,14 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Handle auth errors globally
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 401) {
+    // Only redirect if not already on auth-related pages or if not an explicit login request
+    const isAuthPage = window.location.pathname.includes('/login') || window.location.pathname.includes('/register');
+    const isLoginEndpoint = err.config?.url?.includes('/auth/login');
+
+    if (err.response?.status === 401 && !isAuthPage && !isLoginEndpoint) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/login';
