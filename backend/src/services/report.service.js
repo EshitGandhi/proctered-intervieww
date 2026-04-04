@@ -79,15 +79,6 @@ const generatePDF = async (report, application) => {
     doc.fillColor('#003366')
        .fontSize(24)
        .text('CANDIDATE REPORT', 50, 50, { align: 'center' });
-    doc.moveDown();
-    
-    // Status Badge
-    doc.fillColor('#dcfce7')
-       .rect(doc.page.width - 150, 55, 100, 20)
-       .fill();
-    doc.fillColor('#166534')
-       .fontSize(10)
-       .text('✓ SUCCESS: True', doc.page.width - 150, 60, { width: 100, align: 'center' });
   };
 
   drawHeader();
@@ -148,7 +139,6 @@ const generatePDF = async (report, application) => {
   // Recommendation
   drawSection('RECOMMENDATION', null, '#f1f5f9', '#334155');
   doc.fillColor('#000000').fontSize(10);
-  doc.text(`DECISION: ${report.recommendation.decision}`, 60);
   doc.text(`REASON: ${report.recommendation.reason}`, 60);
   doc.text(`RISK LEVEL: ${report.recommendation.risk_level}`, 60);
 

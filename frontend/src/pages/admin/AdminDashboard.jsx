@@ -1023,9 +1023,6 @@ const CandidateDetail = ({ appId, onBack }) => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div style={{ background: 'var(--bg-secondary)', padding: 16, borderRadius: 12 }}>
                 <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 8 }}>Recommendation</div>
-                <div style={{ fontSize: '1.1rem', fontWeight: 700, color: report.recommendation.decision?.includes('Hire') ? 'var(--success)' : report.recommendation.decision?.includes('Reject') ? 'var(--danger)' : 'var(--warning)', marginBottom: 4 }}>
-                  {report.recommendation.decision}
-                </div>
                 <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-muted)' }}>{report.recommendation.reason}</p>
                 <div style={{ marginTop: 8, fontSize: '0.75rem', fontWeight: 600 }}>Risk Level: {report.recommendation.risk_level}</div>
               </div>
