@@ -333,7 +333,7 @@ const CandidateDashboard = () => {
       <div style={{ maxWidth: 900, margin: '0 auto' }}>
         {/* Header */}
         <div style={{ marginBottom: 28 }}>
-          <h1 style={{ fontSize: '1.6rem', fontWeight: 700, margin: 0, marginBottom: 4 }}>My Hiring Dashboard</h1>
+          <h1 style={{ fontSize: '1.6rem', fontWeight: 700, margin: 0, marginBottom: 4 }}>My Job Portal</h1>
           <p style={{ color: 'var(--text-muted)', margin: 0 }}>Track your application pipeline or explore new opportunities</p>
         </div>
 
