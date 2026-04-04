@@ -254,9 +254,15 @@ exports.deleteApplication = async (req, res) => {
     if (!app) return res.status(404).json({ success: false, error: 'Application not found' });
 
     // optionally delete file if it exists, though storage.service logic would be better
-    if (app.scores?.resume?.resumeUrl) {
-      const p = path.join(process.cwd(), app.scores.resume.resumeUrl);
-      if (fs.existsSync(p)) fs.unlinkSync(p);
+    try {
+      if (app.scores?.resume?.resumeUrl) {
+        const p = path.join(process.cwd(), app.scores.resume.resumeUrl.replace(/^\/?(api\/)?/, ''));
+        if (fs.existsSync(p)) {
+          fs.unlinkSync(p);
+        }
+      }
+    } catch (fsErr) {
+      console.error('Failed to delete resume file during application deletion:', fsErr);
     }
 
     await Application.findByIdAndDelete(req.params.appId);

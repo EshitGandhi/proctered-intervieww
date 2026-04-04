@@ -915,6 +915,7 @@ const CandidateDetail = ({ appId, onBack }) => {
           <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: 14 }}>
             Manually intervene to progress the candidate or reset scores.
           </p>
+          {genError && <div className="alert alert-danger" style={{ marginBottom: 14 }}>{genError}</div>}
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button className="btn btn-secondary btn-sm" onClick={() => handleOverride('delete')} disabled={generating}>
               🗑 Delete Application
