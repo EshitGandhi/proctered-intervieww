@@ -73,108 +73,111 @@ const generatePDF = async (report, application) => {
   
   doc.pipe(stream);
 
-  // --- 1. Background Gradient ---
-  const bgGrad = doc.linearGradient(0, 0, doc.page.width, doc.page.height);
-  bgGrad.stop(0, '#36155c');    // Deep purple top
-  bgGrad.stop(0.5, '#2e1065');  // Indigo mid
-  bgGrad.stop(1, '#0f172a');    // Dark slate bottom
-  doc.rect(0, 0, doc.page.width, doc.page.height).fill(bgGrad);
+  // --- 1. Colors & Branding ---
+  const KADEL_BLUE = '#0a2569';
+  const TEXT_DARK = '#1e293b';
+  const TEXT_LIGHT = '#64748b';
+  const BORDER_LIGHT = '#e2e8f0';
+  const LOGO_PATH = 'C:\\Users\\admin\\.gemini\\antigravity\\brain\\71833a6d-2ea0-4f02-97d9-287ae05320af\\media__1775300843955.png';
 
-  // Helper for drawing glass cards
-  const drawGlassCard = (x, y, w, h) => {
-    // Semi-transparent background
-    doc.roundedRect(x, y, w, h, 14).fillOpacity(0.12).fill('#ffffff');
-    // Subtle border overlay
-    doc.roundedRect(x, y, w, h, 14).lineWidth(1).strokeOpacity(0.25).stroke('#ffffff');
-  };
+  // White Background
+  doc.rect(0, 0, doc.page.width, doc.page.height).fill('#ffffff');
 
   const marginX = 40;
   let currentY = 40;
 
-  // --- 2. Title Header Card ---
-  drawGlassCard(marginX, currentY, doc.page.width - 2 * marginX, 60);
-  const titleGrad = doc.linearGradient(marginX, currentY, doc.page.width - marginX, currentY + 60);
-  titleGrad.stop(0, '#fdf4ff').stop(1, '#e9d5ff'); // subtle pink/purple text gradient mock
-  doc.fillOpacity(1).fillColor('#ffffff').fontSize(26).text('Candidate Performance Report', marginX, currentY + 16, { align: 'center', width: doc.page.width - 2 * marginX });
+  // --- 2. Header with Logo ---
+  try {
+    if (fs.existsSync(LOGO_PATH)) {
+      doc.image(LOGO_PATH, marginX, currentY, { width: 120 });
+    }
+  } catch (e) {
+    console.error('Logo not found at path:', LOGO_PATH);
+  }
+
+  doc.fillColor(KADEL_BLUE).fontSize(20).text('CANDIDATE PERFORMANCE REPORT', marginX, currentY + 10, { align: 'right', width: doc.page.width - 2 * marginX });
+  doc.fillColor(TEXT_LIGHT).fontSize(10).text(`Generated on: ${new Date().toLocaleDateString()}`, marginX, currentY + 35, { align: 'right', width: doc.page.width - 2 * marginX });
   
   currentY += 80;
 
-  // --- 3. Overview Block (Candidate Info & Role) ---
-  drawGlassCard(marginX, currentY, doc.page.width - 2 * marginX, 90);
-  doc.fillOpacity(1).fillColor('#c4b5fd').fontSize(11).text('CANDIDATE INFO', marginX + 20, currentY + 18);
-  doc.fillColor('#ffffff').fontSize(16).text(`${application.candidateId.name}`, marginX + 20, currentY + 36);
-  doc.fillColor('#e2e8f0').fontSize(10).text(`${application.candidateId.email}`, marginX + 20, currentY + 58);
-  
-  doc.fillColor('#c4b5fd').fontSize(11).text('ROLE APPLIED', marginX + (doc.page.width - 2*marginX)/2 + 20, currentY + 18);
-  doc.fillColor('#ffffff').fontSize(16).text(`${report.role}`, marginX + (doc.page.width - 2*marginX)/2 + 20, currentY + 36);
-  
-  currentY += 110;
+  // Horizontal Divider
+  doc.lineWidth(1).strokeColor(BORDER_LIGHT).moveTo(marginX, currentY).lineTo(doc.page.width - marginX, currentY).stroke();
+  currentY += 30;
 
-  // --- 4. Score Cards ---
-  const scoreWidth = (doc.page.width - 2 * marginX - 45) / 4;
-  const scoreLabels = ['RESUME MATCH', 'CODING SCORE', 'MCQ SCORE', 'FINAL OVERALL'];
-  const scoreValues = [report.scores.resume_score, report.scores.coding_score, report.scores.mcq_score, report.scores.final_score];
+  // --- 3. Overview (Info & Role) ---
+  doc.fillColor(KADEL_BLUE).fontSize(10).text('CANDIDATE DETAILS', marginX, currentY);
+  currentY += 15;
+  doc.fillColor(TEXT_DARK).fontSize(14).text(application.candidateId.name, marginX, currentY);
+  doc.fillColor(TEXT_LIGHT).fontSize(10).text(application.candidateId.email, marginX, currentY + 18);
   
+  doc.fillColor(KADEL_BLUE).fontSize(10).text('ROLE APPLIED', marginX + 300, currentY - 15);
+  doc.fillColor(TEXT_DARK).fontSize(14).text(report.role, marginX + 300, currentY);
+  
+  currentY += 60;
+
+  // --- 4. Score Grid ---
+  const scoreLabels = ['Resume Match', 'Coding', 'MCQ', 'Final Score'];
+  const scoreValues = [report.scores.resume_score, report.scores.coding_score, report.scores.mcq_score, report.scores.final_score];
+  const boxWidth = (doc.page.width - 2 * marginX - 60) / 4;
+
   scoreLabels.forEach((label, i) => {
-    const startX = marginX + i * (scoreWidth + 15);
-    drawGlassCard(startX, currentY, scoreWidth, 80);
-    doc.fillOpacity(1).fillColor('#d8b4fe').fontSize(10).text(label, startX + 5, currentY + 15, { width: scoreWidth - 10, align: 'center' });
-    doc.fillColor('#ffffff').fontSize(24).text(`${scoreValues[i]}%`, startX, currentY + 40, { width: scoreWidth, align: 'center' });
+    const x = marginX + i * (boxWidth + 20);
+    // Score Box
+    doc.roundedRect(x, currentY, boxWidth, 70, 8).fillAndStroke('#f8fafc', BORDER_LIGHT);
+    doc.fillColor(TEXT_LIGHT).fontSize(8).text(label.toUpperCase(), x, currentY + 15, { width: boxWidth, align: 'center' });
+    doc.fillColor(KADEL_BLUE).fontSize(20).text(`${scoreValues[i]}%`, x, currentY + 32, { width: boxWidth, align: 'center' });
   });
 
   currentY += 100;
 
-  // --- 5. Analysis / Stats Block ---
-  // Sentiment and Confidence wide card
-  drawGlassCard(marginX, currentY, doc.page.width - 2 * marginX, 60);
-  doc.fillOpacity(1).fillColor('#c4b5fd').fontSize(11).text('OVERALL SENTIMENT:', marginX + 30, currentY + 24);
-  doc.fillColor('#4ade80').fontSize(13).text(report.analysis.sentiment.toUpperCase(), marginX + 170, currentY + 23);
-
-  doc.fillColor('#c4b5fd').fontSize(11).text('CONFIDENCE LEVEL:', marginX + 320, currentY + 24);
-  doc.fillColor('#60a5fa').fontSize(13).text(report.analysis.confidence_level.toUpperCase(), marginX + 460, currentY + 23);
-
-  currentY += 80;
-
-  // Strengths and Weaknesses side-by-side vertical cards
-  const colWidth = (doc.page.width - 2 * marginX - 20) / 2;
-  const strengthsX = marginX;
-  const weaknessesX = marginX + colWidth + 20;
-  const cardHeight = 220;
+  // --- 5. Analysis Block ---
+  doc.roundedRect(marginX, currentY, doc.page.width - 2 * marginX, 200, 10).strokeColor(BORDER_LIGHT).stroke();
   
-  drawGlassCard(strengthsX, currentY, colWidth, cardHeight);
-  drawGlassCard(weaknessesX, currentY, colWidth, cardHeight);
+  let sectionY = currentY + 20;
+  doc.fillColor(KADEL_BLUE).fontSize(12).text('INTERVIEW ANALYSIS', marginX + 20, sectionY);
+  sectionY += 25;
 
-  doc.fillOpacity(1).fillColor('#a78bfa').fontSize(13).text('KEY STRENGTHS:', strengthsX + 20, currentY + 20);
-  doc.fillColor('#e2e8f0').fontSize(10);
-  let strY = currentY + 45;
-  report.analysis.strengths.slice(0, 6).forEach(s => {
-    doc.text(`• ${s}`, strengthsX + 20, strY, { width: colWidth - 40 });
-    strY = doc.y + 6;
+  doc.fillColor(TEXT_LIGHT).fontSize(10).text('Sentiment:', marginX + 20, sectionY);
+  doc.fillColor(report.analysis.sentiment.toLowerCase() === 'positive' ? '#059669' : '#dc2626').fontSize(10).text(report.analysis.sentiment.toUpperCase(), marginX + 80, sectionY);
+
+  doc.fillColor(TEXT_LIGHT).fontSize(10).text('Confidence:', marginX + 200, sectionY);
+  doc.fillColor('#2563eb').fontSize(10).text(report.analysis.confidence_level.toUpperCase(), marginX + 265, sectionY);
+
+  sectionY += 30;
+
+  // Strengths column
+  doc.fillColor(KADEL_BLUE).fontSize(10).text('KEY STRENGTHS', marginX + 20, sectionY);
+  let strY = sectionY + 15;
+  report.analysis.strengths.forEach(s => {
+    doc.fillColor(TEXT_DARK).fontSize(9).text(`• ${s}`, marginX + 20, strY, { width: 220 });
+    strY = doc.y + 4;
   });
 
-  doc.fillOpacity(1).fillColor('#f472b6').fontSize(13).text('IDENTIFIED WEAKNESSES:', weaknessesX + 20, currentY + 20);
-  doc.fillColor('#e2e8f0').fontSize(10);
-  let weakY = currentY + 45;
-  report.analysis.weaknesses.slice(0, 6).forEach(w => {
-    doc.text(`• ${w}`, weaknessesX + 20, weakY, { width: colWidth - 40 });
-    weakY = doc.y + 6;
+  // Weaknesses column
+  doc.fillColor('#991b1b').fontSize(10).text('AREAS FOR IMPROVEMENT', marginX + (doc.page.width - 2*marginX)/2 + 10, sectionY);
+  let weakY = sectionY + 15;
+  report.analysis.weaknesses.forEach(w => {
+    doc.fillColor(TEXT_DARK).fontSize(9).text(`• ${w}`, marginX + (doc.page.width - 2*marginX)/2 + 10, weakY, { width: 220 });
+    weakY = doc.y + 4;
   });
 
-  currentY += cardHeight + 20;
+  currentY += 220;
 
-  // --- 6. Insights & Conclusion ---
-  drawGlassCard(marginX, currentY, doc.page.width - 2 * marginX, 150);
-  doc.fillOpacity(0.1).fill('#e0e7ff'); // Inner panel overlay
-  doc.fillOpacity(1).fillColor('#a78bfa').fontSize(14).text('EXECUTIVE INSIGHTS', marginX + 20, currentY + 20);
+  // --- 6. Executive Summary & Suggestions ---
+  doc.fillColor(KADEL_BLUE).fontSize(12).text('EXECUTIVE INSIGHTS', marginX, currentY);
+  currentY += 20;
+  doc.fillColor(TEXT_DARK).fontSize(10).text(report.insights.candidate_summary, marginX, currentY, { width: doc.page.width - 2 * marginX, lineHeight: 1.4 });
   
-  doc.fillColor('#f8fafc').fontSize(10).text(report.insights.candidate_summary, marginX + 20, currentY + 45, { width: doc.page.width - 2 * marginX - 40 });
-  
-  doc.fillColor('#cbd5e1').fontSize(11).text('Improvement Suggestions:', marginX + 20, doc.y + 12);
-  let sugY = doc.y + 6;
-  report.insights.improvement_suggestions.slice(0, 3).forEach(s => {
-      doc.fillColor('#e2e8f0').fontSize(10).text(`• ${s}`, marginX + 20, sugY, { width: doc.page.width - 2 * marginX - 40 });
-      sugY = doc.y + 4;
+  currentY = doc.y + 20;
+  doc.fillColor(KADEL_BLUE).fontSize(10).text('SUGGESTIONS FOR CANDIDATE', marginX, currentY);
+  currentY += 15;
+  report.insights.improvement_suggestions.forEach(s => {
+    doc.fillColor(TEXT_DARK).fontSize(9).text(`• ${s}`, marginX, currentY, { width: doc.page.width - 2 * marginX });
+    currentY = doc.y + 4;
   });
+
+  // Footer
+  doc.fontSize(8).fillColor(TEXT_LIGHT).text('Proprietary and Confidential - Kadel Labs Interview Platform', 0, doc.page.height - 30, { align: 'center', width: doc.page.width });
 
   doc.end();
   
@@ -183,5 +186,6 @@ const generatePDF = async (report, application) => {
     stream.on('error', reject);
   });
 };
+
 
 module.exports = { extractText, analyzeTranscript, generatePDF };
