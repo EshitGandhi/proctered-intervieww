@@ -257,11 +257,6 @@ const AdminRegister = () => {
           </Link>
         </p>
 
-        <div style={{ textAlign: 'center', marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
-          <Link to="/login" style={{ color: 'var(--text-muted)', fontSize: '0.78rem', textDecoration: 'none' }}>
-            ← Candidate Portal
-          </Link>
-        </div>
       </div>
     </div>
   );
