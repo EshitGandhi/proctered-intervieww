@@ -66,109 +66,114 @@ const analyzeTranscript = async (transcript, scores, role) => {
  * PDF Generation using pdfkit
  */
 const generatePDF = async (report, application) => {
-  const doc = new PDFDocument({ margin: 50 });
+  const doc = new PDFDocument({ margin: 0, size: 'A4' });
   const filename = `Report_${application.candidateId.name}_${Date.now()}.pdf`;
   const pdfPath = path.join(UPLOAD_DIR, filename);
   const stream = fs.createWriteStream(pdfPath);
   
   doc.pipe(stream);
 
-  // Helper Header
-  const drawHeader = () => {
-    // Ideally logo here doc.image('path/to/logo', 50, 45, { width: 50 });
-    doc.fillColor('#003366')
-       .fontSize(24)
-       .text('CANDIDATE REPORT', 50, 50, { align: 'center' });
+  // --- 1. Background Gradient ---
+  const bgGrad = doc.linearGradient(0, 0, doc.page.width, doc.page.height);
+  bgGrad.stop(0, '#36155c');    // Deep purple top
+  bgGrad.stop(0.5, '#2e1065');  // Indigo mid
+  bgGrad.stop(1, '#0f172a');    // Dark slate bottom
+  doc.rect(0, 0, doc.page.width, doc.page.height).fill(bgGrad);
+
+  // Helper for drawing glass cards
+  const drawGlassCard = (x, y, w, h) => {
+    // Semi-transparent background
+    doc.roundedRect(x, y, w, h, 14).fillOpacity(0.12).fill('#ffffff');
+    // Subtle border overlay
+    doc.roundedRect(x, y, w, h, 14).lineWidth(1).strokeOpacity(0.25).stroke('#ffffff');
   };
 
-  drawHeader();
-  doc.moveDown(2);
+  const marginX = 40;
+  let currentY = 40;
 
-  // Candidate Info Section
-  const infoY = doc.y;
-  doc.fillColor('#e0f2fe').rect(50, infoY, doc.page.width - 100, 25).fill();
-  doc.fillColor('#0369a1').fontSize(12).text('CANDIDATE INFO', 60, infoY + 7);
-  doc.moveDown(1.5);
+  // --- 2. Title Header Card ---
+  drawGlassCard(marginX, currentY, doc.page.width - 2 * marginX, 60);
+  const titleGrad = doc.linearGradient(marginX, currentY, doc.page.width - marginX, currentY + 60);
+  titleGrad.stop(0, '#fdf4ff').stop(1, '#e9d5ff'); // subtle pink/purple text gradient mock
+  doc.fillOpacity(1).fillColor('#ffffff').fontSize(26).text('Candidate Performance Report', marginX, currentY + 16, { align: 'center', width: doc.page.width - 2 * marginX });
   
-  doc.fillColor('#000000').fontSize(10);
-  doc.text(`NAME: ${application.candidateId.name}`, 60);
-  doc.moveDown(0.3);
-  doc.text(`EMAIL: ${application.candidateId.email}`, 60);
-  doc.moveDown(2);
+  currentY += 80;
 
-  // Role Section
-  const roleY = doc.y;
-  doc.fillColor('#e0f2fe').rect(50, roleY, doc.page.width - 100, 25).fill();
-  doc.fillColor('#0369a1').fontSize(12).text('ROLE', 60, roleY + 7);
-  doc.moveDown(1.5);
-  doc.fillColor('#000000').fontSize(10).text(report.role, 60);
-  doc.moveDown(2);
+  // --- 3. Overview Block (Candidate Info & Role) ---
+  drawGlassCard(marginX, currentY, doc.page.width - 2 * marginX, 90);
+  doc.fillOpacity(1).fillColor('#c4b5fd').fontSize(11).text('CANDIDATE INFO', marginX + 20, currentY + 18);
+  doc.fillColor('#ffffff').fontSize(16).text(`${application.candidateId.name}`, marginX + 20, currentY + 36);
+  doc.fillColor('#e2e8f0').fontSize(10).text(`${application.candidateId.email}`, marginX + 20, currentY + 58);
+  
+  doc.fillColor('#c4b5fd').fontSize(11).text('ROLE APPLIED', marginX + (doc.page.width - 2*marginX)/2 + 20, currentY + 18);
+  doc.fillColor('#ffffff').fontSize(16).text(`${report.role}`, marginX + (doc.page.width - 2*marginX)/2 + 20, currentY + 36);
+  
+  currentY += 110;
 
-  // Scores Section
-  const scoreY = doc.y;
-  doc.fillColor('#f0fdf4').rect(50, scoreY, doc.page.width - 100, 60).fill();
-  doc.fillColor('#166534').fontSize(14).text('SCORES', 60, scoreY + 22);
-
-  const scoreLabels = ['RESUME', 'CODING', 'MCQ', 'FINAL'];
-  const scoreValues = [
-    report.scores.resume_score,
-    report.scores.coding_score,
-    report.scores.mcq_score,
-    report.scores.final_score
-  ];
-
+  // --- 4. Score Cards ---
+  const scoreWidth = (doc.page.width - 2 * marginX - 45) / 4;
+  const scoreLabels = ['RESUME MATCH', 'CODING SCORE', 'MCQ SCORE', 'FINAL OVERALL'];
+  const scoreValues = [report.scores.resume_score, report.scores.coding_score, report.scores.mcq_score, report.scores.final_score];
+  
   scoreLabels.forEach((label, i) => {
-    const x = 160 + (i * 90);
-    doc.fillColor('#ffffff').rect(x, scoreY + 10, 80, 40).fill();
-    doc.fillColor('#333333').fontSize(8).text(`${label} SCORE`, x, scoreY + 15, { width: 80, align: 'center' });
-    doc.fillColor('#000000').fontSize(14).text(scoreValues[i], x, scoreY + 28, { width: 80, align: 'center' });
+    const startX = marginX + i * (scoreWidth + 15);
+    drawGlassCard(startX, currentY, scoreWidth, 80);
+    doc.fillOpacity(1).fillColor('#d8b4fe').fontSize(10).text(label, startX + 5, currentY + 15, { width: scoreWidth - 10, align: 'center' });
+    doc.fillColor('#ffffff').fontSize(24).text(`${scoreValues[i]}%`, startX, currentY + 40, { width: scoreWidth, align: 'center' });
   });
 
-  doc.moveDown(3);
+  currentY += 100;
 
-  // Generic content sections
-  const drawSection = (title, data, bgColor, textColor) => {
-    doc.moveDown();
-    const sectionTitleY = doc.y;
-    doc.fillColor(bgColor).rect(50, sectionTitleY, doc.page.width - 100, 25).fill();
-    doc.fillColor(textColor).fontSize(12).text(title, 60, sectionTitleY + 7);
-    doc.moveDown();
-  };
+  // --- 5. Analysis / Stats Block ---
+  // Sentiment and Confidence wide card
+  drawGlassCard(marginX, currentY, doc.page.width - 2 * marginX, 60);
+  doc.fillOpacity(1).fillColor('#c4b5fd').fontSize(11).text('OVERALL SENTIMENT:', marginX + 30, currentY + 24);
+  doc.fillColor('#4ade80').fontSize(13).text(report.analysis.sentiment.toUpperCase(), marginX + 170, currentY + 23);
 
-  // Analysis
-  drawSection('ANALYSIS', null, '#dbeafe', '#1e40af');
-  doc.fillColor('#000000').fontSize(10);
-  doc.text(`SENTIMENT: ${report.analysis.sentiment}`, 60);
-  doc.moveDown(0.3);
-  doc.text(`CONFIDENCE LEVEL: ${report.analysis.confidence_level}`, 60);
-  doc.moveDown(1.5);
+  doc.fillColor('#c4b5fd').fontSize(11).text('CONFIDENCE LEVEL:', marginX + 320, currentY + 24);
+  doc.fillColor('#60a5fa').fontSize(13).text(report.analysis.confidence_level.toUpperCase(), marginX + 460, currentY + 23);
+
+  currentY += 80;
+
+  // Strengths and Weaknesses side-by-side vertical cards
+  const colWidth = (doc.page.width - 2 * marginX - 20) / 2;
+  const strengthsX = marginX;
+  const weaknessesX = marginX + colWidth + 20;
+  const cardHeight = 220;
   
-  doc.text('STRENGTHS:', 60);
-  doc.moveDown(0.2);
-  report.analysis.strengths.forEach(s => {
-      doc.text(`• ${s}`, 70);
-      doc.moveDown(0.2);
+  drawGlassCard(strengthsX, currentY, colWidth, cardHeight);
+  drawGlassCard(weaknessesX, currentY, colWidth, cardHeight);
+
+  doc.fillOpacity(1).fillColor('#a78bfa').fontSize(13).text('KEY STRENGTHS:', strengthsX + 20, currentY + 20);
+  doc.fillColor('#e2e8f0').fontSize(10);
+  let strY = currentY + 45;
+  report.analysis.strengths.slice(0, 6).forEach(s => {
+    doc.text(`• ${s}`, strengthsX + 20, strY, { width: colWidth - 40 });
+    strY = doc.y + 6;
   });
-  doc.moveDown(1);
+
+  doc.fillOpacity(1).fillColor('#f472b6').fontSize(13).text('IDENTIFIED WEAKNESSES:', weaknessesX + 20, currentY + 20);
+  doc.fillColor('#e2e8f0').fontSize(10);
+  let weakY = currentY + 45;
+  report.analysis.weaknesses.slice(0, 6).forEach(w => {
+    doc.text(`• ${w}`, weaknessesX + 20, weakY, { width: colWidth - 40 });
+    weakY = doc.y + 6;
+  });
+
+  currentY += cardHeight + 20;
+
+  // --- 6. Insights & Conclusion ---
+  drawGlassCard(marginX, currentY, doc.page.width - 2 * marginX, 150);
+  doc.fillOpacity(0.1).fill('#e0e7ff'); // Inner panel overlay
+  doc.fillOpacity(1).fillColor('#a78bfa').fontSize(14).text('EXECUTIVE INSIGHTS', marginX + 20, currentY + 20);
   
-  doc.text('WEAKNESSES:', 60);
-  doc.moveDown(0.2);
-  report.analysis.weaknesses.forEach(w => {
-      doc.text(`• ${w}`, 70);
-      doc.moveDown(0.2);
-  });
-
-
-  // Insights
-  drawSection('INSIGHTS', null, '#f0fdf9', '#0d9488');
-  doc.fillColor('#000000').fontSize(10);
-  doc.text(`CANDIDATE SUMMARY: ${report.insights.candidate_summary}`, 60);
-  doc.moveDown(1);
-  doc.text('IMPROVEMENT SUGGESTIONS:', 60);
-  doc.moveDown(0.2);
-  report.insights.improvement_suggestions.forEach(s => {
-      doc.text(`• ${s}`, 70);
-      doc.moveDown(0.2);
+  doc.fillColor('#f8fafc').fontSize(10).text(report.insights.candidate_summary, marginX + 20, currentY + 45, { width: doc.page.width - 2 * marginX - 40 });
+  
+  doc.fillColor('#cbd5e1').fontSize(11).text('Improvement Suggestions:', marginX + 20, doc.y + 12);
+  let sugY = doc.y + 6;
+  report.insights.improvement_suggestions.slice(0, 3).forEach(s => {
+      doc.fillColor('#e2e8f0').fontSize(10).text(`• ${s}`, marginX + 20, sugY, { width: doc.page.width - 2 * marginX - 40 });
+      sugY = doc.y + 4;
   });
 
   doc.end();
