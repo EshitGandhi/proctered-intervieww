@@ -347,32 +347,27 @@ const CodeEvalRound = () => {
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)', padding: 24 }}>
         <div className="card" style={{ maxWidth: 560, width: '100%', textAlign: 'center' }}>
           <div style={{ fontSize: 64, marginBottom: 16 }}>{passed ? '🎉' : '😞'}</div>
-          <h2 style={{ marginBottom: 8 }}>{passed ? 'Coding Round Passed!' : 'Coding Round Failed'}</h2>
+          <h2 style={{ marginBottom: 8 }}>{passed ? 'Coding Round Output' : 'Coding Round Output'}</h2>
           <div className={`alert ${passed ? 'alert-success' : 'alert-danger'}`} style={{ marginBottom: 20, fontSize: '1.05rem', fontWeight: 600 }}>
-            Score: {result.score}%
+            {passed ? 'You have successfully passed the coding round.' : 'Your coding round has been evaluated.'}
           </div>
-          <p style={{ color: 'var(--text-muted)', marginBottom: 20 }}>{result.message}</p>
+          <p style={{ color: 'var(--text-muted)', marginBottom: 20 }}>Your test results have been recorded and will be reviewed by the administrative team.</p>
 
-          {/* Per question breakdown */}
-          {result.results && result.results.length > 0 && (
-            <div style={{ textAlign: 'left', marginBottom: 20 }}>
-              {result.results.map((qr, i) => (
-                <div key={i} style={{ background: 'var(--bg-secondary)', borderRadius: 8, padding: '10px 14px', marginBottom: 8 }}>
-                  <div style={{ fontWeight: 700, marginBottom: 4 }}>Q{i + 1}: {qr.title}</div>
-                  <div style={{ fontSize: '0.82rem', color: qr.testsPassed === qr.testsTotal ? '#10b981' : '#ef4444' }}>
-                    {qr.testsPassed}/{qr.testsTotal} test cases passed
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          {/* Test cases breakdown hidden from candidates */}
 
-          {passed && (
+          {passed ? (
             <div style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: 14, marginBottom: 20, textAlign: 'left' }}>
               <h4 style={{ margin: '0 0 6px' }}>🎯 What's Next?</h4>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', margin: 0 }}>
                 You've passed all automated rounds! An admin will review your profile and schedule the final interview. Check your dashboard for updates.
               </p>
+            </div>
+          ) : (
+            <div style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: 14, marginBottom: 20, textAlign: 'left' }}>
+              <h4 style={{ margin: '0 0 6px' }}>What's Next?</h4>
+               <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', margin: 0 }}>
+                  You did not pass the coding round metrics. Please review your dashboard for updates.
+               </p>
             </div>
           )}
           <button className="btn btn-primary" onClick={() => navigate('/dashboard')}>Go to Dashboard</button>
@@ -583,7 +578,7 @@ const CodeEvalRound = () => {
             <div style={{ flex: 1 }}>
               {currentQState.submitted && (
                 <span style={{ color: '#10b981', fontSize: '0.82rem', fontWeight: 700 }}>
-                  ✅ Submitted ({currentQState.submitResult?.testsPassed}/{currentQState.submitResult?.testsTotal} test cases passed)
+                  ✅ Submitted
                 </span>
               )}
             </div>
