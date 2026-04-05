@@ -283,9 +283,12 @@ const generateDriverCode = (parsed) => {
   };
 
   // ── C++ ──────────────────────────────────────────────────────────────────
+  const CPP_INDENT = '\n    ';
   const cppReads = params.map(p => {
-    return (TYPE_MAP[p.type]?.cppRead || ((n) => `cin >> ${n};`))(p.name);
-  }).join('\n    ');
+    const raw = (TYPE_MAP[p.type]?.cppRead || ((n) => `cin >> ${n};`))(p.name);
+    // normalize embedded newlines to include the same 4-space indent
+    return raw.split('\n').join(CPP_INDENT);
+  }).join(CPP_INDENT);
   const cppCallArgs = params.map(p => p.name).join(', ');
   const cpp =
 `#include <bits/stdc++.h>

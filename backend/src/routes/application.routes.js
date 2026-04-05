@@ -41,33 +41,38 @@ router.post('/:appId/coding', protect, async (req, res) => {
     const CodingQuestion = require('../models/CodingQuestion');
     const { executeCode } = require('../services/judge0.service');
 
-    let totalTestCases = 0;
-    let passedTestCases = 0;
+    // Helper: resolve driver code with flat map first, then legacy templates[]
+    const resolveDriverCode = (question, language) => {
+      if (question.driverCode?.[language]) return question.driverCode[language];
+      const tpl = question.templates?.find(t => t.language === language);
+      return tpl?.driverCode || '';
+    };
+
+    const buildCode = (sourceCode, driverCode) => {
+      if (!driverCode) return sourceCode;
+      if (driverCode.includes('// [[CANDIDATE_CODE]]')) {
+        return driverCode.replace('// [[CANDIDATE_CODE]]', sourceCode);
+      }
+      return sourceCode + '\n\n' + driverCode;
+    };
+
     const results = [];
+    // Each question contributes equally to the final score (per-question pass rate averaged)
+    let totalQuestionScore = 0;
+    let questionCount = 0;
 
     for (const sub of submissions) {
       const question = await CodingQuestion.findById(sub.questionId);
       if (!question) continue;
 
+      const driverCode = resolveDriverCode(question, sub.language);
+      const codeToExecute = buildCode(sub.sourceCode, driverCode);
+
       const qResults = { questionId: sub.questionId, title: question.title, testsPassed: 0, testsTotal: 0, testCaseResults: [] };
 
       for (const tc of question.testCases) {
         qResults.testsTotal++;
-        totalTestCases++;
         try {
-          // Join with driver code if template exists
-          let codeToExecute = sub.sourceCode;
-          if (question.templates) {
-            const template = question.templates.find(t => t.language === sub.language);
-            if (template && template.driverCode) {
-              if (template.driverCode.includes('// [[CANDIDATE_CODE]]')) {
-                codeToExecute = template.driverCode.replace('// [[CANDIDATE_CODE]]', sub.sourceCode);
-              } else {
-                codeToExecute = sub.sourceCode + '\n\n' + template.driverCode;
-              }
-            }
-          }
-
           const execResult = await executeCode({
             language: sub.language || 'python',
             sourceCode: codeToExecute,
@@ -77,28 +82,36 @@ router.post('/:appId/coding', protect, async (req, res) => {
           const actualOut = (execResult.stdout || '').trim();
           const expectedOut = (tc.expectedOutput || '').trim();
           const passed = actualOut === expectedOut;
-          if (passed) { passedTestCases++; qResults.testsPassed++; }
+          if (passed) qResults.testsPassed++;
           qResults.testCaseResults.push({
             input: tc.isHidden ? '[hidden]' : tc.input,
             expected: tc.isHidden ? '[hidden]' : tc.expectedOutput,
-            actual: tc.isHidden ? (passed ? '✅ Passed' : '❌ Failed') : actualOut,
+            actual: tc.isHidden ? (passed ? '\u2705 Passed' : '\u274c Failed') : actualOut,
             passed,
           });
         } catch (e) {
           qResults.testCaseResults.push({ input: tc.isHidden ? '[hidden]' : tc.input, passed: false, error: e.message });
         }
       }
+
       results.push(qResults);
+
+      // Equal weightage: each question contributes its own pass% equally
+      const qPassRate = qResults.testsTotal > 0
+        ? (qResults.testsPassed / qResults.testsTotal) * 100
+        : 0;
+      totalQuestionScore += qPassRate;
+      questionCount++;
     }
 
-    // Score = percentage of total test cases passed across all questions
-    const score = totalTestCases > 0 ? Math.round((passedTestCases / totalTestCases) * 100) : 0;
+    // Score = average per-question pass rate (equal weightage regardless of # of test cases)
+    const score = questionCount > 0 ? Math.round(totalQuestionScore / questionCount) : 0;
     const isPassed = score >= application.jobId.codingThreshold;
 
-    const totalWeight = application.jobId.resumeWeight + application.jobId.mcqWeight + application.jobId.codingWeight;
-    const resW = application.jobId.resumeWeight / totalWeight;
-    const mcqW = application.jobId.mcqWeight / totalWeight;
-    const codeW = application.jobId.codingWeight / totalWeight;
+    const totalWeight = (application.jobId.resumeWeight || 1) + (application.jobId.mcqWeight || 1) + (application.jobId.codingWeight || 1);
+    const resW = (application.jobId.resumeWeight || 1) / totalWeight;
+    const mcqW = (application.jobId.mcqWeight || 1) / totalWeight;
+    const codeW = (application.jobId.codingWeight || 1) / totalWeight;
     const finalScore = Math.round(
       ((application.scores.resume?.score || 0) * resW) +
       ((application.scores.mcq?.score || 0) * mcqW) +
@@ -137,21 +150,24 @@ router.post('/:appId/coding/evaluate', protect, async (req, res) => {
     const question = await CodingQuestion.findById(questionId);
     if (!question) return res.status(404).json({ success: false, error: 'Question not found' });
 
+    // Helper: resolve driver code with flat map first, then legacy templates[]
+    const resolveDriverCode = (q, lang) => {
+      if (q.driverCode?.[lang]) return q.driverCode[lang];
+      const tpl = q.templates?.find(t => t.language === lang);
+      return tpl?.driverCode || '';
+    };
+    const driverCode = resolveDriverCode(question, language);
+    const codeToExecute = driverCode
+      ? (driverCode.includes('// [[CANDIDATE_CODE]]')
+          ? driverCode.replace('// [[CANDIDATE_CODE]]', sourceCode)
+          : sourceCode + '\n\n' + driverCode)
+      : sourceCode;
+
     let testsPassed = 0;
     const testCaseResults = [];
 
     for (const tc of question.testCases) {
       try {
-        let codeToExecute = sourceCode;
-        if (question.templates) {
-          const template = question.templates.find(t => t.language === language);
-          if (template && template.driverCode) {
-            codeToExecute = template.driverCode.includes('// [[CANDIDATE_CODE]]') 
-              ? template.driverCode.replace('// [[CANDIDATE_CODE]]', sourceCode)
-              : sourceCode + '\n\n' + template.driverCode;
-          }
-        }
-
         const execResult = await executeCode({ language, sourceCode: codeToExecute, stdin: tc.input });
         const actualOut = (execResult.stdout || '').trim();
         const expectedOut = (tc.expectedOutput || '').trim();
@@ -160,7 +176,7 @@ router.post('/:appId/coding/evaluate', protect, async (req, res) => {
 
         testCaseResults.push({
           passed,
-          actual: tc.isHidden ? (passed ? '✅ Passed' : '❌ Failed') : actualOut,
+          actual: tc.isHidden ? (passed ? '\u2705 Passed' : '\u274c Failed') : actualOut,
           expected: tc.isHidden ? '[hidden]' : expectedOut,
           input: tc.isHidden ? '[hidden]' : tc.input,
           stderr: execResult.stderr,
