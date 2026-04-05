@@ -346,7 +346,7 @@ const CodeEvalRound = () => {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)', padding: 24 }}>
         <div className="card" style={{ maxWidth: 560, width: '100%', textAlign: 'center' }}>
-          <div style={{ fontSize: 64, marginBottom: 16 }}>{passed ? '🎉' : '😞'}</div>
+        
           <h2 style={{ marginBottom: 8 }}>{passed ? 'Coding Round Output' : 'Coding Round Output'}</h2>
           <div className={`alert ${passed ? 'alert-success' : 'alert-danger'}`} style={{ marginBottom: 20, fontSize: '1.05rem', fontWeight: 600 }}>
             {passed ? 'You have successfully passed the coding round.' : 'Your coding round has been evaluated.'}
