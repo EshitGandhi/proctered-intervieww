@@ -1168,7 +1168,7 @@ const CodingQuestionsTab = () => {
                     style={{
                       padding: '4px 12px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 600, border: 'none', cursor: 'pointer',
                       background: activeLang === t.language ? 'var(--primary)' : 'var(--bg-secondary)',
-                      color: activeLang === t.language ? '#fff' : 'var(--text-muted)'
+                      color: activeLang === t.language ? '#4451c1ff' : 'var(--text-muted)'
                     }}
                   >
                     {t.language.toUpperCase()}
