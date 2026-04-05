@@ -29,7 +29,7 @@ const TYPE_MAP = {
   // [cppType]: { java, python, javascript, c, php, cppRead, javaRead, pyRead, jsRead, cRead, phpRead }
   'int': {
     java: 'int', python: 'int', javascript: 'number', c: 'int', php: 'int',
-    cppRead: (n) => `cin >> ${n};`,
+    cppRead: (n) => `int ${n}; cin >> ${n};`,
     javaRead: (n) => `int ${n} = sc.nextInt();`,
     pyRead: (n) => `${n} = int(input())`,
     jsRead: (n, arr) => `const ${n} = parseInt(lines[idx++]);`,
@@ -40,7 +40,7 @@ const TYPE_MAP = {
   },
   'long': {
     java: 'long', python: 'int', javascript: 'number', c: 'long long', php: 'int',
-    cppRead: (n) => `cin >> ${n};`,
+    cppRead: (n) => `long ${n}; cin >> ${n};`,
     javaRead: (n) => `long ${n} = sc.nextLong();`,
     pyRead: (n) => `${n} = int(input())`,
     jsRead: (n) => `const ${n} = parseInt(lines[idx++]);`,
@@ -51,7 +51,7 @@ const TYPE_MAP = {
   },
   'double': {
     java: 'double', python: 'float', javascript: 'number', c: 'double', php: 'float',
-    cppRead: (n) => `cin >> ${n};`,
+    cppRead: (n) => `double ${n}; cin >> ${n};`,
     javaRead: (n) => `double ${n} = sc.nextDouble();`,
     pyRead: (n) => `${n} = float(input())`,
     jsRead: (n) => `const ${n} = parseFloat(lines[idx++]);`,
@@ -62,7 +62,7 @@ const TYPE_MAP = {
   },
   'float': {
     java: 'float', python: 'float', javascript: 'number', c: 'float', php: 'float',
-    cppRead: (n) => `cin >> ${n};`,
+    cppRead: (n) => `float ${n}; cin >> ${n};`,
     javaRead: (n) => `float ${n} = sc.nextFloat();`,
     pyRead: (n) => `${n} = float(input())`,
     jsRead: (n) => `const ${n} = parseFloat(lines[idx++]);`,
@@ -73,7 +73,7 @@ const TYPE_MAP = {
   },
   'bool': {
     java: 'boolean', python: 'bool', javascript: 'boolean', c: 'int', php: 'bool',
-    cppRead: (n) => `cin >> ${n};`,
+    cppRead: (n) => `bool ${n}; cin >> ${n};`,
     javaRead: (n) => `boolean ${n} = sc.nextBoolean();`,
     pyRead: (n) => `${n} = input().strip() == "true"`,
     jsRead: (n) => `const ${n} = lines[idx++].trim() === "true";`,
@@ -84,7 +84,7 @@ const TYPE_MAP = {
   },
   'string': {
     java: 'String', python: 'str', javascript: 'string', c: 'char*', php: 'string',
-    cppRead: (n) => `cin >> ${n};`,
+    cppRead: (n) => `string ${n}; cin >> ${n};`,
     javaRead: (n) => `String ${n} = sc.next();`,
     pyRead: (n) => `${n} = input().strip()`,
     jsRead: (n) => `const ${n} = lines[idx++].trim();`,

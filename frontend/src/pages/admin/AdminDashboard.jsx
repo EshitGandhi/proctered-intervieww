@@ -1383,16 +1383,24 @@ const CodingQuestionsTab = () => {
 
             {/* ── Section 5: Test Cases ──────────────────────────────────── */}
             <div style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: 16, marginBottom: 20 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '.05em' }}>🧪 Test Cases ({form.testCases.length})</div>
                 <button type="button" className="btn btn-secondary btn-sm" onClick={addTestCase}>+ Add Test Case</button>
               </div>
+
+              {/* stdin format reminder */}
+              <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: '0.75rem', color: '#1e40af', lineHeight: 1.6 }}>
+                ℹ️ <strong>Input must be raw stdin</strong> — not variable names.<br />
+                For <code style={{ background: '#dbeafe', padding: '1px 5px', borderRadius: 4 }}>vector&lt;int&gt; nums, int k</code>: first line = array size, second = space-separated elements, third = <code style={{ background: '#dbeafe', padding: '1px 5px', borderRadius: 4 }}>k</code>.<br />
+                Example: <code style={{ background: '#dbeafe', padding: '1px 5px', borderRadius: 4 }}>3↵1 1 1↵2</code> for nums=[1,1,1], k=2
+              </div>
+
               {form.testCases.map((tc, i) => (
                 <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto auto', gap: 10, marginBottom: 10, alignItems: 'center', background: 'var(--bg-tertiary)', padding: '10px 12px', borderRadius: 8, border: `1px solid ${tc.isHidden ? '#fbbf2440' : 'var(--border)'}` }}>
                   <div>
-                    <label style={{ ...labelStyle, fontSize: '0.7rem' }}>Input (stdin)</label>
+                    <label style={{ ...labelStyle, fontSize: '0.7rem' }}>Input (stdin) — raw lines only</label>
                     <textarea style={{ ...inputStyle, minHeight: 56, fontFamily: 'monospace', fontSize: '0.8rem' }}
-                      placeholder="e.g. 2 7 11 15&#10;9" value={tc.input} onChange={e => updateTestCase(i, 'input', e.target.value)} />
+                      placeholder={`e.g. for (vector<int> nums, int k):\n3\n1 1 1\n2`} value={tc.input} onChange={e => updateTestCase(i, 'input', e.target.value)} />
                   </div>
                   <div>
                     <label style={{ ...labelStyle, fontSize: '0.7rem' }}>Expected Output (stdout)</label>
