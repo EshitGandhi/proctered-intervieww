@@ -629,7 +629,7 @@ const CandidatesTab = ({ onSelectCandidate }) => {
                     <td style={{ padding: '12px 14px', fontWeight: 600 }}>{app.scores?.resume?.score || 0}%</td>
                     <td style={{ padding: '12px 14px', fontWeight: 600 }}>{app.scores?.mcq?.score || 0}%</td>
                     <td style={{ padding: '12px 14px', fontWeight: 600 }}>{app.scores?.coding?.score || 0}%</td>
-                    <td style={{ padding: '12px 14px', fontWeight: 700, color: 'var(--primary)' }}>{app.scores?.finalScore || 0}</td>
+                    <td style={{ padding: '12px 14px', fontWeight: 700, color: 'var(--accent-primary)' }}>{app.scores?.finalScore || 0}</td>
                     <td style={{ padding: '12px 14px' }}>
                       <button className="btn btn-ghost btn-sm" onClick={e => { e.stopPropagation(); onSelectCandidate(app._id); }}>View →</button>
                     </td>
@@ -882,7 +882,7 @@ const CandidateDetail = ({ appId, onBack }) => {
 
       {/* Header */}
       <div className="card" style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 20 }}>
-        <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: '1.4rem', flexShrink: 0 }}>
+        <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: '1.4rem', flexShrink: 0 }}>
           {app.candidateId?.name?.charAt(0).toUpperCase()}
         </div>
         <div>
@@ -902,7 +902,7 @@ const CandidateDetail = ({ appId, onBack }) => {
               📄 View Resume
             </a>
           )}
-          <span style={{ fontSize: '0.75rem', fontWeight: 600, background: 'var(--primary-light)', color: 'var(--primary)', padding: '4px 14px', borderRadius: 20, textTransform: 'capitalize' }}>
+          <span style={{ fontSize: '0.75rem', fontWeight: 600, background: 'var(--accent-glow)', color: 'var(--accent-primary)', padding: '4px 14px', borderRadius: 20, textTransform: 'capitalize' }}>
             {app.status.replace(/_/g, ' ')}
           </span>
         </div>
@@ -962,7 +962,7 @@ const CandidateDetail = ({ appId, onBack }) => {
           <h3 style={{ margin: 0, fontSize: '1.05rem' }}>📋 Interview Evaluation Report</h3>
           {report && (
             <div style={{ display: 'flex', gap: 12 }}>
-              <button className="btn btn-secondary btn-sm" onClick={() => { if (window.confirm('Are you sure you want to re-upload a different transcript? This will override the current report.')) setReport(null); }} style={{ background: 'var(--bg-app)' }}>
+              <button className="btn btn-secondary btn-sm" onClick={() => { if (window.confirm('Are you sure you want to re-upload a different transcript? This will override the current report.')) setReport(null); }} style={{ background: 'var(--bg-tertiary)' }}>
                 🔄 Replace Transcript
               </button>
               <button className="btn btn-primary btn-sm" onClick={handleDownloadPDF}>
@@ -1002,8 +1002,8 @@ const CandidateDetail = ({ appId, onBack }) => {
               <div style={{ marginBottom: 16 }}>
                 <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>Sentiment & Confidence</div>
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 600, background: 'var(--bg-app)', padding: '4px 10px', borderRadius: 6 }}>{report.analysis.sentiment}</span>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 600, background: 'var(--bg-app)', padding: '4px 10px', borderRadius: 6 }}>{report.analysis.confidence_level} Confidence</span>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, background: 'var(--bg-tertiary)', padding: '4px 10px', borderRadius: 6 }}>{report.analysis.sentiment}</span>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, background: 'var(--bg-tertiary)', padding: '4px 10px', borderRadius: 6 }}>{report.analysis.confidence_level} Confidence</span>
                 </div>
               </div>
 
@@ -1296,7 +1296,7 @@ const CodingQuestionsTab = () => {
                 </div>
               )}
               {!form.signature && !editing && (
-                <div style={{ background: 'var(--bg-app)', border: '1px dashed var(--border)', borderRadius: 8, padding: '8px 14px', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: 10 }}>
+                <div style={{ background: 'var(--bg-tertiary)', border: '1px dashed var(--border)', borderRadius: 8, padding: '8px 14px', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: 10 }}>
                   💡 Leave signature empty to write starter and driver code manually (Manual Mode).
                 </div>
               )}
@@ -1314,7 +1314,7 @@ const CodingQuestionsTab = () => {
                 {ALL_LANGUAGES.map(lang => {
                   const enabled = form.supportedLanguages.includes(lang.id);
                   return (
-                    <label key={lang.id} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', background: enabled ? 'rgba(37,99,235,0.08)' : 'var(--bg-app)', border: `1px solid ${enabled ? 'var(--accent-primary)' : 'var(--border)'}`, borderRadius: 20, padding: '5px 12px', fontSize: '0.78rem', fontWeight: 600, color: enabled ? 'var(--accent-primary)' : 'var(--text-muted)', transition: 'all 0.15s', userSelect: 'none' }}>
+                    <label key={lang.id} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', background: enabled ? 'rgba(37,99,235,0.08)' : 'var(--bg-tertiary)', border: `1px solid ${enabled ? 'var(--accent-primary)' : 'var(--border)'}`, borderRadius: 20, padding: '5px 12px', fontSize: '0.78rem', fontWeight: 600, color: enabled ? 'var(--accent-primary)' : 'var(--text-muted)', transition: 'all 0.15s', userSelect: 'none' }}>
                       <input type="checkbox" checked={enabled} onChange={() => toggleLang(lang.id)} style={{ display: 'none' }} />
                       {lang.icon} {lang.label}
                     </label>
@@ -1329,7 +1329,7 @@ const CodingQuestionsTab = () => {
                 <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '.05em' }}>💻 Code Templates</div>
                 <div style={{ display: 'flex', gap: 6 }}>
                   {['starter', 'driver'].map(tab => (
-                    <button key={tab} type="button" onClick={() => setPreviewTab(tab)} style={{ padding: '4px 12px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 700, border: 'none', cursor: 'pointer', background: previewTab === tab ? 'var(--primary)' : 'var(--bg-app)', color: previewTab === tab ? '#fff' : 'var(--text-muted)' }}>
+                    <button key={tab} type="button" onClick={() => setPreviewTab(tab)} style={{ padding: '4px 12px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 700, border: 'none', cursor: 'pointer', background: previewTab === tab ? 'var(--accent-primary)' : 'var(--bg-tertiary)', color: previewTab === tab ? '#fff' : 'var(--text-muted)' }}>
                       {tab === 'starter' ? '📝 Starter Code' : '⚙️ Driver Code'}
                     </button>
                   ))}
@@ -1339,7 +1339,7 @@ const CodingQuestionsTab = () => {
               {/* Language tabs */}
               <div style={{ display: 'flex', gap: 6, marginBottom: 12, overflowX: 'auto' }}>
                 {ALL_LANGUAGES.filter(l => form.supportedLanguages.includes(l.id)).map(lang => (
-                  <button type="button" key={lang.id} onClick={() => setActiveLang(lang.id)} style={{ padding: '4px 12px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 600, border: 'none', cursor: 'pointer', whiteSpace: 'nowrap', background: activeLang === lang.id ? 'var(--primary)' : 'var(--bg-app)', color: activeLang === lang.id ? '#fff' : 'var(--text-muted)' }}>
+                  <button type="button" key={lang.id} onClick={() => setActiveLang(lang.id)} style={{ padding: '4px 12px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 600, border: 'none', cursor: 'pointer', whiteSpace: 'nowrap', background: activeLang === lang.id ? 'var(--accent-primary)' : 'var(--bg-tertiary)', color: activeLang === lang.id ? '#fff' : 'var(--text-muted)' }}>
                     {lang.icon} {lang.label}
                   </button>
                 ))}
@@ -1354,10 +1354,10 @@ const CodingQuestionsTab = () => {
                 return (
                   <div>
                     {driverInfo && (
-                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', background: 'var(--bg-app)', borderRadius: 6, padding: '6px 10px', marginBottom: 8, fontFamily: 'monospace' }}>{driverInfo}</div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', background: 'var(--bg-tertiary)', borderRadius: 6, padding: '6px 10px', marginBottom: 8, fontFamily: 'monospace' }}>{driverInfo}</div>
                     )}
                     <textarea
-                      style={{ ...inputStyle, minHeight: 200, fontFamily: 'monospace', fontSize: '0.8rem', background: canEdit ? 'var(--bg-app)' : 'rgba(0,0,0,0.04)', color: canEdit ? 'var(--text-primary)' : 'var(--text-secondary)', cursor: canEdit ? 'text' : 'default', resize: 'vertical' }}
+                      style={{ ...inputStyle, minHeight: 200, fontFamily: 'monospace', fontSize: '0.8rem', background: canEdit ? 'var(--bg-tertiary)' : 'rgba(0,0,0,0.04)', color: canEdit ? 'var(--text-primary)' : 'var(--text-secondary)', cursor: canEdit ? 'text' : 'default', resize: 'vertical' }}
                       value={currentCode}
                       readOnly={!canEdit}
                       placeholder={canEdit ? `Write ${previewTab} code for ${ALL_LANGUAGES.find(l => l.id === activeLang)?.label}...` : 'Generate code from signature above, or switch to manual override.'}
@@ -1388,7 +1388,7 @@ const CodingQuestionsTab = () => {
                 <button type="button" className="btn btn-secondary btn-sm" onClick={addTestCase}>+ Add Test Case</button>
               </div>
               {form.testCases.map((tc, i) => (
-                <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto auto', gap: 10, marginBottom: 10, alignItems: 'center', background: 'var(--bg-app)', padding: '10px 12px', borderRadius: 8, border: `1px solid ${tc.isHidden ? '#fbbf2440' : 'var(--border)'}` }}>
+                <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto auto', gap: 10, marginBottom: 10, alignItems: 'center', background: 'var(--bg-tertiary)', padding: '10px 12px', borderRadius: 8, border: `1px solid ${tc.isHidden ? '#fbbf2440' : 'var(--border)'}` }}>
                   <div>
                     <label style={{ ...labelStyle, fontSize: '0.7rem' }}>Input (stdin)</label>
                     <textarea style={{ ...inputStyle, minHeight: 56, fontFamily: 'monospace', fontSize: '0.8rem' }}
