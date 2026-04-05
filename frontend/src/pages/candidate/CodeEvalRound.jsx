@@ -8,12 +8,14 @@ import FaceCheckModal from '../../components/FaceCheckModal';
 import { DEFAULT_CODE } from '../../hooks/useCodeExecution';
 
 const LANGUAGES = [
-  { id: 'python', label: 'Python', monacoLang: 'python' },
+  { id: 'python',     label: 'Python',     monacoLang: 'python' },
   { id: 'javascript', label: 'JavaScript', monacoLang: 'javascript' },
-  { id: 'java', label: 'Java', monacoLang: 'java' },
-  { id: 'c', label: 'C', monacoLang: 'c' },
-  { id: 'cpp', label: 'C++', monacoLang: 'cpp' },
+  { id: 'java',       label: 'Java',       monacoLang: 'java' },
+  { id: 'c',          label: 'C',          monacoLang: 'c' },
+  { id: 'cpp',        label: 'C++',        monacoLang: 'cpp' },
+  { id: 'php',        label: 'PHP',        monacoLang: 'php' },
 ];
+
 
 const DIFF_COLORS = { easy: '#10b981', medium: '#f59e0b', hard: '#ef4444' };
 

@@ -2,7 +2,7 @@ const axios = require('axios');
 
 /**
  * Judge0-based Code Execution Engine
- * Evaluates Python, JS, Java, C, and C++ using the Judge0 API.
+ * Evaluates C++, C, Java, JavaScript, Python, and PHP using the Judge0 API.
  */
 
 // Use CE community instance if no URL provided: https://ce.judge0.com
@@ -14,8 +14,9 @@ const JUDGE0_LANG_IDS = {
   javascript: 63, // Node.js 12.14.0
   python: 71,     // Python 3.8.1
   java: 62,       // Java 13.0.1
-  c: 50,          // GCC 9.2.0
-  cpp: 54         // GCC 9.2.0
+  c: 50,          // C (GCC 9.2.0)
+  cpp: 54,        // C++ (GCC 9.2.0)
+  php: 68,        // PHP 7.4.1
 };
 
 const executeCode = async ({ language, sourceCode, stdin = '' }) => {

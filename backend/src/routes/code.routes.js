@@ -6,12 +6,23 @@ const { protect } = require('../middleware/auth.middleware');
 const router = express.Router();
 
 // ─── Helper: build code to execute (inject driver if present) ───────────────
-const buildCodeToExecute = (sourceCode, template) => {
-  if (!template?.driverCode) return sourceCode;
-  if (template.driverCode.includes('// [[CANDIDATE_CODE]]')) {
-    return template.driverCode.replace('// [[CANDIDATE_CODE]]', sourceCode);
+// Supports both new flat driverCode map and legacy templates[] format.
+const resolveDriverCode = (question, language) => {
+  // New format: flat driverCode map
+  if (question.driverCode && question.driverCode[language]) {
+    return question.driverCode[language];
   }
-  return sourceCode + '\n\n' + template.driverCode;
+  // Legacy format: templates array
+  const tpl = question.templates?.find(t => t.language === language);
+  return tpl?.driverCode || '';
+};
+
+const buildCodeToExecute = (sourceCode, driverCode) => {
+  if (!driverCode) return sourceCode;
+  if (driverCode.includes('// [[CANDIDATE_CODE]]')) {
+    return driverCode.replace('// [[CANDIDATE_CODE]]', sourceCode);
+  }
+  return sourceCode + '\n\n' + driverCode;
 };
 
 // ─── Helper: classify error type from Judge0 result ─────────────────────────
@@ -40,8 +51,8 @@ router.post('/run-with-tests', protect, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Question not found' });
     }
 
-    const template = question.templates?.find(t => t.language === language);
-    const codeToExecute = buildCodeToExecute(sourceCode, template);
+    const driverCode = resolveDriverCode(question, language);
+    const codeToExecute = buildCodeToExecute(sourceCode, driverCode);
 
     const visibleTCs = question.testCases.filter(tc => !tc.isHidden);
     const hiddenTCs  = question.testCases.filter(tc => tc.isHidden);

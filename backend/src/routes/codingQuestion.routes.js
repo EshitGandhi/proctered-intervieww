@@ -6,14 +6,19 @@ const {
   updateQuestion,
   deleteQuestion,
   getRoundQuestions,
+  previewSignature,
 } = require('../controllers/codingQuestion.controller');
 
 const router = express.Router();
 
-// Candidate Route (Fetch 3 random questions for the test)
+// ─── Candidate ────────────────────────────────────────────────────────────────
+// Fetch 3 random questions for the coding round
 router.get('/round', protect, requireRole('candidate'), getRoundQuestions);
 
-// Admin Routes
+// ─── Admin: Signature Preview (must come before /:id routes) ─────────────────
+router.post('/preview-signature', protect, requireRole('admin'), previewSignature);
+
+// ─── Admin CRUD ───────────────────────────────────────────────────────────────
 router.route('/')
   .get(protect, requireRole('admin'), getQuestions)
   .post(protect, requireRole('admin'), createQuestion);

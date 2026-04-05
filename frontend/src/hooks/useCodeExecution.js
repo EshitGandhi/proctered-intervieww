@@ -197,6 +197,12 @@ int main() {
   return 0;
 }
 `,
+  php: `<?php
+// PHP solution
+$line = trim(fgets(STDIN));
+echo "Hello, World!" . PHP_EOL;
+?>
+`,
 };
 
 export { DEFAULT_CODE };

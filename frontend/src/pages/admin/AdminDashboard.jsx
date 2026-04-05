@@ -180,21 +180,21 @@ const JobsTab = () => {
                 <div style={{ display: 'flex', gap: 16, borderLeft: '1px solid var(--border)', borderRight: '1px solid var(--border)', padding: '0 24px' }}>
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                      <span style={{ fontSize: 14, background: 'var(--bg-tertiary)', padding: 4, borderRadius: 6, border: '1px solid var(--border-bright)' }}>📄</span> 
+                      <span style={{ fontSize: 14, background: 'var(--bg-tertiary)', padding: 4, borderRadius: 6, border: '1px solid var(--border-bright)' }}>📄</span>
                       + {job.resumeThreshold}%
                     </div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: 4 }}>Resume %</div>
                   </div>
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                      <span style={{ fontSize: 14, background: '#e0f2fe', padding: 4, borderRadius: 6, border: '1px solid #bae6fd' }}>📝</span> 
+                      <span style={{ fontSize: 14, background: '#e0f2fe', padding: 4, borderRadius: 6, border: '1px solid #bae6fd' }}>📝</span>
                       + {job.mcqThreshold}%
                     </div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: 4 }}>MCQ %</div>
                   </div>
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                      <span style={{ fontSize: 14, background: '#dcfce7', padding: 4, borderRadius: 6, border: '1px solid #bbf7d0' }}>&lt;/&gt;</span> 
+                      <span style={{ fontSize: 14, background: '#dcfce7', padding: 4, borderRadius: 6, border: '1px solid #bbf7d0' }}>&lt;/&gt;</span>
                       + {job.codingThreshold}%
                     </div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: 4 }}>Code %</div>
@@ -216,8 +216,8 @@ const JobsTab = () => {
 
                 {/* Action Block */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center', width: 140 }}>
-                  <button 
-                    className="btn btn-secondary" 
+                  <button
+                    className="btn btn-secondary"
                     onClick={() => handleViewMetrics(job)}
                     style={{ width: '100%', fontSize: '0.8rem', padding: '6px 0', border: '1px solid var(--border)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
                   >
@@ -233,9 +233,9 @@ const JobsTab = () => {
         </div>
       )}
       {viewMetricsJob && (
-        <MetricsModal 
-          job={viewMetricsJob} 
-          onClose={() => setViewMetricsJob(null)} 
+        <MetricsModal
+          job={viewMetricsJob}
+          onClose={() => setViewMetricsJob(null)}
         />
       )}
     </div>
@@ -252,7 +252,7 @@ const MetricsModal = ({ job, onClose }) => {
       try {
         const res = await api.get(`/applications/job/${job._id}`);
         const apps = res.data.data;
-        
+
         const data = {
           total: apps.length,
           resume: {
@@ -357,8 +357,8 @@ const MetricsModal = ({ job, onClose }) => {
             </div>
 
             <div style={{ marginTop: 8 }}>
-              <button 
-                className="btn btn-primary" 
+              <button
+                className="btn btn-primary"
                 style={{ width: '100%', padding: '12px' }}
                 onClick={() => {
                   window.location.href = `/admin/candidates?jobId=${job._id}`;
@@ -675,7 +675,7 @@ const CandidateDetail = ({ appId, onBack }) => {
     if (appId) {
       api.get(`/proctoring/application/${appId}`)
         .then(r => setProctoringLogs(r.data.data || []))
-        .catch(() => {});
+        .catch(() => { });
     }
   }, [appId]);
 
@@ -962,7 +962,7 @@ const CandidateDetail = ({ appId, onBack }) => {
           <h3 style={{ margin: 0, fontSize: '1.05rem' }}>📋 Interview Evaluation Report</h3>
           {report && (
             <div style={{ display: 'flex', gap: 12 }}>
-              <button className="btn btn-secondary btn-sm" onClick={() => { if(window.confirm('Are you sure you want to re-upload a different transcript? This will override the current report.')) setReport(null); }} style={{ background: 'var(--bg-app)' }}>
+              <button className="btn btn-secondary btn-sm" onClick={() => { if (window.confirm('Are you sure you want to re-upload a different transcript? This will override the current report.')) setReport(null); }} style={{ background: 'var(--bg-app)' }}>
                 🔄 Replace Transcript
               </button>
               <button className="btn btn-primary btn-sm" onClick={handleDownloadPDF}>
@@ -978,15 +978,15 @@ const CandidateDetail = ({ appId, onBack }) => {
               No evaluation report generated yet. Upload the interview transcript to begin.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                accept=".pdf,.docx,.txt" 
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept=".pdf,.docx,.txt"
                 style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}
               />
-              <button 
-                className="btn btn-primary" 
-                onClick={handleGenerateReport} 
+              <button
+                className="btn btn-primary"
+                onClick={handleGenerateReport}
                 disabled={uploading}
                 style={{ padding: '10px 24px' }}
               >
@@ -1006,7 +1006,7 @@ const CandidateDetail = ({ appId, onBack }) => {
                   <span style={{ fontSize: '0.75rem', fontWeight: 600, background: 'var(--bg-app)', padding: '4px 10px', borderRadius: 6 }}>{report.analysis.confidence_level} Confidence</span>
                 </div>
               </div>
-              
+
               <div style={{ marginBottom: 16 }}>
                 <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--success)', textTransform: 'uppercase', marginBottom: 6 }}>Strengths</div>
                 <ul style={{ margin: 0, paddingLeft: 16, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
@@ -1038,6 +1038,18 @@ const CandidateDetail = ({ appId, onBack }) => {
 };
 
 // ─── Tab: Coding Questions ────────────────────────────────────────────────────
+
+const ALL_LANGUAGES = [
+  { id: 'cpp',        label: 'C++',        monacoLang: 'cpp',        icon: '⚙️' },
+  { id: 'c',          label: 'C',          monacoLang: 'c',          icon: '🔩' },
+  { id: 'java',       label: 'Java',       monacoLang: 'java',       icon: '☕' },
+  { id: 'javascript', label: 'JavaScript', monacoLang: 'javascript', icon: '🟨' },
+  { id: 'python',     label: 'Python',     monacoLang: 'python',     icon: '🐍' },
+  { id: 'php',        label: 'PHP',        monacoLang: 'php',        icon: '🐘' },
+];
+
+const BLANK_CODES = { cpp: '', c: '', java: '', javascript: '', python: '', php: '' };
+
 const CodingQuestionsTab = () => {
   const [questions, setQuestions] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
@@ -1045,22 +1057,32 @@ const CodingQuestionsTab = () => {
   const [editing, setEditing] = React.useState(null);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState('');
-  const [activeLang, setActiveLang] = React.useState('cpp');
 
-  const defaultTemplates = [
-    { language: 'cpp', starterCode: '', driverCode: '' },
-    { language: 'java', starterCode: '', driverCode: '' },
-    { language: 'python', starterCode: '', driverCode: '' },
-    { language: 'javascript', starterCode: '', driverCode: '' },
-    { language: 'c', starterCode: '', driverCode: '' }
-  ];
+  // ── Form state ────────────────────────────────────────────────────────────
+  const [form, setForm] = React.useState({
+    title: '', description: '', difficulty: 'medium', constraints: '',
+    signature: '',
+    mode: 'auto',          // 'auto' | 'manual'
+    manualReason: '',      // reason shown when auto falls back to manual
+    starterCode: { ...BLANK_CODES },
+    driverCode:  { ...BLANK_CODES },
+    supportedLanguages: ALL_LANGUAGES.map(l => l.id),
+    testCases: [{ input: '', expectedOutput: '', isHidden: false }],
+  });
+
+  // ── UI state ──────────────────────────────────────────────────────────────
+  const [activeLang,    setActiveLang]    = React.useState('cpp');
+  const [previewTab,    setPreviewTab]    = React.useState('starter'); // 'starter' | 'driver'
+  const [generating,    setGenerating]    = React.useState(false);
+  const [overrideMode,  setOverrideMode]  = React.useState(false);    // allow manual edit in auto mode
 
   const emptyForm = () => ({
     title: '', description: '', difficulty: 'medium', constraints: '',
+    signature: '', mode: 'auto', manualReason: '',
+    starterCode: { ...BLANK_CODES }, driverCode: { ...BLANK_CODES },
+    supportedLanguages: ALL_LANGUAGES.map(l => l.id),
     testCases: [{ input: '', expectedOutput: '', isHidden: false }],
-    templates: JSON.parse(JSON.stringify(defaultTemplates))
   });
-  const [form, setForm] = React.useState(emptyForm());
 
   const fetchQuestions = () => {
     setLoading(true);
@@ -1068,25 +1090,67 @@ const CodingQuestionsTab = () => {
   };
   React.useEffect(() => { fetchQuestions(); }, []);
 
-  const addTestCase = () => setForm(f => ({ ...f, testCases: [...f.testCases, { input: '', expectedOutput: '', isHidden: false }] }));
+  // ── Generate code from signature ──────────────────────────────────────────
+  const handleGenerateCode = async () => {
+    if (!form.signature.trim()) return;
+    setGenerating(true);
+    try {
+      const { data } = await api.post('/coding-questions/preview-signature', { signature: form.signature });
+      const result = data.data;
+      setForm(f => ({
+        ...f,
+        mode: result.mode,
+        manualReason: result.reason || '',
+        starterCode: result.mode === 'auto' ? result.starterCode : f.starterCode,
+        driverCode:  result.mode === 'auto' ? result.driverCode  : f.driverCode,
+      }));
+      setOverrideMode(false);
+    } catch (err) {
+      setForm(f => ({ ...f, mode: 'manual', manualReason: 'Failed to parse signature.' }));
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  // ── Test case helpers ─────────────────────────────────────────────────────
+  const addTestCase    = () => setForm(f => ({ ...f, testCases: [...f.testCases, { input: '', expectedOutput: '', isHidden: false }] }));
   const removeTestCase = (i) => setForm(f => ({ ...f, testCases: f.testCases.filter((_, idx) => idx !== i) }));
   const updateTestCase = (i, key, val) => setForm(f => {
-    const tcs = [...f.testCases]; tcs[i] = { ...tcs[i], [key]: key === 'isHidden' ? val : val }; return { ...f, testCases: tcs };
+    const tcs = [...f.testCases]; tcs[i] = { ...tcs[i], [key]: val }; return { ...f, testCases: tcs };
   });
 
+  const toggleLang = (langId) => {
+    setForm(f => {
+      const exists = f.supportedLanguages.includes(langId);
+      if (exists && f.supportedLanguages.length === 1) return f; // keep at least one
+      return { ...f, supportedLanguages: exists ? f.supportedLanguages.filter(l => l !== langId) : [...f.supportedLanguages, langId] };
+    });
+  };
+
+  // ── Submit ────────────────────────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault(); setSaving(true); setError('');
     try {
+      const isEffectivelyManual = form.mode === 'manual' || overrideMode;
       const payload = {
-        ...form,
-        constraints: form.constraints ? form.constraints.split('\n').filter(Boolean) : [],
+        title: form.title,
+        description: form.description,
+        difficulty: form.difficulty,
+        constraints: form.constraints,
+        signature: form.signature,
+        mode: isEffectivelyManual ? 'manual' : 'auto',
+        starterCode: form.starterCode,
+        driverCode:  form.driverCode,
+        supportedLanguages: form.supportedLanguages,
+        testCases: form.testCases,
       };
+
       if (editing) {
         await api.put(`/coding-questions/${editing}`, payload);
       } else {
         await api.post('/coding-questions', payload);
       }
-      setShowForm(false); setEditing(null); setForm(emptyForm());
+      setShowForm(false); setEditing(null); setForm(emptyForm()); setOverrideMode(false);
       fetchQuestions();
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to save question');
@@ -1094,13 +1158,26 @@ const CodingQuestionsTab = () => {
   };
 
   const handleEdit = (q) => {
-    // Ensure all 5 languages are populated even if older question doesn't have them
-    const qTemplates = defaultTemplates.map(dt => {
-      const existing = q.templates?.find(t => t.language === dt.language);
-      return existing ? { ...existing } : { ...dt };
+    setForm({
+      title: q.title,
+      description: q.description,
+      difficulty: q.difficulty,
+      constraints: (q.constraints || []).join('\n'),
+      signature: q.signature || '',
+      mode: q.mode || 'manual',
+      manualReason: !q.signature ? 'Legacy question — no signature available.' : '',
+      starterCode: q.starterCode && Object.keys(q.starterCode).length ? { ...BLANK_CODES, ...q.starterCode } : rebuildFromTemplates(q.templates, 'starterCode'),
+      driverCode:  q.driverCode  && Object.keys(q.driverCode).length  ? { ...BLANK_CODES, ...q.driverCode  } : rebuildFromTemplates(q.templates, 'driverCode'),
+      supportedLanguages: q.supportedLanguages?.length ? q.supportedLanguages : ALL_LANGUAGES.map(l => l.id),
+      testCases: q.testCases?.length ? q.testCases.map(tc => ({ input: tc.input, expectedOutput: tc.expectedOutput, isHidden: tc.isHidden })) : [{ input: '', expectedOutput: '', isHidden: false }],
     });
-    setForm({ ...q, constraints: (q.constraints || []).join('\n'), templates: qTemplates });
-    setEditing(q._id); setShowForm(true);
+    setEditing(q._id); setShowForm(true); setOverrideMode(q.mode === 'manual' || !q.signature);
+  };
+
+  const rebuildFromTemplates = (templates, field) => {
+    const map = { ...BLANK_CODES };
+    (templates || []).forEach(t => { if (t.language) map[t.language] = t[field] || ''; });
+    return map;
   };
 
   const handleDelete = async (id) => {
@@ -1109,9 +1186,12 @@ const CodingQuestionsTab = () => {
     fetchQuestions();
   };
 
+  const isManualMode = form.mode === 'manual' || overrideMode;
+
+  // ── Styles ────────────────────────────────────────────────────────────────
   const labelStyle = { fontWeight: 600, fontSize: '0.8rem', display: 'block', marginBottom: 4, color: 'var(--text-secondary)' };
   const inputStyle = { width: '100%', padding: '8px 12px', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '0.875rem', boxSizing: 'border-box' };
-  const diffColor = { easy: '#10b981', medium: '#f59e0b', hard: '#ef4444' };
+  const diffColor  = { easy: '#10b981', medium: '#f59e0b', hard: '#ef4444' };
 
   return (
     <div>
@@ -1120,105 +1200,199 @@ const CodingQuestionsTab = () => {
           <h2 style={{ margin: 0, fontSize: '1.2rem' }}>Coding Questions</h2>
           <p style={{ margin: '4px 0 0', color: 'var(--text-muted)', fontSize: '0.82rem' }}>Global question bank — 3 random questions are given per coding round</p>
         </div>
-        <button className="btn btn-primary" onClick={() => { setForm(emptyForm()); setEditing(null); setShowForm(v => !v); }}>
+        <button className="btn btn-primary" onClick={() => { setForm(emptyForm()); setEditing(null); setOverrideMode(false); setShowForm(v => !v); }}>
           {showForm ? 'Cancel' : '+ Add Question'}
         </button>
       </div>
 
       {showForm && (
-        <div className="card" style={{ marginBottom: 24 }}>
-          <h3 style={{ marginBottom: 20, fontSize: '1rem' }}>{editing ? 'Edit Question' : 'New Question'}</h3>
+        <div className="card" style={{ marginBottom: 24, padding: 24 }}>
+          <h3 style={{ marginBottom: 20, fontSize: '1rem' }}>{editing ? 'Edit Question' : 'New Coding Question'}</h3>
           {error && <div className="alert alert-danger" style={{ marginBottom: 16 }}>{error}</div>}
+
           <form onSubmit={handleSubmit}>
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16, marginBottom: 16 }}>
-              <div>
-                <label style={labelStyle}>Question Title *</label>
-                <input style={inputStyle} placeholder="e.g. Two Sum" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} required />
+
+            {/* ── Section 1: Basic Info ──────────────────────────────────── */}
+            <div style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: 16, marginBottom: 20 }}>
+              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 14 }}>📋 Question Details</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16, marginBottom: 16 }}>
+                <div>
+                  <label style={labelStyle}>Question Title *</label>
+                  <input style={inputStyle} placeholder="e.g. Two Sum" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} required />
+                </div>
+                <div>
+                  <label style={labelStyle}>Difficulty</label>
+                  <select style={inputStyle} value={form.difficulty} onChange={e => setForm(f => ({ ...f, difficulty: e.target.value }))}>
+                    <option value="easy">Easy</option>
+                    <option value="medium">Medium</option>
+                    <option value="hard">Hard</option>
+                  </select>
+                </div>
+              </div>
+              <div style={{ marginBottom: 16 }}>
+                <label style={labelStyle}>Problem Description *</label>
+                <textarea style={{ ...inputStyle, minHeight: 100, resize: 'vertical' }}
+                  placeholder="Describe the problem clearly — include what input is given and what output is expected..."
+                  value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} required />
               </div>
               <div>
-                <label style={labelStyle}>Difficulty</label>
-                <select style={inputStyle} value={form.difficulty} onChange={e => setForm(f => ({ ...f, difficulty: e.target.value }))}>
-                  <option value="easy">Easy</option>
-                  <option value="medium">Medium</option>
-                  <option value="hard">Hard</option>
-                </select>
+                <label style={labelStyle}>Constraints (one per line, optional)</label>
+                <textarea style={{ ...inputStyle, minHeight: 56, resize: 'vertical', fontFamily: 'monospace', fontSize: '0.8rem' }}
+                  placeholder="1 ≤ n ≤ 10^4&#10;-10^9 ≤ nums[i] ≤ 10^9"
+                  value={form.constraints} onChange={e => setForm(f => ({ ...f, constraints: e.target.value }))} />
               </div>
-            </div>
-            <div style={{ marginBottom: 16 }}>
-              <label style={labelStyle}>Problem Description *</label>
-              <textarea style={{ ...inputStyle, minHeight: 120, resize: 'vertical' }}
-                placeholder="Describe the problem clearly — include what input is given and what output is expected..."
-                value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} required />
-            </div>
-            <div style={{ marginBottom: 20 }}>
-              <label style={labelStyle}>Constraints (one per line)</label>
-              <textarea style={{ ...inputStyle, minHeight: 64, resize: 'vertical', fontFamily: 'monospace' }}
-                placeholder="1 ≤ n ≤ 10^4\n-10^9 ≤ nums[i] ≤ 10^9"
-                value={form.constraints} onChange={e => setForm(f => ({ ...f, constraints: e.target.value }))} />
             </div>
 
-            <div style={{ marginBottom: 20 }}>
-              <label style={{ ...labelStyle, fontSize: '0.9rem', marginBottom: 12, color: 'var(--text-primary)' }}>Code Templates & Injection</label>
-              <div style={{ display: 'flex', gap: 8, marginBottom: 12, overflowX: 'auto' }}>
-                {defaultTemplates.map(t => (
+            {/* ── Section 2: Function Signature & Auto Generation ────────── */}
+            <div style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: 16, marginBottom: 20 }}>
+              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 14 }}>⚡ Auto Driver Code Generation</div>
+
+              <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
+                <div style={{ flex: 1 }}>
+                  <label style={labelStyle}>Function Signature</label>
+                  <input
+                    style={{ ...inputStyle, fontFamily: 'monospace', fontSize: '0.85rem' }}
+                    placeholder="e.g.  int solve(vector<int> nums, int k)"
+                    value={form.signature}
+                    onChange={e => setForm(f => ({ ...f, signature: e.target.value, mode: 'auto', manualReason: '' }))}
+                  />
+                  <p style={{ margin: '5px 0 0', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                    Supported types: <code>int, long, double, float, bool, string, vector&lt;int&gt;, vector&lt;string&gt;</code>
+                  </p>
+                </div>
+                <div style={{ alignSelf: 'flex-end' }}>
                   <button
                     type="button"
-                    key={t.language}
-                    onClick={() => setActiveLang(t.language)}
-                    style={{
-                      padding: '4px 12px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 600, border: 'none', cursor: 'pointer',
-                      background: activeLang === t.language ? 'var(--primary)' : 'var(--bg-secondary)',
-                      color: activeLang === t.language ? '#fff' : 'var(--text-muted)'
-                    }}
+                    className="btn btn-primary"
+                    style={{ padding: '9px 18px', fontSize: '0.82rem', whiteSpace: 'nowrap' }}
+                    onClick={handleGenerateCode}
+                    disabled={generating || !form.signature.trim()}
                   >
-                    {t.language.toUpperCase()}
+                    {generating ? '⏳ Generating…' : '✨ Generate Code'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Mode badge */}
+              {form.mode === 'auto' && !overrideMode && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                  <span style={{ background: '#d1fae5', color: '#065f46', fontSize: '0.72rem', fontWeight: 700, padding: '3px 10px', borderRadius: 20, border: '1px solid #6ee7b7' }}>
+                    ✅ Auto Mode — Starter &amp; Driver code generated
+                  </span>
+                  <button type="button" style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => setOverrideMode(true)}>
+                    Edit manually
+                  </button>
+                </div>
+              )}
+              {(form.mode === 'manual' && form.manualReason) && (
+                <div style={{ background: '#fef3c7', border: '1px solid #fbbf24', color: '#92400e', borderRadius: 8, padding: '8px 14px', fontSize: '0.8rem', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  ⚠️ <strong>Switched to Manual Mode:</strong> {form.manualReason}
+                </div>
+              )}
+              {overrideMode && form.mode === 'auto' && (
+                <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', color: '#1e40af', borderRadius: 8, padding: '8px 14px', fontSize: '0.8rem', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  ✏️ <strong>Manual Override Active</strong> — Editing auto-generated code.
+                  <button type="button" style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#1e40af', fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => setOverrideMode(false)}>Discard edits</button>
+                </div>
+              )}
+              {!form.signature && !editing && (
+                <div style={{ background: 'var(--bg-app)', border: '1px dashed var(--border)', borderRadius: 8, padding: '8px 14px', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: 10 }}>
+                  💡 Leave signature empty to write starter and driver code manually (Manual Mode).
+                </div>
+              )}
+              {editing && !form.signature && (
+                <div style={{ background: '#fef3c7', border: '1px solid #fbbf24', color: '#92400e', borderRadius: 8, padding: '8px 14px', fontSize: '0.8rem', marginBottom: 10 }}>
+                  📂 <strong>Manual Mode (Legacy Question)</strong> — No function signature. Edit starter and driver code below.
+                </div>
+              )}
+            </div>
+
+            {/* ── Section 3: Supported Languages ────────────────────────── */}
+            <div style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: 16, marginBottom: 20 }}>
+              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 12 }}>🌐 Supported Languages</div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {ALL_LANGUAGES.map(lang => {
+                  const enabled = form.supportedLanguages.includes(lang.id);
+                  return (
+                    <label key={lang.id} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', background: enabled ? 'rgba(37,99,235,0.08)' : 'var(--bg-app)', border: `1px solid ${enabled ? 'var(--accent-primary)' : 'var(--border)'}`, borderRadius: 20, padding: '5px 12px', fontSize: '0.78rem', fontWeight: 600, color: enabled ? 'var(--accent-primary)' : 'var(--text-muted)', transition: 'all 0.15s', userSelect: 'none' }}>
+                      <input type="checkbox" checked={enabled} onChange={() => toggleLang(lang.id)} style={{ display: 'none' }} />
+                      {lang.icon} {lang.label}
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* ── Section 4: Code Preview / Editor ──────────────────────── */}
+            <div style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: 16, marginBottom: 20 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '.05em' }}>💻 Code Templates</div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {['starter', 'driver'].map(tab => (
+                    <button key={tab} type="button" onClick={() => setPreviewTab(tab)} style={{ padding: '4px 12px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 700, border: 'none', cursor: 'pointer', background: previewTab === tab ? 'var(--primary)' : 'var(--bg-app)', color: previewTab === tab ? '#fff' : 'var(--text-muted)' }}>
+                      {tab === 'starter' ? '📝 Starter Code' : '⚙️ Driver Code'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Language tabs */}
+              <div style={{ display: 'flex', gap: 6, marginBottom: 12, overflowX: 'auto' }}>
+                {ALL_LANGUAGES.filter(l => form.supportedLanguages.includes(l.id)).map(lang => (
+                  <button type="button" key={lang.id} onClick={() => setActiveLang(lang.id)} style={{ padding: '4px 12px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 600, border: 'none', cursor: 'pointer', whiteSpace: 'nowrap', background: activeLang === lang.id ? 'var(--primary)' : 'var(--bg-app)', color: activeLang === lang.id ? '#fff' : 'var(--text-muted)' }}>
+                    {lang.icon} {lang.label}
                   </button>
                 ))}
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, background: 'var(--bg-secondary)', padding: '16px', borderRadius: 8 }}>
-                <div>
-                  <label style={{ ...labelStyle, fontSize: '0.75rem' }}>Starter Code (Shown to Candidate)</label>
-                  <textarea
-                    style={{ ...inputStyle, minHeight: 140, fontFamily: 'monospace', fontSize: '0.8rem', background: 'var(--bg-app)' }}
-                    placeholder="e.g. int solve(int a, int b) {\n\n}"
-                    value={form.templates?.find(t => t.language === activeLang)?.starterCode || ''}
-                    onChange={e => {
-                      const newT = [...form.templates];
-                      const idx = newT.findIndex(t => t.language === activeLang);
-                      if (idx >= 0) newT[idx].starterCode = e.target.value;
-                      setForm(f => ({ ...f, templates: newT }));
-                    }}
-                  />
-                </div>
-                <div>
-                  <label style={{ ...labelStyle, fontSize: '0.75rem' }}>Driver Code (Hidden Backend Runner)</label>
-                  <textarea
-                    style={{ ...inputStyle, minHeight: 140, fontFamily: 'monospace', fontSize: '0.8rem', background: 'var(--bg-app)' }}
-                    placeholder="e.g. int main() {\n  int a, b; cin >> a >> b;\n  cout << solve(a,b);\n  return 0;\n}"
-                    value={form.templates?.find(t => t.language === activeLang)?.driverCode || ''}
-                    onChange={e => {
-                      const newT = [...form.templates];
-                      const idx = newT.findIndex(t => t.language === activeLang);
-                      if (idx >= 0) newT[idx].driverCode = e.target.value;
-                      setForm(f => ({ ...f, templates: newT }));
-                    }}
-                  />
-                </div>
-              </div>
+              {/* Code textarea */}
+              {(() => {
+                const codeKey = previewTab === 'starter' ? 'starterCode' : 'driverCode';
+                const currentCode = form[codeKey][activeLang] || '';
+                const canEdit = isManualMode;
+                const driverInfo = previewTab === 'driver' ? '// The marker // [[CANDIDATE_CODE]] will be replaced with the candidate\'s code at runtime.' : null;
+                return (
+                  <div>
+                    {driverInfo && (
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', background: 'var(--bg-app)', borderRadius: 6, padding: '6px 10px', marginBottom: 8, fontFamily: 'monospace' }}>{driverInfo}</div>
+                    )}
+                    <textarea
+                      style={{ ...inputStyle, minHeight: 200, fontFamily: 'monospace', fontSize: '0.8rem', background: canEdit ? 'var(--bg-app)' : 'rgba(0,0,0,0.04)', color: canEdit ? 'var(--text-primary)' : 'var(--text-secondary)', cursor: canEdit ? 'text' : 'default', resize: 'vertical' }}
+                      value={currentCode}
+                      readOnly={!canEdit}
+                      placeholder={canEdit ? `Write ${previewTab} code for ${ALL_LANGUAGES.find(l => l.id === activeLang)?.label}...` : 'Generate code from signature above, or switch to manual override.'}
+                      onChange={e => {
+                        if (!canEdit) return;
+                        setForm(f => ({ ...f, [codeKey]: { ...f[codeKey], [activeLang]: e.target.value } }));
+                      }}
+                    />
+                    {!canEdit && currentCode && (
+                      <div style={{ textAlign: 'right', marginTop: 4 }}>
+                        <button type="button" style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '0.72rem', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => setOverrideMode(true)}>Override &amp; edit manually</button>
+                      </div>
+                    )}
+                    {!currentCode && !canEdit && (
+                      <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+                        {form.signature ? 'Click "✨ Generate Code" above to auto-fill.' : 'Enter a function signature then click Generate Code, or switch to Manual Mode.'}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
 
-            <div style={{ marginBottom: 16 }}>
+            {/* ── Section 5: Test Cases ──────────────────────────────────── */}
+            <div style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: 16, marginBottom: 20 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <label style={{ ...labelStyle, marginBottom: 0 }}>Test Cases ({form.testCases.length})</label>
+                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '.05em' }}>🧪 Test Cases ({form.testCases.length})</div>
                 <button type="button" className="btn btn-secondary btn-sm" onClick={addTestCase}>+ Add Test Case</button>
               </div>
               {form.testCases.map((tc, i) => (
-                <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto auto', gap: 10, marginBottom: 10, alignItems: 'center', background: 'var(--bg-secondary)', padding: '10px 12px', borderRadius: 8 }}>
+                <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto auto', gap: 10, marginBottom: 10, alignItems: 'center', background: 'var(--bg-app)', padding: '10px 12px', borderRadius: 8, border: `1px solid ${tc.isHidden ? '#fbbf2440' : 'var(--border)'}` }}>
                   <div>
                     <label style={{ ...labelStyle, fontSize: '0.7rem' }}>Input (stdin)</label>
                     <textarea style={{ ...inputStyle, minHeight: 56, fontFamily: 'monospace', fontSize: '0.8rem' }}
-                      placeholder="e.g. 2 7 11 15\n9" value={tc.input} onChange={e => updateTestCase(i, 'input', e.target.value)} />
+                      placeholder="e.g. 2 7 11 15&#10;9" value={tc.input} onChange={e => updateTestCase(i, 'input', e.target.value)} />
                   </div>
                   <div>
                     <label style={{ ...labelStyle, fontSize: '0.7rem' }}>Expected Output (stdout)</label>
@@ -1226,23 +1400,31 @@ const CodingQuestionsTab = () => {
                       placeholder="e.g. 0 1" value={tc.expectedOutput} onChange={e => updateTestCase(i, 'expectedOutput', e.target.value)} />
                   </div>
                   <div style={{ textAlign: 'center' }}>
-                    <label style={{ ...labelStyle, fontSize: '0.7rem' }}>Hidden?</label>
-                    <input type="checkbox" checked={tc.isHidden} onChange={e => updateTestCase(i, 'isHidden', e.target.checked)} style={{ width: 18, height: 18, cursor: 'pointer' }} />
+                    <label style={{ ...labelStyle, fontSize: '0.68rem' }}>Hidden?</label>
+                    <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                      <input type="checkbox" checked={tc.isHidden} onChange={e => updateTestCase(i, 'isHidden', e.target.checked)} style={{ width: 18, height: 18, cursor: 'pointer' }} />
+                    </label>
+                    {tc.isHidden && <div style={{ fontSize: '0.6rem', color: '#f59e0b', marginTop: 2 }}>🔒 Hidden</div>}
                   </div>
                   <button type="button" onClick={() => removeTestCase(i)} disabled={form.testCases.length <= 1}
-                    style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', fontSize: '0.78rem', alignSelf: 'flex-end' }}>✕</button>
+                    style={{ background: form.testCases.length <= 1 ? '#e5e7eb' : '#ef444420', color: form.testCases.length <= 1 ? '#9ca3af' : '#ef4444', border: 'none', borderRadius: 6, padding: '6px 10px', cursor: form.testCases.length <= 1 ? 'default' : 'pointer', fontSize: '0.78rem', alignSelf: 'flex-end' }}>✕</button>
                 </div>
               ))}
             </div>
 
-            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-              <button type="button" className="btn btn-secondary" onClick={() => { setShowForm(false); setEditing(null); }}>Cancel</button>
-              <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Saving...' : editing ? 'Update Question' : 'Create Question'}</button>
+            {/* ── Footer buttons ─────────────────────────────────────────── */}
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                Mode: <strong style={{ color: isManualMode ? '#f59e0b' : '#10b981' }}>{isManualMode ? '🔴 Manual' : '🟢 Auto'}</strong>
+              </span>
+              <button type="button" className="btn btn-secondary" onClick={() => { setShowForm(false); setEditing(null); setOverrideMode(false); }}>Cancel</button>
+              <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Saving…' : editing ? 'Update Question' : 'Create Question'}</button>
             </div>
           </form>
         </div>
       )}
 
+      {/* ── Questions list ───────────────────────────────────────────────────── */}
       {loading ? (
         <div style={{ textAlign: 'center', padding: 40 }}><div className="spinner" /></div>
       ) : questions.length === 0 ? (
@@ -1252,22 +1434,43 @@ const CodingQuestionsTab = () => {
         </div>
       ) : (
         <div style={{ display: 'grid', gap: 12 }}>
-          {questions.map(q => (
-            <div key={q._id} style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                  <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>{q.title}</span>
-                  <span style={{ fontSize: '0.7rem', fontWeight: 700, color: diffColor[q.difficulty], background: `${diffColor[q.difficulty]}20`, padding: '2px 8px', borderRadius: 20, textTransform: 'capitalize' }}>{q.difficulty}</span>
-                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{q.testCases.length} test case{q.testCases.length !== 1 ? 's' : ''} ({q.testCases.filter(t => t.isHidden).length} hidden)</span>
+          {questions.map(q => {
+            const isAuto = q.mode === 'auto';
+            const isLegacy = !q.mode && !q.signature;
+            const langs = q.supportedLanguages || [];
+            return (
+              <div key={q._id} style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>{q.title}</span>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 700, color: diffColor[q.difficulty], background: `${diffColor[q.difficulty]}20`, padding: '2px 8px', borderRadius: 20, textTransform: 'capitalize' }}>{q.difficulty}</span>
+                    {isAuto && <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#10b981', background: '#d1fae5', border: '1px solid #6ee7b7', padding: '2px 8px', borderRadius: 20 }}>🟢 Auto</span>}
+                    {!isAuto && !isLegacy && <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#f59e0b', background: '#fef3c7', border: '1px solid #fbbf24', padding: '2px 8px', borderRadius: 20 }}>🔴 Manual</span>}
+                    {isLegacy && <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#6b7280', background: '#f3f4f6', border: '1px solid #d1d5db', padding: '2px 8px', borderRadius: 20 }}>📂 Legacy</span>}
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{q.testCases?.length || 0} test case{q.testCases?.length !== 1 ? 's' : ''} ({(q.testCases || []).filter(t => t.isHidden).length} hidden)</span>
+                  </div>
+                  {q.signature && <div style={{ fontFamily: 'monospace', fontSize: '0.75rem', color: 'var(--text-muted)', background: 'var(--bg-secondary)', padding: '3px 10px', borderRadius: 6, display: 'inline-block', marginBottom: 6 }}>{q.signature}</div>}
+                  <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-muted)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{q.description}</p>
+                  {langs.length > 0 && (
+                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 8 }}>
+                      {langs.map(lang => {
+                        const info = ALL_LANGUAGES.find(l => l.id === lang);
+                        return info ? (
+                          <span key={lang} style={{ fontSize: '0.65rem', fontWeight: 600, color: 'var(--text-muted)', background: 'var(--bg-secondary)', border: '1px solid var(--border)', padding: '2px 7px', borderRadius: 12 }}>
+                            {info.icon} {info.label}
+                          </span>
+                        ) : null;
+                      })}
+                    </div>
+                  )}
                 </div>
-                <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-muted)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{q.description}</p>
+                <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                  <button className="btn btn-secondary btn-sm" onClick={() => handleEdit(q)}>Edit</button>
+                  <button className="btn btn-sm" style={{ background: '#ef444420', color: '#ef4444', border: 'none', borderRadius: 6, padding: '6px 12px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }} onClick={() => handleDelete(q._id)}>Delete</button>
+                </div>
               </div>
-              <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                <button className="btn btn-secondary btn-sm" onClick={() => handleEdit(q)}>Edit</button>
-                <button className="btn btn-sm" style={{ background: '#ef444420', color: '#ef4444', border: 'none', borderRadius: 6, padding: '6px 12px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }} onClick={() => handleDelete(q._id)}>Delete</button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
@@ -1284,7 +1487,7 @@ const AdminDashboard = () => {
     if (path.includes('mcq')) return 'mcq';
     if (path.includes('candidates')) return 'candidates';
     if (path.includes('coding')) return 'coding';
-        return 'jobs';
+    return 'jobs';
   };
 
   const [tab, setTab] = useState(getTabFromPath());
@@ -1299,11 +1502,11 @@ const AdminDashboard = () => {
   }, [location.pathname]);
 
   const nav = [
-    { id: 'jobs',       label: '💼 Jobs' },
-    { id: 'mcq',        label: '📝 MCQ' },
-    { id: 'coding',     label: '💻 Coding Questions' },
+    { id: 'jobs', label: '💼 Jobs' },
+    { id: 'mcq', label: '📝 MCQ' },
+    { id: 'coding', label: '💻 Coding Questions' },
     { id: 'candidates', label: '👥 Candidates' },
-      ];
+  ];
 
   const handleSelectCandidate = (appId) => {
     setSelectedAppId(appId);
@@ -1361,9 +1564,9 @@ const AdminDashboard = () => {
           )}
         </div>
 
-        {tab === 'jobs'       && <JobsTab />}
-        {tab === 'mcq'        && <MCQTab />}
-        {tab === 'coding'     && <CodingQuestionsTab />}
+        {tab === 'jobs' && <JobsTab />}
+        {tab === 'mcq' && <MCQTab />}
+        {tab === 'coding' && <CodingQuestionsTab />}
         {tab === 'candidates' && <CandidatesTab onSelectCandidate={handleSelectCandidate} />}
         {tab === 'detail' && selectedAppId && (
           <CandidateDetail appId={selectedAppId} onBack={handleBack} />
