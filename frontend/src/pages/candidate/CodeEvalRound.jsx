@@ -57,6 +57,10 @@ const CodeEvalRound = () => {
   const [timeLeft, setTimeLeft] = useState(null); // in seconds
   const timerRef = useRef(null);
 
+  // Custom in-page confirm modal (replaces window.confirm which causes tab violations)
+  const [confirmModal, setConfirmModal] = useState(null); // { message, onConfirm }
+  const showConfirm = (message, onConfirm) => setConfirmModal({ message, onConfirm });
+
   // Turn off camera as soon as we have a result
   useEffect(() => {
     if (result && camStreamRef.current) {
@@ -229,37 +233,45 @@ const CodeEvalRound = () => {
   };
 
 
-  const handleSubmitQuestion = async (idx) => {
-    const q = qState[idx];
-    const question = questions[idx];
-    if (!window.confirm('Submit this code for evaluation? You will not be able to edit it anymore.')) return;
-    updateQ(idx, { running: true, runResult: null });
-    try {
-      const { data } = await api.post(`/applications/${appId}/coding/evaluate`, { 
-        questionId: question._id, 
-        language: q.language, 
-        sourceCode: q.code 
-      });
-      updateQ(idx, { 
-        submitted: true, 
-        running: false, 
-        runResult: { type: 'testcases', results: data.results },
-        submitResult: { testsPassed: data.testsPassed, testsTotal: data.testsTotal }
-      });
-    } catch (e) {
-      updateQ(idx, { running: false, runResult: { type: 'error', message: 'Evaluation failed. Please try again.' } });
-    }
+  const handleSubmitQuestion = (idx) => {
+    showConfirm(
+      'Submit this code for evaluation? You will not be able to edit it anymore.',
+      async () => {
+        const q = qState[idx];
+        const question = questions[idx];
+        updateQ(idx, { running: true, runResult: null });
+        try {
+          const { data } = await api.post(`/applications/${appId}/coding/evaluate`, {
+            questionId: question._id,
+            language: q.language,
+            sourceCode: q.code
+          });
+          updateQ(idx, {
+            submitted: true,
+            running: false,
+            runResult: { type: 'testcases', results: data.results },
+            submitResult: { testsPassed: data.testsPassed, testsTotal: data.testsTotal }
+          });
+        } catch (e) {
+          updateQ(idx, { running: false, runResult: { type: 'error', message: 'Evaluation failed. Please try again.' } });
+        }
+      }
+    );
   };
 
   const handleFinishTest = async (auto = false) => {
     const submittedCount = Object.values(qState).filter(q => q.submitted).length;
     if (!auto) {
-      if (submittedCount < questions.length) {
-        if (!window.confirm(`You have only submitted ${submittedCount}/${questions.length} questions. Unsubmitted questions will count as 0%. Continue?`)) return;
-      } else {
-        if (!window.confirm('Finalize your test and submit all results?')) return;
-      }
+      const msg = submittedCount < questions.length
+        ? `You have only submitted ${submittedCount}/${questions.length} questions. Unsubmitted questions will count as 0%. Continue?`
+        : 'Finalize your test and submit all results?';
+      showConfirm(msg, () => _doFinishTest());
+      return;
     }
+    _doFinishTest();
+  };
+
+  const _doFinishTest = async () => {
 
     setSubmitting(true);
     try {
@@ -376,6 +388,44 @@ const CodeEvalRound = () => {
   // ─── Main IDE Layout ──────────────────────────────────────────────────────
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)', overflow: 'hidden' }}>
+
+      {/* ── Custom In-Page Confirm Modal (no browser dialog = no tab violation) ── */}
+      {confirmModal && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 99999,
+          background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <div style={{
+            background: 'var(--bg-surface)', borderRadius: 14,
+            padding: '28px 32px', maxWidth: 420, width: '90%',
+            border: '1px solid var(--border)',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+            textAlign: 'center',
+          }}>
+            <div style={{ fontSize: 32, marginBottom: 12 }}>⚠️</div>
+            <p style={{ margin: '0 0 24px', fontSize: '0.95rem', lineHeight: 1.6, color: 'var(--text-primary)', fontWeight: 500 }}>
+              {confirmModal.message}
+            </p>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+              <button
+                className="btn btn-secondary"
+                style={{ minWidth: 100 }}
+                onClick={() => setConfirmModal(null)}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary"
+                style={{ minWidth: 100 }}
+                onClick={() => { const cb = confirmModal.onConfirm; setConfirmModal(null); cb(); }}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Proctoring Toast ─────────────────────────────────────────────── */}
       {proctorMsg && (
