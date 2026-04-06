@@ -141,32 +141,35 @@ exports.getRoundQuestions = async (req, res) => {
     if (appId) {
       const app = await Application.findById(appId);
       if (app && app.scores?.coding?.questions && app.scores.coding.questions.length > 0) {
-        // Fetch assigned questions
+        // Questions already exist for this application, fetch them exactly as they are
         questions = await Promise.all(
           app.scores.coding.questions.map(id => CodingQuestion.findById(id))
         );
-        questions = questions.filter(Boolean);
-      } else if (app) {
-        // Pick new random questions: 1 Easy, 1 Medium, 1 Hard
-        const easy = await CodingQuestion.aggregate([{ $match: { difficulty: 'easy', isActive: true } }, { $sample: { size: 1 } }]);
+        questions = questions.filter(Boolean); // Filter in case a question was deleted
+      } 
+      
+      // If we don't have exactly 3 questions yet, pick 1E, 1M, 1H
+      if (app && questions.length < 3) {
+        const easy   = await CodingQuestion.aggregate([{ $match: { difficulty: 'easy', isActive: true } }, { $sample: { size: 1 } }]);
         const medium = await CodingQuestion.aggregate([{ $match: { difficulty: 'medium', isActive: true } }, { $sample: { size: 1 } }]);
-        const hard = await CodingQuestion.aggregate([{ $match: { difficulty: 'hard', isActive: true } }, { $sample: { size: 1 } }]);
+        const hard   = await CodingQuestion.aggregate([{ $match: { difficulty: 'hard', isActive: true } }, { $sample: { size: 1 } }]);
 
         const selected = [];
-        if (easy[0]) selected.push(easy[0]);
+        if (easy[0])   selected.push(easy[0]);
         if (medium[0]) selected.push(medium[0]);
-        if (hard[0]) selected.push(hard[0]);
+        if (hard[0])   selected.push(hard[0]);
 
         if (selected.length > 0) {
-          app.set('scores.coding.questions', selected.map(q => q._id));
-          await app.save();
+          // Force save to database to LOCK these questions to this application/candidate
+          app.scores.coding.questions = selected.map(q => q._id);
+          await Application.updateOne({ _id: appId }, { $set: { "scores.coding.questions": app.scores.coding.questions } });
         }
         questions = selected;
       }
     }
 
+    // Last resort fallback (only if appId is missing or all selections failed)
     if (questions.length === 0) {
-      // Fallback: 3 random questions
       questions = await CodingQuestion.aggregate([
         { $match: { isActive: true } },
         { $sample: { size: 3 } }
