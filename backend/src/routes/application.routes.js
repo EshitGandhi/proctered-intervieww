@@ -83,7 +83,14 @@ router.post('/:appId/coding', protect, async (req, res) => {
           // Normalize output: trim whitespace to be lenient
           const actualOut = (execResult.stdout || '').trim();
           const expectedOut = (tc.expectedOutput || '').trim();
-          const passed = actualOut === expectedOut;
+          let passed = actualOut === expectedOut;
+          if (!passed && actualOut !== '' && expectedOut !== '') {
+            const numActual = Number(actualOut);
+            const numExpected = Number(expectedOut);
+            if (!isNaN(numActual) && !isNaN(numExpected)) {
+              passed = numActual === numExpected;
+            }
+          }
           if (passed) qResults.testsPassed++;
           qResults.testCaseResults.push({
             input: tc.isHidden ? '[hidden]' : tc.input,
@@ -174,7 +181,14 @@ router.post('/:appId/coding/evaluate', protect, async (req, res) => {
         const execResult = await executeCode({ language, sourceCode: codeToExecute, stdin: tc.input });
         const actualOut = (execResult.stdout || '').trim();
         const expectedOut = (tc.expectedOutput || '').trim();
-        const passed = actualOut === expectedOut;
+        let passed = actualOut === expectedOut;
+        if (!passed && actualOut !== '' && expectedOut !== '') {
+          const numActual = Number(actualOut);
+          const numExpected = Number(expectedOut);
+          if (!isNaN(numActual) && !isNaN(numExpected)) {
+            passed = numActual === numExpected;
+          }
+        }
         if (passed) testsPassed++;
 
         testCaseResults.push({
