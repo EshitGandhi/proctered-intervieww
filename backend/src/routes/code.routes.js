@@ -65,12 +65,18 @@ router.post('/run-with-tests', protect, async (req, res) => {
         const expectedOutput = (tc.expectedOutput || '').trim();
         const errorType = classifyError(result);
         const isError = !!errorType;
+        let passed = !isError && actualOutput === expectedOutput;
+        if (!passed && !isError && actualOutput !== '' && expectedOutput !== '') {
+          const numA = Number(actualOutput);
+          const numE = Number(expectedOutput);
+          if (!isNaN(numA) && !isNaN(numE)) passed = numA === numE;
+        }
         return {
           hidden: false,
           input: tc.input,
           expected: tc.expectedOutput,
           actual: actualOutput,
-          passed: !isError && actualOutput === expectedOutput,
+          passed: passed,
           stderr: result.compileOutput || result.stderr || '',
           errorType: isError ? errorType : null,
         };
@@ -85,9 +91,15 @@ router.post('/run-with-tests', protect, async (req, res) => {
         const expectedOutput = (tc.expectedOutput || '').trim();
         const errorType = classifyError(result);
         const isError = !!errorType;
+        let passed = !isError && actualOutput === expectedOutput;
+        if (!passed && !isError && actualOutput !== '' && expectedOutput !== '') {
+          const numA = Number(actualOutput);
+          const numE = Number(expectedOutput);
+          if (!isNaN(numA) && !isNaN(numE)) passed = numA === numE;
+        }
         return {
           hidden: true,
-          passed: !isError && actualOutput === expectedOutput,
+          passed: passed,
           errorType: isError ? errorType : null,
         };
       })
