@@ -10,7 +10,9 @@ const fs = require('fs');
 const generateReport = async (req, res) => {
   try {
     const { appId } = req.params;
-    const application = await Application.findById(appId).populate('candidateId jobId');
+    const application = await Application.findById(appId)
+      .populate('candidateId jobId')
+      .populate('scores.coding.answers.questionId');
 
     if (!application) {
       return res.status(404).json({ success: false, message: 'Application not found' });
@@ -28,7 +30,7 @@ const generateReport = async (req, res) => {
     };
 
     // 3. AI Analysis
-    const analysisData = await analyzeTranscript(transcript, scores, application.jobId.title);
+    const analysisData = await analyzeTranscript(transcript, scores, application);
 
     // 4. Create/Update Report in DB
     const reportData = {
@@ -36,7 +38,13 @@ const generateReport = async (req, res) => {
       candidateId: application.candidateId._id,
       role: application.jobId.title,
       scores,
-      ...analysisData,
+      evaluation: analysisData.evaluation || {},
+      strengths: analysisData.strengths || [],
+      weaknesses: analysisData.weaknesses || [],
+      violations_analysis: analysisData.violations_analysis || '',
+      performance_analysis: analysisData.performance_analysis || '',
+      recommendation: analysisData.recommendation || '',
+      confidence: analysisData.confidence || 0,
       transcript,
     };
 
@@ -92,7 +100,9 @@ const downloadReport = async (req, res) => {
     let fullPath = path.resolve(process.cwd(), report.pdfPath.replace(/^\//, ''));
     if (!fs.existsSync(fullPath)) {
       // PDF file was wiped by Render ephemeral storage. Regenerate it!
-      const application = await Application.findById(report.applicationId).populate('candidateId jobId');
+      const application = await Application.findById(report.applicationId)
+        .populate('candidateId jobId')
+        .populate('scores.coding.answers.questionId');
       if (!application) {
         return res.status(404).json({ success: false, message: 'PDF missing and Application data not found to regenerate.' });
       }
