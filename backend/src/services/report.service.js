@@ -175,7 +175,7 @@ const generatePDF = async (report, application) => {
       fs.mkdirSync(UPLOAD_DIR, { recursive: true });
   }
 
-  const filename = \`Report_\${(application.candidateId?.name || 'Candidate').replace(/\\s+/g, '_')}_\${Date.now()}.pdf\`;
+  const filename = `Report_${(application.candidateId?.name || 'Candidate').replace(/s+/g, '_')}_${Date.now()}.pdf`;
   const pdfPath = path.join(UPLOAD_DIR, filename);
 
   // Coding HTML Section
@@ -183,17 +183,17 @@ const generatePDF = async (report, application) => {
   if (application.scores?.coding?.answers && application.scores.coding.answers.length > 0) {
     codingHTML = application.scores.coding.answers.map((ans, idx) => {
       const q = ans.questionId;
-      return \`
+      return `
         <div class="coding-submission">
-          <h3>Question \${idx + 1}: \${escapeHtml(q?.title || 'Unknown Question')}</h3>
-          <p><strong>Selected Language:</strong> <span class="badge">\${ans.language || 'N/A'}</span></p>
-          <pre><code>\${escapeHtml(ans.code || '')}</code></pre>
+          <h3>Question ${idx + 1}: ${escapeHtml(q?.title || 'Unknown Question')}</h3>
+          <p><strong>Selected Language:</strong> <span class="badge">${ans.language || 'N/A'}</span></p>
+          <pre><code>${escapeHtml(ans.code || '')}</code></pre>
         </div>
-      \`;
+      `;
     }).join('');
   }
 
-  const html = \`
+  const html = `
     <!DOCTYPE html>
     <html>
     <head>
@@ -211,7 +211,7 @@ const generatePDF = async (report, application) => {
         .candidate-info p { margin: 5px 0; opacity: 0.9; font-size: 14px; }
         .rec-badge { display: inline-block; background: white; color: #0a2569; padding: 4px 10px; border-radius: 4px; font-weight: 700; font-size: 12px; margin-top: 10px; }
         
-        .donut-container { position: relative; width: 110px; height: 110px; border-radius: 50%; background: conic-gradient(#38bdf8 \${report.scores?.final_score || 0}%, #1e293b 0); display: flex; align-items: center; justify-content: center; box-shadow: inset 0 2px 4px 0 rgb(0 0 0 / 0.1); }
+        .donut-container { position: relative; width: 110px; height: 110px; border-radius: 50%; background: conic-gradient(#38bdf8 ${report.scores?.final_score || 0}%, #1e293b 0); display: flex; align-items: center; justify-content: center; box-shadow: inset 0 2px 4px 0 rgb(0 0 0 / 0.1); }
         .donut-inner { width: 86px; height: 86px; border-radius: 50%; background: #0a2569; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; }
         .donut-inner span { font-size: 10px; font-weight: normal; opacity: 0.8; }
 
@@ -258,37 +258,37 @@ const generatePDF = async (report, application) => {
 
         <div class="candidate-card">
           <div class="candidate-info">
-            <h2>\${escapeHtml(application.candidateId?.name || 'Candidate')}</h2>
-            <p>\${escapeHtml(application.candidateId?.email || 'N/A')}</p>
-            <p>Role: <strong>\${escapeHtml(report.role || 'N/A')}</strong></p>
-            <div class="rec-badge">\${escapeHtml(report.recommendation || 'PENDING')}</div>
+            <h2>${escapeHtml(application.candidateId?.name || 'Candidate')}</h2>
+            <p>${escapeHtml(application.candidateId?.email || 'N/A')}</p>
+            <p>Role: <strong>${escapeHtml(report.role || 'N/A')}</strong></p>
+            <div class="rec-badge">${escapeHtml(report.recommendation || 'PENDING')}</div>
           </div>
           <div class="donut-container">
-            <div class="donut-inner">\${report.scores?.final_score || 0}% <span>overall</span></div>
+            <div class="donut-inner">${report.scores?.final_score || 0}% <span>overall</span></div>
           </div>
         </div>
 
         <div class="section">
           <div class="section-title">Executive Summary</div>
-          <div class="summary-box">\${escapeHtml(report.evaluation?.summary || 'No summary available.')}</div>
+          <div class="summary-box">${escapeHtml(report.evaluation?.summary || 'No summary available.')}</div>
         </div>
 
         <div class="scores-grid">
           <div class="score-card">
-            <div class="small-donut" style="background: conic-gradient(#10b981 \${report.scores?.resume_score || 0}%, #f1f5f9 0);">
-              <div class="small-donut-inner">\${report.scores?.resume_score || 0}%</div>
+            <div class="small-donut" style="background: conic-gradient(#10b981 ${report.scores?.resume_score || 0}%, #f1f5f9 0);">
+              <div class="small-donut-inner">${report.scores?.resume_score || 0}%</div>
             </div>
             <strong>Resume Match</strong>
           </div>
           <div class="score-card">
-            <div class="small-donut" style="background: conic-gradient(#3b82f6 \${report.scores?.mcq_score || 0}%, #f1f5f9 0);">
-              <div class="small-donut-inner">\${report.scores?.mcq_score || 0}%</div>
+            <div class="small-donut" style="background: conic-gradient(#3b82f6 ${report.scores?.mcq_score || 0}%, #f1f5f9 0);">
+              <div class="small-donut-inner">${report.scores?.mcq_score || 0}%</div>
             </div>
             <strong>Online Test (MCQ)</strong>
           </div>
           <div class="score-card">
-            <div class="small-donut" style="background: conic-gradient(#8b5cf6 \${report.scores?.coding_score || 0}%, #f1f5f9 0);">
-              <div class="small-donut-inner">\${report.scores?.coding_score || 0}%</div>
+            <div class="small-donut" style="background: conic-gradient(#8b5cf6 ${report.scores?.coding_score || 0}%, #f1f5f9 0);">
+              <div class="small-donut-inner">${report.scores?.coding_score || 0}%</div>
             </div>
             <strong>Coding Assessment</strong>
           </div>
@@ -297,11 +297,11 @@ const generatePDF = async (report, application) => {
         <div class="sw-grid section">
           <div class="sw-card strengths">
             <h4>Key Strengths</h4>
-            <ul>\${(report.strengths && report.strengths.length > 0) ? report.strengths.map(s => \`<li>\${escapeHtml(s)}</li>\`).join('') : '<li>None highlighted.</li>'}</ul>
+            <ul>${(report.strengths && report.strengths.length > 0) ? report.strengths.map(s => `<li>${escapeHtml(s)}</li>`).join('') : '<li>None highlighted.</li>'}</ul>
           </div>
           <div class="sw-card weaknesses">
             <h4>Areas for Improvement</h4>
-            <ul>\${(report.weaknesses && report.weaknesses.length > 0) ? report.weaknesses.map(s => \`<li>\${escapeHtml(s)}</li>\`).join('') : '<li>None highlighted.</li>'}</ul>
+            <ul>${(report.weaknesses && report.weaknesses.length > 0) ? report.weaknesses.map(s => `<li>${escapeHtml(s)}</li>`).join('') : '<li>None highlighted.</li>'}</ul>
           </div>
         </div>
         
@@ -310,37 +310,37 @@ const generatePDF = async (report, application) => {
           <div class="metrics-grid">
             <div class="metric">
               <span class="metric-label">Violations Analysis</span>
-              <span class="metric-value">\${escapeHtml(report.violations_analysis || 'No violations noted.')}</span>
+              <span class="metric-value">${escapeHtml(report.violations_analysis || 'No violations noted.')}</span>
             </div>
             <div class="metric">
               <span class="metric-label">Performance Analysis</span>
-              <span class="metric-value">\${escapeHtml(report.performance_analysis || 'Not evaluated.')}</span>
+              <span class="metric-value">${escapeHtml(report.performance_analysis || 'Not evaluated.')}</span>
             </div>
             <div class="metric">
               <span class="metric-label">AI Confidence Level</span>
-              <span class="metric-value" style="font-size: 18px; font-weight: 700; color: #0a2569;">\${report.confidence || 0}%</span>
+              <span class="metric-value" style="font-size: 18px; font-weight: 700; color: #0a2569;">${report.confidence || 0}%</span>
             </div>
           </div>
         </div>
         
         <div class="section">
           <div class="section-title">Sectional Analysis</div>
-          <div style="margin-bottom: 10px;"><strong>Resume:</strong> \${escapeHtml(report.evaluation?.resume_analysis || 'N/A')}</div>
-          <div style="margin-bottom: 10px;"><strong>MCQ:</strong> \${escapeHtml(report.evaluation?.mcq_analysis || 'N/A')}</div>
-          <div><strong>Coding:</strong> \${escapeHtml(report.evaluation?.coding_analysis || 'N/A')}</div>
+          <div style="margin-bottom: 10px;"><strong>Resume:</strong> ${escapeHtml(report.evaluation?.resume_analysis || 'N/A')}</div>
+          <div style="margin-bottom: 10px;"><strong>MCQ:</strong> ${escapeHtml(report.evaluation?.mcq_analysis || 'N/A')}</div>
+          <div><strong>Coding:</strong> ${escapeHtml(report.evaluation?.coding_analysis || 'N/A')}</div>
         </div>
 
       </div>
 
-      \${codingHTML ? \`
+      ${codingHTML ? `
       <div class="page page-break">
         <div class="section-title" style="margin-top: 20px;">Candidate Coding Submissions</div>
-        \${codingHTML}
-      </div>\` : ''}
+        ${codingHTML}
+      </div>` : ''}
 
     </body>
     </html>
-  \`;
+  `;
 
   const browser = await puppeteer.launch({ 
     args: ['--no-sandbox', '--disable-setuid-sandbox'],
@@ -351,7 +351,7 @@ const generatePDF = async (report, application) => {
   await page.pdf({ path: pdfPath, format: 'A4', printBackground: true, margin: { top: '0', bottom: '0', left: '0', right: '0' } });
   await browser.close();
 
-  return \`/uploads/reports/\${filename}\`;
+  return `/uploads/reports/${filename}`;
 };
 
 module.exports = { extractText, analyzeTranscript, generatePDF };
