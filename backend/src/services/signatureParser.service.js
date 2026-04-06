@@ -121,8 +121,8 @@ const TYPE_MAP = {
 const RETURN_OUTPUT = {
   'int':    { cpp: 'cout << result;', java: 'System.out.println(result);', py: 'print(result)', js: 'console.log(result);', c: 'printf("%d", result);', php: 'echo $result;' },
   'long':   { cpp: 'cout << result;', java: 'System.out.println(result);', py: 'print(result)', js: 'console.log(result);', c: 'printf("%lld", result);', php: 'echo $result;' },
-  'double': { cpp: 'cout << result;', java: 'System.out.println(result);', py: 'print(result)', js: 'console.log(result);', c: 'printf("%.6f", result);', php: 'echo $result;' },
-  'float':  { cpp: 'cout << result;', java: 'System.out.println(result);', py: 'print(result)', js: 'console.log(result);', c: 'printf("%.6f", result);', php: 'echo $result;' },
+  'double': { cpp: 'cout << fixed << setprecision(5) << result;', java: 'System.out.println(result);', py: 'print(result)', js: 'console.log(result);', c: 'printf("%g", result);', php: 'echo $result;' },
+  'float':  { cpp: 'cout << fixed << setprecision(5) << result;', java: 'System.out.println(result);', py: 'print(result)', js: 'console.log(result);', c: 'printf("%g", result);', php: 'echo $result;' },
   'bool':   { cpp: 'cout << (result ? "true" : "false");', java: 'System.out.println(result);', py: 'print(str(result).lower())', js: 'console.log(result);', c: 'printf("%s", result ? "true" : "false");', php: 'echo $result ? "true" : "false";' },
   'string': { cpp: 'cout << result;', java: 'System.out.println(result);', py: 'print(result)', js: 'console.log(result);', c: 'printf("%s", result);', php: 'echo $result;' },
   'vector<int>': {
