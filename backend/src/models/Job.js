@@ -44,6 +44,7 @@ const jobSchema = new mongoose.Schema(
     // Test Configurations
     mcqCount: { type: Number, default: 20 },
     mcqDuration: { type: Number, default: 30 }, // Minutes for MCQ Round
+    codingCount: { type: Number, default: 3 },
     codingDuration: { type: Number, default: 60 }, // Minutes for Coding Round
   },
   { timestamps: true }

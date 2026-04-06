@@ -56,12 +56,14 @@ router.post('/:appId/coding', protect, async (req, res) => {
       return sourceCode + '\n\n' + driverCode;
     };
 
-    const results = [];
-    // Each question contributes equally to the final score (per-question pass rate averaged)
+    // Each question contributes equally to the final round score (per-question pass rate averaged)
     let totalQuestionScore = 0;
-    let questionCount = 0;
+    const scoredQuestions = new Set();
+    const plannedCount = application.jobId.codingCount || 3;
 
     for (const sub of submissions) {
+      if (scoredQuestions.has(sub.questionId)) continue;
+      
       const question = await CodingQuestion.findById(sub.questionId);
       if (!question) continue;
 
@@ -96,16 +98,17 @@ router.post('/:appId/coding', protect, async (req, res) => {
 
       results.push(qResults);
 
-      // Equal weightage: each question contributes its own pass% equally
+      // Equal weightage: each question contributes its own pass% equally (out of plannedCount)
       const qPassRate = qResults.testsTotal > 0
         ? (qResults.testsPassed / qResults.testsTotal) * 100
         : 0;
+      
       totalQuestionScore += qPassRate;
-      questionCount++;
+      scoredQuestions.add(sub.questionId);
     }
 
-    // Score = average per-question pass rate (equal weightage regardless of # of test cases)
-    const score = questionCount > 0 ? Math.round(totalQuestionScore / questionCount) : 0;
+    // Score = average per-question pass rate across ALL intended questions (0 for unattempted)
+    const score = Math.round(totalQuestionScore / plannedCount);
     const isPassed = score >= application.jobId.codingThreshold;
 
     const totalWeight = (application.jobId.resumeWeight || 1) + (application.jobId.mcqWeight || 1) + (application.jobId.codingWeight || 1);
