@@ -90,9 +90,16 @@ const CodeEvalRound = () => {
           return;
         }
         setQuestions(qs);
-        // Set timer based on job.codingDuration
+        // Set timer based on job.codingDuration, persisting across reloads
         if (app.jobId?.codingDuration) {
-          setTimeLeft(app.jobId.codingDuration * 60);
+          const durationSecs = app.jobId.codingDuration * 60;
+          if (qData.startTime) {
+            // Calculate how much time has passed since they started
+            const elapsed = Math.floor((Date.now() - new Date(qData.startTime).getTime()) / 1000);
+            setTimeLeft(Math.max(0, durationSecs - elapsed));
+          } else {
+            setTimeLeft(durationSecs);
+          }
         } else {
           setTimeLeft(60 * 60); // Default 60 mins if not set
         }

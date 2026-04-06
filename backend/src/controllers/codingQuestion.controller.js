@@ -162,7 +162,17 @@ exports.getRoundQuestions = async (req, res) => {
         if (selected.length > 0) {
           // Force save to database to LOCK these questions to this application/candidate
           app.scores.coding.questions = selected.map(q => q._id);
-          await Application.updateOne({ _id: appId }, { $set: { "scores.coding.questions": app.scores.coding.questions } });
+          if (!app.scores.coding.startTime) {
+            app.scores.coding.startTime = new Date();
+          }
+          await Application.updateOne(
+            { _id: appId }, 
+            { $set: { 
+                "scores.coding.questions": app.scores.coding.questions,
+                "scores.coding.startTime": app.scores.coding.startTime
+              } 
+            }
+          );
         }
         questions = selected;
       }
@@ -212,7 +222,15 @@ exports.getRoundQuestions = async (req, res) => {
       };
     });
 
-    res.status(200).json({ success: true, data: formattedQuestions });
+    let appStartTime = null;
+    if (appId) {
+      const appRecord = await Application.findById(appId);
+      if (appRecord?.scores?.coding?.startTime) {
+        appStartTime = appRecord.scores.coding.startTime;
+      }
+    }
+
+    res.status(200).json({ success: true, data: formattedQuestions, startTime: appStartTime });
   } catch (error) {
     res.status(400).json({ success: false, error: error.message });
   }

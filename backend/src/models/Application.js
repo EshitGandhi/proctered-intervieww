@@ -50,6 +50,7 @@ const applicationSchema = new mongoose.Schema(
       coding: {
         score: { type: Number, default: 0 },
         questions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'CodingQuestion' }],
+        startTime: { type: Date },
       },
       finalScore: { type: Number, default: 0 },
     },
