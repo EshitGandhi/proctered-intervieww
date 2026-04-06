@@ -59,6 +59,7 @@ router.post('/:appId/coding', protect, async (req, res) => {
     // Each question contributes equally to the final round score (per-question pass rate averaged)
     let totalQuestionScore = 0;
     const scoredQuestions = new Set();
+    const results = [];
     const plannedCount = application.jobId.codingCount || 3;
 
     for (const sub of submissions) {
