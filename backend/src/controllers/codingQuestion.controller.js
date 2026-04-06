@@ -1,4 +1,5 @@
 const CodingQuestion = require('../models/CodingQuestion');
+const Application = require('../models/Application');
 const { processSignature } = require('../services/signatureParser.service');
 
 // ─── Helper: sync flat starterCode/driverCode maps into legacy templates[] ────
@@ -134,10 +135,43 @@ exports.previewSignature = (req, res) => {
 /** GET /coding-questions/round — 3 random active questions for the candidate */
 exports.getRoundQuestions = async (req, res) => {
   try {
-    const questions = await CodingQuestion.aggregate([
-      { $match: { isActive: true } },
-      { $sample: { size: 3 } }
-    ]);
+    const { appId } = req.query;
+    let questions = [];
+
+    if (appId) {
+      const app = await Application.findById(appId);
+      if (app && app.scores?.coding?.questions && app.scores.coding.questions.length > 0) {
+        // Fetch assigned questions
+        questions = await Promise.all(
+          app.scores.coding.questions.map(id => CodingQuestion.findById(id))
+        );
+        questions = questions.filter(Boolean);
+      } else if (app) {
+        // Pick new random questions: 1 Easy, 1 Medium, 1 Hard
+        const easy = await CodingQuestion.aggregate([{ $match: { difficulty: 'easy', isActive: true } }, { $sample: { size: 1 } }]);
+        const medium = await CodingQuestion.aggregate([{ $match: { difficulty: 'medium', isActive: true } }, { $sample: { size: 1 } }]);
+        const hard = await CodingQuestion.aggregate([{ $match: { difficulty: 'hard', isActive: true } }, { $sample: { size: 1 } }]);
+
+        const selected = [];
+        if (easy[0]) selected.push(easy[0]);
+        if (medium[0]) selected.push(medium[0]);
+        if (hard[0]) selected.push(hard[0]);
+
+        if (selected.length > 0) {
+          app.set('scores.coding.questions', selected.map(q => q._id));
+          await app.save();
+        }
+        questions = selected;
+      }
+    }
+
+    if (questions.length === 0) {
+      // Fallback: 3 random questions
+      questions = await CodingQuestion.aggregate([
+        { $match: { isActive: true } },
+        { $sample: { size: 3 } }
+      ]);
+    }
 
     const formattedQuestions = questions.map(q => {
       // Build templates from flat maps (preferred) or fall back to legacy templates[]

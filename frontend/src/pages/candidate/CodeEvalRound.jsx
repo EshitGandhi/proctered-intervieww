@@ -81,8 +81,8 @@ const CodeEvalRound = () => {
           setLoading(false);
           return;
         }
-        // Load 3 random questions
-        const { data: qData } = await api.get('/coding-questions/round');
+        // Load assigned questions (E/M/H)
+        const { data: qData } = await api.get(`/coding-questions/round?appId=${appId}`);
         const qs = qData.data || [];
         if (qs.length === 0) {
           setError('No coding questions have been set up yet. Please ask your admin to add questions.');
