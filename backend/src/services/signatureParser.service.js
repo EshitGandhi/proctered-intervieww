@@ -31,10 +31,10 @@ const TYPE_MAP = {
     java: 'int', python: 'int', javascript: 'number', c: 'int', php: 'int',
     cppRead: (n) => `int ${n}; cin >> ${n};`,
     javaRead: (n) => `int ${n} = sc.nextInt();`,
-    pyRead: (n) => `${n} = int(input())`,
-    jsRead: (n, arr) => `const ${n} = parseInt(lines[idx++]);`,
+    pyRead: (n) => `${n} = int(tokens[idx]); idx += 1`,
+    jsRead: (n) => `const ${n} = parseInt(tokens[idx++], 10);`,
     cRead: (n) => `int ${n}; scanf("%d", &${n});`,
-    phpRead: (n) => `$${n} = (int)trim(fgets(STDIN));`,
+    phpRead: (n) => `$${n} = (int)$tokens[$idx++];`,
     javaParam: 'int', pyParam: '', jsParam: '', cParam: 'int',
     phpParam: '$',
   },
@@ -42,10 +42,10 @@ const TYPE_MAP = {
     java: 'long', python: 'int', javascript: 'number', c: 'long long', php: 'int',
     cppRead: (n) => `long ${n}; cin >> ${n};`,
     javaRead: (n) => `long ${n} = sc.nextLong();`,
-    pyRead: (n) => `${n} = int(input())`,
-    jsRead: (n) => `const ${n} = parseInt(lines[idx++]);`,
+    pyRead: (n) => `${n} = int(tokens[idx]); idx += 1`,
+    jsRead: (n) => `const ${n} = parseInt(tokens[idx++], 10);`,
     cRead: (n) => `long long ${n}; scanf("%lld", &${n});`,
-    phpRead: (n) => `$${n} = (int)trim(fgets(STDIN));`,
+    phpRead: (n) => `$${n} = (int)$tokens[$idx++];`,
     javaParam: 'long', pyParam: '', jsParam: '', cParam: 'long long',
     phpParam: '$',
   },
@@ -53,10 +53,10 @@ const TYPE_MAP = {
     java: 'double', python: 'float', javascript: 'number', c: 'double', php: 'float',
     cppRead: (n) => `double ${n}; cin >> ${n};`,
     javaRead: (n) => `double ${n} = sc.nextDouble();`,
-    pyRead: (n) => `${n} = float(input())`,
-    jsRead: (n) => `const ${n} = parseFloat(lines[idx++]);`,
+    pyRead: (n) => `${n} = float(tokens[idx]); idx += 1`,
+    jsRead: (n) => `const ${n} = parseFloat(tokens[idx++]);`,
     cRead: (n) => `double ${n}; scanf("%lf", &${n});`,
-    phpRead: (n) => `$${n} = (float)trim(fgets(STDIN));`,
+    phpRead: (n) => `$${n} = (float)$tokens[$idx++];`,
     javaParam: 'double', pyParam: '', jsParam: '', cParam: 'double',
     phpParam: '$',
   },
@@ -64,10 +64,10 @@ const TYPE_MAP = {
     java: 'float', python: 'float', javascript: 'number', c: 'float', php: 'float',
     cppRead: (n) => `float ${n}; cin >> ${n};`,
     javaRead: (n) => `float ${n} = sc.nextFloat();`,
-    pyRead: (n) => `${n} = float(input())`,
-    jsRead: (n) => `const ${n} = parseFloat(lines[idx++]);`,
+    pyRead: (n) => `${n} = float(tokens[idx]); idx += 1`,
+    jsRead: (n) => `const ${n} = parseFloat(tokens[idx++]);`,
     cRead: (n) => `float ${n}; scanf("%f", &${n});`,
-    phpRead: (n) => `$${n} = (float)trim(fgets(STDIN));`,
+    phpRead: (n) => `$${n} = (float)$tokens[$idx++];`,
     javaParam: 'float', pyParam: '', jsParam: '', cParam: 'float',
     phpParam: '$',
   },
@@ -75,10 +75,10 @@ const TYPE_MAP = {
     java: 'boolean', python: 'bool', javascript: 'boolean', c: 'int', php: 'bool',
     cppRead: (n) => `bool ${n}; cin >> ${n};`,
     javaRead: (n) => `boolean ${n} = sc.nextBoolean();`,
-    pyRead: (n) => `${n} = input().strip() == "true"`,
-    jsRead: (n) => `const ${n} = lines[idx++].trim() === "true";`,
+    pyRead: (n) => `${n} = (tokens[idx] == "true"); idx += 1`,
+    jsRead: (n) => `const ${n} = tokens[idx++] === "true";`,
     cRead: (n) => `int ${n}; scanf("%d", &${n});`,
-    phpRead: (n) => `$${n} = trim(fgets(STDIN)) === "true";`,
+    phpRead: (n) => `$${n} = ($tokens[$idx++] === "true");`,
     javaParam: 'boolean', pyParam: '', jsParam: '', cParam: 'int',
     phpParam: '$',
   },
@@ -86,10 +86,10 @@ const TYPE_MAP = {
     java: 'String', python: 'str', javascript: 'string', c: 'char*', php: 'string',
     cppRead: (n) => `string ${n}; cin >> ${n};`,
     javaRead: (n) => `String ${n} = sc.next();`,
-    pyRead: (n) => `${n} = input().strip()`,
-    jsRead: (n) => `const ${n} = lines[idx++].trim();`,
+    pyRead: (n) => `${n} = tokens[idx]; idx += 1`,
+    jsRead: (n) => `const ${n} = tokens[idx++];`,
     cRead: (n) => `char ${n}[1000]; scanf("%s", ${n});`,
-    phpRead: (n) => `$${n} = trim(fgets(STDIN));`,
+    phpRead: (n) => `$${n} = $tokens[$idx++];`,
     javaParam: 'String', pyParam: '', jsParam: '', cParam: 'char*',
     phpParam: '$',
   },
@@ -97,10 +97,10 @@ const TYPE_MAP = {
     java: 'int[]', python: 'list', javascript: 'number[]', c: 'int[]', php: 'array',
     cppRead: (n) => `int n_${n}; cin >> n_${n};\nvector<int> ${n}(n_${n});\nfor(int i=0;i<n_${n};i++) cin >> ${n}[i];`,
     javaRead: (n) => `int n_${n} = sc.nextInt();\nint[] ${n} = new int[n_${n}];\nfor(int i=0;i<n_${n};i++) ${n}[i] = sc.nextInt();`,
-    pyRead: (n) => `${n} = list(map(int, input().split()))`,
-    jsRead: (n) => `const ${n} = lines[idx++].split(' ').map(Number);`,
+    pyRead: (n) => `n_${n} = int(tokens[idx]); idx += 1\n${n} = [int(tokens[i]) for i in range(idx, idx + n_${n})]\nidx += n_${n}`,
+    jsRead: (n) => `const n_${n} = parseInt(tokens[idx++], 10);\nconst ${n} = [];\nfor(let i=0; i<n_${n}; i++) ${n}.push(parseInt(tokens[idx++], 10));`,
     cRead: (n) => `int n_${n}; scanf("%d", &n_${n});\nint ${n}[n_${n}];\nfor(int i=0;i<n_${n};i++) scanf("%d", &${n}[i]);`,
-    phpRead: (n) => `$arr_${n} = explode(" ", trim(fgets(STDIN)));\n$${n} = array_map('intval', $arr_${n});`,
+    phpRead: (n) => `$n_${n} = (int)$tokens[$idx++];\n$${n} = [];\nfor($i=0; $i<$n_${n}; $i++) $${n}[] = (int)$tokens[$idx++];`,
     javaParam: 'int[]', pyParam: '', jsParam: '', cParam: 'int*, int',
     phpParam: '$',
   },
@@ -108,10 +108,10 @@ const TYPE_MAP = {
     java: 'String[]', python: 'list', javascript: 'string[]', c: 'char**', php: 'array',
     cppRead: (n) => `int n_${n}; cin >> n_${n};\nvector<string> ${n}(n_${n});\nfor(int i=0;i<n_${n};i++) cin >> ${n}[i];`,
     javaRead: (n) => `int n_${n} = sc.nextInt();\nString[] ${n} = new String[n_${n}];\nfor(int i=0;i<n_${n};i++) ${n}[i] = sc.next();`,
-    pyRead: (n) => `${n} = input().split()`,
-    jsRead: (n) => `const ${n} = lines[idx++].split(' ');`,
+    pyRead: (n) => `n_${n} = int(tokens[idx]); idx += 1\n${n} = tokens[idx : idx + n_${n}]\nidx += n_${n}`,
+    jsRead: (n) => `const n_${n} = parseInt(tokens[idx++], 10);\nconst ${n} = [];\nfor(let i=0; i<n_${n}; i++) ${n}.push(tokens[idx++]);`,
     cRead: (n) => `// vector<string> not directly supported in C — using manual mode`,
-    phpRead: (n) => `$${n} = explode(" ", trim(fgets(STDIN)));`,
+    phpRead: (n) => `$n_${n} = (int)$tokens[$idx++];\n$${n} = [];\nfor($i=0; $i<$n_${n}; $i++) $${n}[] = $tokens[$idx++];`,
     javaParam: 'String[]', pyParam: '', jsParam: '', cParam: 'char**',
     phpParam: '$',
   },
@@ -326,25 +326,29 @@ public class Main {
 
   // ── Python ───────────────────────────────────────────────────────────────
   const pyReads = params.map(p => {
-    return (TYPE_MAP[p.type]?.pyRead || ((n) => `${n} = input()`))(p.name);
+    return (TYPE_MAP[p.type]?.pyRead || ((n) => `${n} = tokens[idx]; idx += 1`))(p.name);
   }).join('\n');
   const pyCallArgs = params.map(p => p.name).join(', ');
   const python =
 `# [[CANDIDATE_CODE]]
 
+import sys
+tokens = sys.stdin.read().split()
+idx = 0
 ${pyReads}
 result = ${functionName}(${pyCallArgs})
 ${out.py}`;
 
   // ── JavaScript ───────────────────────────────────────────────────────────
   const jsReads = params.map(p => {
-    return (TYPE_MAP[p.type]?.jsRead || ((n) => `const ${n} = lines[idx++];`))(p.name);
+    return (TYPE_MAP[p.type]?.jsRead || ((n) => `const ${n} = tokens[idx++];`))(p.name);
   }).join('\n');
   const jsCallArgs = params.map(p => p.name).join(', ');
   const javascript =
 `// [[CANDIDATE_CODE]]
 
-const lines = require('fs').readFileSync('/dev/stdin','utf8').split('\\n');
+const input = require('fs').readFileSync('/dev/stdin','utf8');
+const tokens = input.trim().split(/\\s+/);
 let idx = 0;
 ${jsReads}
 const result = ${functionName}(${jsCallArgs});
@@ -379,13 +383,19 @@ int main() {
 
   // ── PHP ──────────────────────────────────────────────────────────────────
   const phpReads = params.map(p => {
-    return (TYPE_MAP[p.type]?.phpRead || ((n) => `$${n} = trim(fgets(STDIN));`))(p.name);
+    return (TYPE_MAP[p.type]?.phpRead || ((n) => `$${n} = $tokens[$idx++];`))(p.name);
   }).join('\n');
   const phpCallArgs = params.map(p => `$${p.name}`).join(', ');
   const php =
 `<?php
 // [[CANDIDATE_CODE]]
 
+$input = trim(stream_get_contents(STDIN));
+$tokens = preg_split('/\\s+/', $input, -1, PREG_SPLIT_NO_EMPTY);
+if ($tokens === false || (count($tokens) === 1 && $tokens[0] === '')) {
+    $tokens = [];
+}
+$idx = 0;
 ${phpReads}
 $result = ${functionName}(${phpCallArgs});
 ${out.php}
