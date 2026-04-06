@@ -106,11 +106,15 @@ const CodeEvalRound = () => {
 
         // Initialize per-question state: { language, code, running, submitted, submitResult }
         const init = {};
+        const savedAnswers = qData.answers || [];
         qs.forEach((q, i) => { 
-          const lang = 'python';
+          const saved = savedAnswers.find(a => a.questionId === q._id);
+          const lang = saved ? saved.language : 'python';
           const tpl = q.templates?.find(t => t.language === lang);
-          const initialCode = tpl?.starterCode || DEFAULT_CODE[lang] || '';
-          init[i] = { language: lang, code: initialCode, running: false, runResult: null, submitted: false, submitResult: null }; 
+          const initialCode = saved ? saved.code : (tpl?.starterCode || DEFAULT_CODE[lang] || '');
+          const submitted = !!saved;
+
+          init[i] = { language: lang, code: initialCode, running: false, runResult: null, submitted: submitted, submitResult: null }; 
         });
         setQState(init);
       } catch (e) {

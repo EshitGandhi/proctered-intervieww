@@ -223,14 +223,18 @@ exports.getRoundQuestions = async (req, res) => {
     });
 
     let appStartTime = null;
+    let appAnswers = [];
     if (appId) {
       const appRecord = await Application.findById(appId);
       if (appRecord?.scores?.coding?.startTime) {
         appStartTime = appRecord.scores.coding.startTime;
       }
+      if (appRecord?.scores?.coding?.answers) {
+        appAnswers = appRecord.scores.coding.answers;
+      }
     }
 
-    res.status(200).json({ success: true, data: formattedQuestions, startTime: appStartTime });
+    res.status(200).json({ success: true, data: formattedQuestions, startTime: appStartTime, answers: appAnswers });
   } catch (error) {
     res.status(400).json({ success: false, error: error.message });
   }

@@ -204,6 +204,17 @@ router.post('/:appId/coding/evaluate', protect, async (req, res) => {
       }
     }
 
+    // Save submitted answer to lock it down
+    if (!application.scores.coding.answers) application.scores.coding.answers = [];
+    const existingAns = application.scores.coding.answers.find(a => a.questionId.toString() === questionId);
+    if (existingAns) {
+      existingAns.code = sourceCode;
+      existingAns.language = language;
+    } else {
+      application.scores.coding.answers.push({ questionId, code: sourceCode, language });
+    }
+    await application.save();
+
     res.status(200).json({
       success: true,
       testsPassed,
