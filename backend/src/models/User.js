@@ -35,6 +35,11 @@ const userSchema = new mongoose.Schema(
       trim: true,
       default: null, // Only for candidates
     },
+    experience: {
+      type: String,
+      trim: true,
+      default: null, // e.g. "Fresher", "1 year", "3+ years"
+    },
     isActive: {
       type: Boolean,
       default: true,

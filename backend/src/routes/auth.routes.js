@@ -18,7 +18,7 @@ router.post('/verify-key', verifyAdminKey, (req, res) => {
 // POST /api/auth/register
 router.post('/register', async (req, res, next) => {
   try {
-    const { name, email, password, role, domain, adminKey } = req.body;
+    const { name, email, password, role, domain, experience, adminKey } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({ success: false, message: 'Name, email, and password are required' });
@@ -39,13 +39,13 @@ router.post('/register', async (req, res, next) => {
       userRole = 'admin';
     }
 
-    const user = await User.create({ name, email, password, role: userRole, domain });
+    const user = await User.create({ name, email, password, role: userRole, domain, experience: experience || null });
     const token = signToken(user._id);
 
     res.status(201).json({
       success: true,
       token,
-      user: { id: user._id, name: user.name, email: user.email, role: user.role, domain: user.domain },
+      user: { id: user._id, name: user.name, email: user.email, role: user.role, domain: user.domain, experience: user.experience },
     });
   } catch (error) {
     next(error);
@@ -71,7 +71,7 @@ router.post('/login', async (req, res, next) => {
     res.json({
       success: true,
       token,
-      user: { id: user._id, name: user.name, email: user.email, role: user.role, domain: user.domain },
+      user: { id: user._id, name: user.name, email: user.email, role: user.role, domain: user.domain, experience: user.experience },
     });
   } catch (error) {
     next(error);
@@ -89,6 +89,7 @@ router.get('/me', protect, async (req, res, next) => {
         email: req.user.email,
         role: req.user.role,
         domain: req.user.domain,
+        experience: req.user.experience,
       },
     });
   } catch (error) {

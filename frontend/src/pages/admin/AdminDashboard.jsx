@@ -654,6 +654,7 @@ const CandidateDetail = ({ appId, onBack }) => {
   const [report, setReport] = useState(null);
   const [fetchingReport, setFetchingReport] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [interviewDate, setInterviewDate] = useState('');
   const fileInputRef = React.useRef(null);
 
   const [proctoringLogs, setProctoringLogs] = useState([]);
@@ -748,22 +749,24 @@ const CandidateDetail = ({ appId, onBack }) => {
 
   const handleGenerateReport = async () => {
     const file = fileInputRef.current?.files[0];
-    if (!file) return alert('Please select a transcript file (PDF/DOCX)');
+    if (!file) return alert('Please select a transcript file (.pdf, .docx, or .txt)');
 
     setUploading(true);
     setGenError('');
 
     const formData = new FormData();
     formData.append('transcript', file);
+    if (interviewDate) formData.append('interview_date', interviewDate);
 
     try {
       const { data } = await api.post(`/reports/generate/${appId}`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 200000, // 200s for HF Space cold-start
       });
       setReport(data.data);
       alert('Report generated successfully!');
     } catch (err) {
-      setGenError(err.response?.data?.message || 'Failed to generate report');
+      setGenError(err.response?.data?.message || 'Failed to generate report. The AI service may be starting up — please try again.');
     } finally {
       setUploading(false);
     }
@@ -962,7 +965,7 @@ const CandidateDetail = ({ appId, onBack }) => {
           <h3 style={{ margin: 0, fontSize: '1.05rem' }}>📋 Interview Evaluation Report</h3>
           {report && (
             <div style={{ display: 'flex', gap: 12 }}>
-              <button className="btn btn-secondary btn-sm" onClick={() => { if (window.confirm('Are you sure you want to re-upload a different transcript? This will override the current report.')) setReport(null); }} style={{ background: 'var(--bg-tertiary)' }}>
+              <button className="btn btn-secondary btn-sm" onClick={() => { if (window.confirm('Are you sure you want to re-upload a different transcript? This will override the current report.')) { setReport(null); setInterviewDate(''); } }} style={{ background: 'var(--bg-tertiary)' }}>
                 🔄 Replace Transcript
               </button>
               <button className="btn btn-primary btn-sm" onClick={handleDownloadPDF}>
@@ -973,61 +976,104 @@ const CandidateDetail = ({ appId, onBack }) => {
         </div>
 
         {!report ? (
-          <div style={{ background: 'var(--bg-secondary)', padding: '24px', borderRadius: 12, textAlign: 'center', border: '2px dashed var(--border)' }}>
-            <p style={{ margin: '0 0 16px', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-              No evaluation report generated yet. Upload the interview transcript to begin.
+          <div style={{ background: 'var(--bg-secondary)', padding: '24px', borderRadius: 12, border: '2px dashed var(--border)' }}>
+            <p style={{ margin: '0 0 20px', color: 'var(--text-muted)', fontSize: '0.9rem', textAlign: 'center' }}>
+              No evaluation report generated yet. Fill in the details below and upload the interview transcript.
             </p>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-              <input
-                type="file"
-                ref={fileInputRef}
-                accept=".pdf,.docx,.txt"
-                style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}
-              />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+              {/* Interview Date */}
+              <div>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>
+                  Interview Date
+                </label>
+                <input
+                  type="date"
+                  value={interviewDate}
+                  onChange={e => setInterviewDate(e.target.value)}
+                  style={{
+                    width: '100%', padding: '9px 12px', borderRadius: 8,
+                    border: '1px solid var(--border)', background: 'var(--bg-card)',
+                    color: 'var(--text-primary)', fontSize: '0.875rem',
+                    boxSizing: 'border-box', outline: 'none',
+                  }}
+                />
+              </div>
+              {/* Transcript Upload */}
+              <div>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>
+                  Interview Transcript *
+                </label>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept=".pdf,.docx,.txt"
+                  style={{
+                    width: '100%', padding: '8px 0', fontSize: '0.8rem',
+                    color: 'var(--text-muted)', boxSizing: 'border-box',
+                  }}
+                />
+              </div>
+            </div>
+            <div style={{ background: 'var(--bg-card)', borderRadius: 8, padding: '10px 14px', fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: 16, border: '1px solid var(--border)' }}>
+              ℹ️ Scores (resume, MCQ, coding) and job description are pulled automatically from the candidate's application.
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
               <button
                 className="btn btn-primary"
                 onClick={handleGenerateReport}
                 disabled={uploading}
-                style={{ padding: '10px 24px' }}
+                style={{ padding: '10px 32px', fontSize: '0.95rem' }}
               >
-                {uploading ? 'Processing AI Analysis...' : '✨ Generate Evaluation Report'}
+                {uploading ? '⏳ Generating Report (may take ~1 min)...' : '✨ Generate Evaluation Report'}
               </button>
-              {genError && <p style={{ color: 'var(--danger)', fontSize: '0.8rem', marginTop: 8 }}>{genError}</p>}
+              {uploading && (
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>
+                  The AI service may take up to a minute on first request. Please wait.
+                </p>
+              )}
+              {genError && <p style={{ color: 'var(--danger)', fontSize: '0.8rem', margin: 0 }}>{genError}</p>}
             </div>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-            {/* Left Column: Analysis */}
-            <div style={{ background: 'rgba(37,99,235,0.03)', padding: 16, borderRadius: 12, border: '1px solid rgba(37,99,235,0.1)' }}>
-              <div style={{ marginBottom: 16 }}>
-                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>Sentiment & Confidence</div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 600, background: 'var(--bg-tertiary)', padding: '4px 10px', borderRadius: 6 }}>{report.analysis.sentiment}</span>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 600, background: 'var(--bg-tertiary)', padding: '4px 10px', borderRadius: 6 }}>{report.analysis.confidence_level} Confidence</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {/* Report meta info */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+              <div style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: '14px 16px' }}>
+                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>Interview Date</div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  {report.interview_date || '—'}
                 </div>
               </div>
-
-              <div style={{ marginBottom: 16 }}>
-                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--success)', textTransform: 'uppercase', marginBottom: 6 }}>Strengths</div>
-                <ul style={{ margin: 0, paddingLeft: 16, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                  {report.analysis.strengths.map((s, i) => <li key={i} style={{ marginBottom: 4 }}>{s}</li>)}
-                </ul>
+              <div style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: '14px 16px' }}>
+                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>Experience</div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  {report.experience || 'Not specified'}
+                </div>
               </div>
-
-              <div>
-                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--danger)', textTransform: 'uppercase', marginBottom: 6 }}>Weaknesses</div>
-                <ul style={{ margin: 0, paddingLeft: 16, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                  {report.analysis.weaknesses.map((w, i) => <li key={i} style={{ marginBottom: 4 }}>{w}</li>)}
-                </ul>
+              <div style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: '14px 16px' }}>
+                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>Final Score</div>
+                <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--accent-primary)' }}>
+                  {report.scores?.final_score ?? 0}%
+                </div>
               </div>
             </div>
 
-            {/* Right Column: Recommendation & Insights */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div style={{ background: 'var(--bg-secondary)', padding: 16, borderRadius: 12 }}>
-                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 8 }}>Candidate Summary</div>
-                <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{report.insights.candidate_summary}</p>
-              </div>
+            {/* Score breakdown */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+              {[
+                { label: 'Resume Score', key: 'resume_score', color: '#10b981' },
+                { label: 'MCQ Score', key: 'mcq_score', color: '#3b82f6' },
+                { label: 'Coding Score', key: 'coding_score', color: '#8b5cf6' },
+              ].map(({ label, key, color }) => (
+                <div key={key} style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: '14px 16px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>{label}</div>
+                  <div style={{ fontSize: '1.6rem', fontWeight: 800, color }}>{report.scores?.[key] ?? 0}%</div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ background: 'rgba(37,99,235,0.05)', padding: '12px 16px', borderRadius: 10, border: '1px solid rgba(37,99,235,0.12)', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+              ✅ PDF report generated successfully. Click <strong>Download PDF Report</strong> above to view the full AI-generated evaluation.
             </div>
           </div>
         )}

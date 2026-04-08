@@ -15,6 +15,7 @@ const CandidateRegister = () => {
     password: '',
     confirmPassword: '',
     domain: '',
+    experience: '',
   });
   const [resume, setResume] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -81,6 +82,7 @@ const CandidateRegister = () => {
         password: form.password,
         role: 'candidate',
         domain: form.domain,
+        experience: form.experience || null,
       });
 
       // Store token with candidate-specific scope
@@ -204,6 +206,28 @@ const CandidateRegister = () => {
             >
               <option value="">— Select your field —</option>
               {DOMAINS.map(d => <option key={d} value={d}>{d}</option>)}
+            </select>
+          </div>
+
+          {/* Experience */}
+          <div>
+            <label style={labelStyle}>Years of Experience</label>
+            <select
+              style={inputStyle}
+              value={form.experience}
+              onChange={e => setForm(f => ({ ...f, experience: e.target.value }))}
+            >
+              <option value="">— Select experience level —</option>
+              <option value="Fresher">Fresher (0 years)</option>
+              <option value="Less than 1 year">Less than 1 year</option>
+              <option value="1 year">1 year</option>
+              <option value="2 years">2 years</option>
+              <option value="3 years">3 years</option>
+              <option value="4 years">4 years</option>
+              <option value="5 years">5 years</option>
+              <option value="6-8 years">6–8 years</option>
+              <option value="9-12 years">9–12 years</option>
+              <option value="12+ years">12+ years</option>
             </select>
           </div>
 

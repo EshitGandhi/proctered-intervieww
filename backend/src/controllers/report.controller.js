@@ -1,51 +1,81 @@
-const Report = require('../models/Report');
-const Application = require('../models/Application');
-const { extractText, analyzeTranscript, generatePDF } = require('../services/report.service');
 const path = require('path');
 const fs = require('fs');
+const Report = require('../models/Report');
+const Application = require('../models/Application');
+const { extractText, generateReportPDF } = require('../services/report.service');
 
 /**
- * Generate Candidate Evaluation Report
+ * Builds the payload for the HF Space report API from stored application + report data.
+ * @param {object} application - Populated Mongoose Application document
+ * @param {object} options - { transcript, interview_date, experience }
+ * @returns {object}
+ */
+const buildReportPayload = (application, { transcript, interview_date, experience }) => ({
+  candidate_name: application.candidateId?.name || 'Candidate',
+  role: application.jobId?.title || 'Not specified',
+  experience: experience || application.candidateId?.experience || 'Not specified',
+  company: 'Kadel Labs',
+  interview_date: interview_date || new Date().toISOString().split('T')[0],
+  job_description: application.jobId?.description || 'Not provided',
+  transcript: transcript || '',
+  resume_score: Math.round(application.scores?.resume?.score || 0),
+  coding_score: Math.round(application.scores?.coding?.score || 0),
+  mcq_score: Math.round(application.scores?.mcq?.score || 0),
+});
+
+/**
+ * POST /api/reports/generate/:appId
+ * Admin uploads interview transcript + optional interview_date.
+ * Calls HF Space API to generate PDF and stores report metadata.
  */
 const generateReport = async (req, res) => {
   try {
     const { appId } = req.params;
+    const { interview_date } = req.body;
+
     const application = await Application.findById(appId)
-      .populate('candidateId jobId')
-      .populate('scores.coding.answers.questionId');
+      .populate('candidateId', 'name email experience')
+      .populate('jobId', 'title description domain');
 
     if (!application) {
       return res.status(404).json({ success: false, message: 'Application not found' });
     }
 
-    // 1. Extract text from uploaded transcript
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'Transcript file is required' });
+    }
+
+    // 1. Extract transcript text
     const transcript = await extractText(req.file);
 
-    // 2. Prepare scores
+    // 2. Build API payload
+    const payload = buildReportPayload(application, {
+      transcript,
+      interview_date,
+      experience: application.candidateId?.experience,
+    });
+
+    // 3. Call HF Space API → get PDF
+    const pdfPath = await generateReportPDF(payload, application.candidateId?.name);
+
+    // 4. Persist report metadata (upsert)
     const scores = {
-      resume_score: application.scores?.resume?.score || 0,
-      coding_score: application.scores?.coding?.score || 0,
-      mcq_score: application.scores?.mcq?.score || 0,
-      final_score: application.scores?.finalScore || 0,
+      resume_score: payload.resume_score,
+      coding_score: payload.coding_score,
+      mcq_score: payload.mcq_score,
+      final_score: Math.round(application.scores?.finalScore || 0),
     };
 
-    // 3. AI Analysis
-    const analysisData = await analyzeTranscript(transcript, scores, application);
-
-    // 4. Create/Update Report in DB
     const reportData = {
       applicationId: appId,
       candidateId: application.candidateId._id,
-      role: application.jobId.title,
+      role: payload.role,
+      experience: payload.experience,
+      interview_date: payload.interview_date,
       scores,
-      evaluation: analysisData.evaluation || {},
-      strengths: analysisData.strengths || [],
-      weaknesses: analysisData.weaknesses || [],
-      violations_analysis: analysisData.violations_analysis || '',
-      performance_analysis: analysisData.performance_analysis || '',
-      recommendation: analysisData.recommendation || '',
-      confidence: analysisData.confidence || 0,
       transcript,
+      job_description: payload.job_description,
+      pdfPath,
     };
 
     let report = await Report.findOne({ applicationId: appId });
@@ -56,24 +86,24 @@ const generateReport = async (req, res) => {
       report = await Report.create(reportData);
     }
 
-    // 5. Generate PDF
-    const pdfPath = await generatePDF(report, application);
-    report.pdfPath = pdfPath;
-    await report.save();
-
-    // 6. Cleanup temp file
-    if (req.file) fs.unlinkSync(req.file.path);
+    // 5. Cleanup temp transcript file
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
 
     res.status(200).json({ success: true, data: report });
   } catch (err) {
-    if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-    console.error('[Generate Report Error]:', err);
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+    console.error('[Generate Report Error]:', err.message);
     res.status(500).json({ success: false, message: err.message });
   }
 };
 
 /**
- * Get Report by Application ID
+ * GET /api/reports/application/:appId
+ * Returns the stored report for an application.
  */
 const getReportByApplication = async (req, res) => {
   try {
@@ -88,25 +118,36 @@ const getReportByApplication = async (req, res) => {
 };
 
 /**
- * Download PDF Report
+ * GET /api/reports/download/:id
+ * Serves the PDF file. If the file is missing (Render ephemeral storage wipe),
+ * regenerates it by re-calling the HF Space API using stored report data.
  */
 const downloadReport = async (req, res) => {
   try {
     const report = await Report.findById(req.params.id);
     if (!report || !report.pdfPath) {
-      return res.status(404).json({ success: false, message: 'Report or PDF not found' });
+      return res.status(404).json({ success: false, message: 'Report or PDF path not found' });
     }
 
     let fullPath = path.resolve(process.cwd(), report.pdfPath.replace(/^\//, ''));
+
     if (!fs.existsSync(fullPath)) {
-      // PDF file was wiped by Render ephemeral storage. Regenerate it!
+      // PDF wiped by Render ephemeral storage — regenerate using stored data
       const application = await Application.findById(report.applicationId)
-        .populate('candidateId jobId')
-        .populate('scores.coding.answers.questionId');
+        .populate('candidateId', 'name email experience')
+        .populate('jobId', 'title description domain');
+
       if (!application) {
-        return res.status(404).json({ success: false, message: 'PDF missing and Application data not found to regenerate.' });
+        return res.status(404).json({ success: false, message: 'Cannot regenerate PDF: application data missing' });
       }
-      const newPdfPath = await generatePDF(report, application);
+
+      const payload = buildReportPayload(application, {
+        transcript: report.transcript || '',
+        interview_date: report.interview_date,
+        experience: report.experience,
+      });
+
+      const newPdfPath = await generateReportPDF(payload, application.candidateId?.name);
       report.pdfPath = newPdfPath;
       await report.save();
       fullPath = path.resolve(process.cwd(), newPdfPath.replace(/^\//, ''));
@@ -114,6 +155,7 @@ const downloadReport = async (req, res) => {
 
     res.download(fullPath);
   } catch (err) {
+    console.error('[Download Report Error]:', err.message);
     res.status(500).json({ success: false, message: err.message });
   }
 };

@@ -15,12 +15,15 @@ const reportSchema = new mongoose.Schema(
       index: true,
     },
     role: { type: String, required: true },
+    experience: { type: String, default: 'Not specified' },
+    interview_date: { type: String, default: null },
     scores: {
       resume_score: { type: Number, default: 0 },
       coding_score: { type: Number, default: 0 },
       mcq_score: { type: Number, default: 0 },
       final_score: { type: Number, default: 0 },
     },
+    // Retained for any legacy/display purposes; not populated by HF Space API
     evaluation: {
       summary: { type: String },
       resume_analysis: { type: String },
@@ -34,6 +37,7 @@ const reportSchema = new mongoose.Schema(
     recommendation: { type: String },
     confidence: { type: Number },
     transcript: { type: String },
+    job_description: { type: String },
     pdfPath: { type: String },
   },
   { timestamps: true }
