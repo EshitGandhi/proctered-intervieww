@@ -1,6 +1,7 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { EXPERIENCE_LEVELS } = require('../constants/experienceLevels');
 const { protect, verifyAdminKey } = require('../middleware/auth.middleware');
 
 const router = express.Router();
@@ -48,6 +49,12 @@ router.post('/register', async (req, res, next) => {
         });
       }
       experienceValue = String(experience).trim();
+      if (!EXPERIENCE_LEVELS.includes(experienceValue)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid experience level',
+        });
+      }
     }
 
     const user = await User.create({

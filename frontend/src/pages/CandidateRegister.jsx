@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
-import { DOMAINS } from '../utils/constants';
+import { DOMAINS, EXPERIENCE_OPTIONS } from '../utils/constants';
 
 const CandidateRegister = () => {
   const navigate = useNavigate();
@@ -222,16 +222,9 @@ const CandidateRegister = () => {
               required
             >
               <option value="">— Select experience level —</option>
-              <option value="Fresher">Fresher (0 years)</option>
-              <option value="Less than 1 year">Less than 1 year</option>
-              <option value="1 year">1 year</option>
-              <option value="2 years">2 years</option>
-              <option value="3 years">3 years</option>
-              <option value="4 years">4 years</option>
-              <option value="5 years">5 years</option>
-              <option value="6-8 years">6–8 years</option>
-              <option value="9-12 years">9–12 years</option>
-              <option value="12+ years">12+ years</option>
+              {EXPERIENCE_OPTIONS.map(({ value, label }) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
             </select>
           </div>
 

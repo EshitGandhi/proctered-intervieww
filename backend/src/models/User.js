@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const { EXPERIENCE_LEVELS } = require('../constants/experienceLevels');
 
 const userSchema = new mongoose.Schema(
   {
@@ -38,7 +39,14 @@ const userSchema = new mongoose.Schema(
     experience: {
       type: String,
       trim: true,
-      default: null, // e.g. "Fresher", "1 year", "3+ years"
+      default: null,
+      validate: {
+        validator(value) {
+          if (value == null || value === '') return true;
+          return EXPERIENCE_LEVELS.includes(value);
+        },
+        message: 'Experience must be one of the predefined levels',
+      },
     },
     isActive: {
       type: Boolean,
