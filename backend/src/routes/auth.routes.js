@@ -39,7 +39,25 @@ router.post('/register', async (req, res, next) => {
       userRole = 'admin';
     }
 
-    const user = await User.create({ name, email, password, role: userRole, domain, experience: experience || null });
+    let experienceValue = null;
+    if (userRole === 'candidate') {
+      if (experience === undefined || experience === null || String(experience).trim() === '') {
+        return res.status(400).json({
+          success: false,
+          message: 'Years of experience is required for candidate accounts',
+        });
+      }
+      experienceValue = String(experience).trim();
+    }
+
+    const user = await User.create({
+      name,
+      email,
+      password,
+      role: userRole,
+      domain: userRole === 'candidate' ? domain : null,
+      experience: experienceValue,
+    });
     const token = signToken(user._id);
 
     res.status(201).json({

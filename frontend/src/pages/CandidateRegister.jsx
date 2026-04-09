@@ -72,6 +72,9 @@ const CandidateRegister = () => {
     if (!form.domain) {
       return setError('Please select your domain');
     }
+    if (!form.experience) {
+      return setError('Please select your years of experience');
+    }
 
     setLoading(true);
     try {
@@ -82,7 +85,7 @@ const CandidateRegister = () => {
         password: form.password,
         role: 'candidate',
         domain: form.domain,
-        experience: form.experience || null,
+        experience: form.experience,
       });
 
       // Store token with candidate-specific scope
@@ -211,11 +214,12 @@ const CandidateRegister = () => {
 
           {/* Experience */}
           <div>
-            <label style={labelStyle}>Years of Experience</label>
+            <label style={labelStyle}>Years of Experience *</label>
             <select
               style={inputStyle}
               value={form.experience}
               onChange={e => setForm(f => ({ ...f, experience: e.target.value }))}
+              required
             >
               <option value="">— Select experience level —</option>
               <option value="Fresher">Fresher (0 years)</option>
