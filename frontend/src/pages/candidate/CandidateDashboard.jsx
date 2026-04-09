@@ -237,14 +237,9 @@ const JobBoard = ({ myApplications, onApply }) => {
                     <h3 style={{ margin: 0, fontSize: '1.05rem' }}>{job.title}</h3>
                     <span className="badge badge-neutral" style={{ fontSize: '0.7rem' }}>{job.domain}</span>
                   </div>
-                  <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: 12, lineHeight: 1.5 }}>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: 0, lineHeight: 1.5 }}>
                     {job.description?.substring(0, 180)}{job.description?.length > 180 ? '...' : ''}
                   </p>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {job.requiredSkills.map(s => (
-                      <span key={s} style={{ fontSize: '0.72rem', padding: '2px 10px', borderRadius: 20, background: 'var(--primary-light)', color: 'var(--primary)', fontWeight: 500 }}>{s}</span>
-                    ))}
-                  </div>
                 </div>
 
                 <div style={{ flexShrink: 0 }}>

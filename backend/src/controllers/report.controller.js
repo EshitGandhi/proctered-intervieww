@@ -97,7 +97,13 @@ const generateReport = async (req, res) => {
       fs.unlinkSync(req.file.path);
     }
     console.error('[Generate Report Error]:', err.message);
-    res.status(500).json({ success: false, message: err.message });
+    const upstream = err.statusCode;
+    const status =
+      upstream === 400 || upstream === 422 || upstream === 429 ? 502 : upstream >= 500 ? 502 : 500;
+    res.status(status).json({
+      success: false,
+      message: err.message || 'Report generation failed',
+    });
   }
 };
 
@@ -156,7 +162,10 @@ const downloadReport = async (req, res) => {
     res.download(fullPath);
   } catch (err) {
     console.error('[Download Report Error]:', err.message);
-    res.status(500).json({ success: false, message: err.message });
+    const upstream = err.statusCode;
+    const status =
+      upstream === 400 || upstream === 422 || upstream === 429 ? 502 : upstream >= 500 ? 502 : 500;
+    res.status(status).json({ success: false, message: err.message || 'Download failed' });
   }
 };
 

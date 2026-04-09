@@ -45,11 +45,6 @@ const JobBoard = () => {
                   <p style={{ marginTop: 12, fontSize: '0.9rem', lineHeight: 1.5, color: 'var(--text-secondary)' }}>
                     {job.description}
                   </p>
-                  <div style={{ marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                    {job.requiredSkills.map(skill => (
-                      <span key={skill} className="badge badge-neutral" style={{ fontSize: '0.75rem' }}>{skill}</span>
-                    ))}
-                  </div>
                 </div>
                 <button 
                   className="btn btn-primary" 
