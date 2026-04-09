@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../services/api';
+import { jobSkipsCodingRound } from '../../utils/constants';
 import useTabProctor from '../../hooks/useTabProctor';
 import useFaceProctor from '../../hooks/useFaceProctor';
 import FaceCheckModal from '../../components/FaceCheckModal';
@@ -286,7 +287,8 @@ const MCQTest = () => {
   }
 
   if (result) {
-    const passed = result.data.status === 'coding_pending';
+    const passed = result.data.status !== 'mcq_failed';
+    const noCodingRound = jobSkipsCodingRound(application?.jobId?.domain);
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)' }}>
         <div className="card" style={{ maxWidth: 480, textAlign: 'center', width: '100%' }}>
@@ -295,11 +297,16 @@ const MCQTest = () => {
           <div className={`alert ${passed ? 'alert-success' : 'alert-danger'}`} style={{ marginBottom: 20 }}>
             {result.message}
           </div>
-          <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
-            {passed
-              ? <button className="btn btn-primary" onClick={() => navigate(`/coding/${appId}`)}>Go to Coding Round →</button>
-              : <button className="btn btn-secondary" onClick={() => navigate('/dashboard')}>Back to Dashboard</button>
-            }
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+            {passed && !noCodingRound && (
+              <button className="btn btn-primary" onClick={() => navigate(`/coding/${appId}`)}>Go to Coding Round →</button>
+            )}
+            {passed && noCodingRound && (
+              <button className="btn btn-primary" onClick={() => navigate('/dashboard')}>Back to Dashboard</button>
+            )}
+            {!passed && (
+              <button className="btn btn-secondary" onClick={() => navigate('/dashboard')}>Back to Dashboard</button>
+            )}
           </div>
         </div>
       </div>

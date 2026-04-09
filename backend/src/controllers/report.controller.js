@@ -3,6 +3,7 @@ const fs = require('fs');
 const Report = require('../models/Report');
 const Application = require('../models/Application');
 const { extractText, generateReportPDF } = require('../services/report.service');
+const { skipsCodingRound } = require('../utils/applicationScores');
 
 /**
  * Builds the payload for the HF Space report API from stored application + report data.
@@ -10,18 +11,23 @@ const { extractText, generateReportPDF } = require('../services/report.service')
  * @param {object} options - { transcript, interview_date, experience }
  * @returns {object}
  */
-const buildReportPayload = (application, { transcript, interview_date, experience }) => ({
-  candidate_name: application.candidateId?.name || 'Candidate',
-  role: application.jobId?.title || 'Not specified',
-  experience: experience || application.candidateId?.experience || 'Not specified',
-  company: 'Kadel Labs',
-  interview_date: interview_date || new Date().toISOString().split('T')[0],
-  job_description: application.jobId?.description || 'Not provided',
-  transcript: transcript || '',
-  resume_score: Math.round(application.scores?.resume?.score || 0),
-  coding_score: Math.round(application.scores?.coding?.score || 0),
-  mcq_score: Math.round(application.scores?.mcq?.score || 0),
-});
+const buildReportPayload = (application, { transcript, interview_date, experience }) => {
+  const codingScore = skipsCodingRound(application.jobId?.domain)
+    ? 0
+    : Math.round(application.scores?.coding?.score || 0);
+  return {
+    candidate_name: application.candidateId?.name || 'Candidate',
+    role: application.jobId?.title || 'Not specified',
+    experience: experience || application.candidateId?.experience || 'Not specified',
+    company: 'Kadel Labs',
+    interview_date: interview_date || new Date().toISOString().split('T')[0],
+    job_description: application.jobId?.description || 'Not provided',
+    transcript: transcript || '',
+    resume_score: Math.round(application.scores?.resume?.score || 0),
+    coding_score: codingScore,
+    mcq_score: Math.round(application.scores?.mcq?.score || 0),
+  };
+};
 
 /**
  * POST /api/reports/generate/:appId

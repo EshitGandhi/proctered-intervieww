@@ -6,6 +6,7 @@ import useTabProctor from '../../hooks/useTabProctor';
 import useFaceProctor from '../../hooks/useFaceProctor';
 import FaceCheckModal from '../../components/FaceCheckModal';
 import { DEFAULT_CODE } from '../../hooks/useCodeExecution';
+import { jobSkipsCodingRound } from '../../utils/constants';
 
 const LANGUAGES = [
   { id: 'python',     label: 'Python',     monacoLang: 'python' },
@@ -76,6 +77,11 @@ const CodeEvalRound = () => {
         const { data: appData } = await api.get('/applications/my');
         const app = (appData.data || []).find(a => a._id === appId);
         if (!app) { setError('Application not found.'); setLoading(false); return; }
+        if (jobSkipsCodingRound(app.jobId?.domain)) {
+          setError('This role does not include a coding round. Return to your dashboard.');
+          setLoading(false);
+          return;
+        }
         if (app.status !== 'coding_pending') {
           setError(`Coding round not active. Current status: ${app.status}`);
           setLoading(false);

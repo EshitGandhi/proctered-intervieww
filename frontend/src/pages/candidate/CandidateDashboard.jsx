@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AppLayout from '../../components/Layout/AppLayout';
 import api from '../../services/api';
+import { jobSkipsCodingRound } from '../../utils/constants';
 
 // ─── Step Status Badge ────────────────────────────────────────────────────────
 const StatusBadge = ({ status }) => {
@@ -27,47 +28,54 @@ const StatusBadge = ({ status }) => {
 const getStepInfo = (app) => {
   const s = app.status;
   const jobActive = app.jobId?.isActive !== false; // treat missing as active
-  const steps = [
-    {
-      label: 'Resume Screening',
-      icon: '📄',
-      status: s === 'resume_rejected' ? 'failed'
-        : s === 'applied' ? 'active'
-        : 'passed',
-      score: app.scores?.resume?.score,
-      threshold: app.jobId?.resumeThreshold,
-      actionLabel: null,
-      actionPath: null,
-    },
-    {
-      label: 'MCQ Test',
-      icon: '📝',
-      status: s === 'resume_rejected' ? 'locked'
-        : s === 'applied' ? 'locked'
-        : s === 'mcq_pending' ? 'active'
-        : s === 'mcq_failed' ? 'failed'
-        : 'passed',
-      score: app.scores?.mcq?.score,
-      threshold: app.jobId?.mcqThreshold,
-      actionLabel: s === 'mcq_pending' && jobActive ? 'Start MCQ Test' : null,
-      actionPath: s === 'mcq_pending' && jobActive ? `/mcq/${app._id}` : null,
-      jobDeactivated: s === 'mcq_pending' && !jobActive,
-    },
-    {
-      label: 'Coding Round',
-      icon: '💻',
-      status: ['resume_rejected', 'applied', 'mcq_pending', 'mcq_failed'].includes(s) ? 'locked'
-        : s === 'coding_pending' ? 'active'
-        : s === 'coding_failed' ? 'failed'
-        : 'passed',
-      score: app.scores?.coding?.score,
-      threshold: app.jobId?.codingThreshold,
-      actionLabel: s === 'coding_pending' && jobActive ? 'Open Code Editor' : null,
-      actionPath: s === 'coding_pending' && jobActive ? `/coding/${app._id}` : null,
-      jobDeactivated: s === 'coding_pending' && !jobActive,
-    },
-  ];
-  return steps;
+  const skipCoding = jobSkipsCodingRound(app.jobId?.domain);
+
+  const resumeStep = {
+    label: 'Resume Screening',
+    icon: '📄',
+    status: s === 'resume_rejected' ? 'failed'
+      : s === 'applied' ? 'active'
+      : 'passed',
+    score: app.scores?.resume?.score,
+    threshold: app.jobId?.resumeThreshold,
+    actionLabel: null,
+    actionPath: null,
+  };
+
+  const mcqStep = {
+    label: 'MCQ Test',
+    icon: '📝',
+    status: s === 'resume_rejected' ? 'locked'
+      : s === 'applied' ? 'locked'
+      : s === 'mcq_pending' ? 'active'
+      : s === 'mcq_failed' ? 'failed'
+      : 'passed',
+    score: app.scores?.mcq?.score,
+    threshold: app.jobId?.mcqThreshold,
+    actionLabel: s === 'mcq_pending' && jobActive ? 'Start MCQ Test' : null,
+    actionPath: s === 'mcq_pending' && jobActive ? `/mcq/${app._id}` : null,
+    jobDeactivated: s === 'mcq_pending' && !jobActive,
+  };
+
+  if (skipCoding) {
+    return [resumeStep, mcqStep];
+  }
+
+  const codingStep = {
+    label: 'Coding Round',
+    icon: '💻',
+    status: ['resume_rejected', 'applied', 'mcq_pending', 'mcq_failed'].includes(s) ? 'locked'
+      : s === 'coding_pending' ? 'active'
+      : s === 'coding_failed' ? 'failed'
+      : 'passed',
+    score: app.scores?.coding?.score,
+    threshold: app.jobId?.codingThreshold,
+    actionLabel: s === 'coding_pending' && jobActive ? 'Open Code Editor' : null,
+    actionPath: s === 'coding_pending' && jobActive ? `/coding/${app._id}` : null,
+    jobDeactivated: s === 'coding_pending' && !jobActive,
+  };
+
+  return [resumeStep, mcqStep, codingStep];
 };
 
 const PipelineCard = ({ app, navigate }) => {
@@ -96,7 +104,7 @@ const PipelineCard = ({ app, navigate }) => {
       </div>
 
       {/* Step Tracker */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${steps.length}, 1fr)`, gap: 12 }}>
         {steps.map((step, i) => (
           <div key={i} style={{
             background: step.status === 'locked' ? 'var(--bg-secondary)' : 'var(--bg-primary)',
@@ -108,7 +116,7 @@ const PipelineCard = ({ app, navigate }) => {
             transition: 'all 0.2s',
           }}>
             {/* Step number connector line */}
-            {i < 2 && (
+            {i < steps.length - 1 && (
               <div style={{
                 position: 'absolute',
                 right: -7, top: '50%',

@@ -14,6 +14,7 @@ const {
   overrideApplicationStatus,
 } = require('../controllers/application.controller');
 const Application = require('../models/Application');
+const { finalScoreFromApplication } = require('../utils/applicationScores');
 
 const { uploadResume } = require('../services/storage.service');
 
@@ -119,15 +120,7 @@ router.post('/:appId/coding', protect, async (req, res) => {
     const score = Math.round(totalQuestionScore / plannedCount);
     const isPassed = score >= application.jobId.codingThreshold;
 
-    const totalWeight = (application.jobId.resumeWeight || 1) + (application.jobId.mcqWeight || 1) + (application.jobId.codingWeight || 1);
-    const resW = (application.jobId.resumeWeight || 1) / totalWeight;
-    const mcqW = (application.jobId.mcqWeight || 1) / totalWeight;
-    const codeW = (application.jobId.codingWeight || 1) / totalWeight;
-    const finalScore = Math.round(
-      ((application.scores.resume?.score || 0) * resW) +
-      ((application.scores.mcq?.score || 0) * mcqW) +
-      (score * codeW)
-    );
+    const finalScore = finalScoreFromApplication(application, score);
 
     application.scores.coding = { score };
     application.scores.finalScore = finalScore;

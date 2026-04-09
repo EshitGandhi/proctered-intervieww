@@ -26,6 +26,13 @@ export const EXPERIENCE_OPTIONS = [
   { value: '12+ years', label: '12+ years' },
 ];
 
+/** Domains with no coding round — keep in sync with backend `src/constants/jobDomains.js` */
+export const DOMAIN_SKIPS_CODING = 'Business Analyst';
+
+export function jobSkipsCodingRound(domain) {
+  return domain === DOMAIN_SKIPS_CODING;
+}
+
 export const DOMAINS = [
   'AI/ML Engineer',
   'PHP Developer',

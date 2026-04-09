@@ -6,6 +6,10 @@ const path = require('path');
 const axios = require('axios');
 const FormData = require('form-data');
 const { getFileUrl } = require('../services/storage.service');
+const { skipsCodingRound, finalScoreFromApplication } = require('../utils/applicationScores');
+
+const JOB_POPULATE_MINIMAL =
+  'title domain resumeThreshold mcqThreshold codingThreshold resumeWeight mcqWeight codingWeight mcqCount mcqDuration codingDuration isActive';
 
 
 
@@ -232,13 +236,32 @@ exports.submitMCQ = async (req, res) => {
     const isPassed = score >= application.jobId.mcqThreshold;
 
     application.scores.mcq = { score, answers: evaluatedAnswers };
-    application.status = isPassed ? 'coding_pending' : 'mcq_failed';
+
+    const jobDomain = application.jobId?.domain;
+    if (isPassed && skipsCodingRound(jobDomain)) {
+      application.scores.coding = { score: 0 };
+      application.scores.finalScore = finalScoreFromApplication(application, 0);
+      application.status = 'coding_passed';
+    } else if (isPassed) {
+      application.status = 'coding_pending';
+    } else {
+      application.status = 'mcq_failed';
+    }
+
     await application.save();
+
+    const refreshed = await Application.findById(application._id).populate('jobId', JOB_POPULATE_MINIMAL);
+
+    const passMessage = isPassed && skipsCodingRound(jobDomain)
+      ? `MCQ Passed (${score}%)! This role has no coding round — awaiting admin review.`
+      : isPassed
+        ? `MCQ Passed (${score}%)! Proceed to coding round.`
+        : `MCQ Failed (${score}%). Required: ${application.jobId.mcqThreshold}%.`;
 
     res.status(200).json({
       success: true,
-      data: application,
-      message: isPassed ? `MCQ Passed (${score}%)! Proceed to coding round.` : `MCQ Failed (${score}%). Required: ${application.jobId.mcqThreshold}%.`
+      data: refreshed,
+      message: passMessage,
     });
   } catch (error) {
     res.status(400).json({ success: false, error: error.message });
@@ -295,8 +318,15 @@ exports.overrideApplicationStatus = async (req, res) => {
       app.set('scores.coding', undefined);
       message = 'Coding score reset. Candidate can retake the coding round.';
     } else if (action === 'skip_mcq' && (app.status === 'mcq_pending' || app.status === 'mcq_failed')) {
-      app.status = 'coding_pending';
-      message = 'MCQ round skipped. Candidate proceeds to coding.';
+      if (skipsCodingRound(app.jobId?.domain)) {
+        app.scores.coding = { score: 0 };
+        app.scores.finalScore = finalScoreFromApplication(app, 0);
+        app.status = 'coding_passed';
+        message = 'MCQ skipped. Business Analyst roles have no coding round — pipeline complete.';
+      } else {
+        app.status = 'coding_pending';
+        message = 'MCQ round skipped. Candidate proceeds to coding.';
+      }
     } else if (action === 'skip_coding' && (app.status === 'coding_pending' || app.status === 'coding_failed')) {
       app.status = 'coding_passed';
       message = 'Coding round skipped. Candidate proceeds to final selection.';
