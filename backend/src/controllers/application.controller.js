@@ -104,7 +104,7 @@ exports.applyForJob = async (req, res) => {
     }
 
     if (!req.file) {
-      return res.status(400).json({ success: false, error: 'Resume PDF is required' });
+      return res.status(400).json({ success: false, error: 'Resume file (PDF or Word) is required' });
     }
 
     const { score, matchedSkills, missingSkills } = await parseResumeAndScore(req.file, job.domain);

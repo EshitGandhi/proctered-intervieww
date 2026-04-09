@@ -210,7 +210,7 @@ const JobBoard = ({ myApplications, onApply }) => {
       setResume(null);
       onApply(); // refresh
     } catch (err) {
-      setError(err.response?.data?.error || 'Application failed');
+      setError(err.response?.data?.error || err.response?.data?.message || 'Application failed');
     } finally {
       setApplyingId(null);
     }

@@ -108,11 +108,12 @@ const uploadResume = multer({
   storage: STORAGE_TYPE === 's3' ? s3Storage : localStorage,
   limits: { fileSize: 10485760 }, // 10 MB limit for resumes
   fileFilter: (req, file, cb) => {
-    if (file.mimetype === 'application/pdf') {
-      cb(null, true);
-    } else {
-      cb(new Error('Only PDF files are allowed'), false);
+    const ext = path.extname(file.originalname || '').toLowerCase();
+    const allowedExt = ['.pdf', '.doc', '.docx'];
+    if (!allowedExt.includes(ext)) {
+      return cb(new Error('Only PDF or Word documents (.pdf, .doc, .docx) are allowed'), false);
     }
+    cb(null, true);
   },
 });
 
